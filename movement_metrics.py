@@ -8,6 +8,7 @@ from enum import Enum
 class PlotType(Enum):
     NONE = 0
     POINT_CLOUD = 1
+    CENTROID = 2
 
 def ReadData(file_path):
     vals =[]
@@ -65,10 +66,44 @@ def PlotPointCloud(data, keypoints):
     plt.ylim([0, 720])
     plt.show()
 
+def PlotCentroid(data, keypoints):
+    np_vals = np.array(data)
+    selected_vals = []
+    
+    int_arg = stoi_map['spine_top'] - 1
+    mid_x = np_vals[:,0,int_arg]
+    mid_y = np_vals[:,1,int_arg]
+
+    for point in keypoints:
+        start_iter = (point - 1)
+        selected = np_vals[:,:,start_iter]
+        selected[:,0] = mid_x - selected[:,0]
+        selected[:,1] = mid_y - selected[:,1]
+        selected_vals.append(selected)
+    
+    selected_vals = np.stack(selected_vals, axis=2)
+
+    np_means_avg = np.mean(selected_vals, axis=2)
+
+    plt.scatter(np_means_avg[:,0], np_means_avg[:,1], alpha=np_means_avg[:,2], s=1)
+
+    plt.title("Centroid of movement")
+    plt.xlabel("x Pixel Position")
+    plt.ylabel("y Pixel Position")
+    plt.xlim([-640, 640])
+    plt.ylim([-360, 360])
+    plt.axhline(0, color='black')
+    plt.axvline(0, color='black')
+    plt.show()
+
+            
 def Plot(data, keypoints, type):
     match type:
         case PlotType.POINT_CLOUD:
             PlotPointCloud(data, keypoints)
+            return True
+        case PlotType.CENTROID:
+            PlotCentroid(data, keypoints)
             return True
         case _:
             return False
@@ -109,6 +144,9 @@ if __name__ == '__main__':
         if arg == '--point_cloud':
             gather_keypoints = True
             plot_type = PlotType.POINT_CLOUD
+        if arg == '--centroid':
+            gather_keypoints = True
+            plot_type = PlotType.CENTROID
 
 
     data = ReadData(file_path)
