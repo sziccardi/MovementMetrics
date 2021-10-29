@@ -9,6 +9,7 @@ class PlotType(Enum):
     NONE = 0
     POINT_CLOUD = 1
     CENTROID = 2
+    POS_SPEC = 3
 
 def ReadData(file_path):
     vals =[]
@@ -96,7 +97,28 @@ def PlotCentroid(data, keypoints):
     plt.axvline(0, color='black')
     plt.show()
 
-            
+
+def PlotLocSpectrum(data, keypoints):
+    x_dict = {}
+    y_dict = {}
+
+    for point in keypoints:
+        start_iter = (point - 1)
+        
+        np_vals = np.array(data)
+        name = itos_map[point]
+
+        x_dict[name] = np_vals[:,0, start_iter]
+        y_dict[name] = np_vals[:,1, start_iter]
+
+    fig, ax = plt.subplots(len(keypoints))
+    ax[0].boxplot(x_dict.values(), vert=False)
+    ax[1].boxplot(y_dict.values())
+    ax[0].set_yticklabels(x_dict.keys())
+    ax[1].set_xticklabels(y_dict.keys())
+    plt.show()
+
+
 def Plot(data, keypoints, type):
     match type:
         case PlotType.POINT_CLOUD:
@@ -104,6 +126,9 @@ def Plot(data, keypoints, type):
             return True
         case PlotType.CENTROID:
             PlotCentroid(data, keypoints)
+            return True
+        case PlotType.POS_SPEC:
+            PlotLocSpectrum(data, keypoints)
             return True
         case _:
             return False
@@ -147,6 +172,9 @@ if __name__ == '__main__':
         if arg == '--centroid':
             gather_keypoints = True
             plot_type = PlotType.CENTROID
+        if arg == '--pos_spectrum':
+            gather_keypoints = True
+            plot_type = PlotType.POS_SPEC
 
 
     data = ReadData(file_path)
