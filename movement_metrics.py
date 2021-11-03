@@ -24,12 +24,13 @@ def ReadData(file_path):
             y_pose = [700 - x for x in data_array[1::3]]
             c_pose = data_array[2::3]
 
-            data_array = json_file['people'][0]['hand_right_keypoints_2d']
+            #flipped left and right to respect participant left/right vs frame left/right
+            data_array = json_file['people'][0]['hand_left_keypoints_2d'] 
             x_right_hand = data_array[::3]
             y_right_hand = [700 - x for x in data_array[1::3]]
             c_right_hand = data_array[2::3]
 
-            data_array = json_file['people'][0]['hand_left_keypoints_2d']
+            data_array = json_file['people'][0]['hand_right_keypoints_2d']
             x_left_hand = data_array[::3]
             y_left_hand = [700 - x for x in data_array[1::3]]
             c_left_hand = data_array[2::3]
@@ -97,7 +98,6 @@ def PlotCentroid(data, keypoints):
     plt.axvline(0, color='black')
     plt.show()
 
-
 def PlotLocSpectrum(data, keypoints):
     x_dict = {}
     y_dict = {}
@@ -112,6 +112,9 @@ def PlotLocSpectrum(data, keypoints):
         y_dict[name] = np_vals[:,1, start_iter]
 
     fig, ax = plt.subplots(len(keypoints))
+    fig.tight_layout(pad=2.0)
+    ax[0].set_title('Spectrum of X Values')
+    ax[1].set_title('Spectrum of Y Values')
     ax[0].boxplot(x_dict.values(), vert=False)
     ax[1].boxplot(y_dict.values())
     ax[0].set_yticklabels(x_dict.keys())
@@ -135,10 +138,10 @@ def Plot(data, keypoints, type):
 
 
 if __name__ == '__main__':
-    keypoint_names = ['head','spine_top','shoulder_left','elbow_left','wrist_left','shoulder_right',
-    'elbow_right','wrist_right','spine_base','hip_left','knee_left','ankle_left','hip_right',
-    'knee_right','ankle_right','eye_left','eye_right','ear_left','ear_right','big_toe_right',
-    'little_toe_right','heel_right','big_toe_left','little_toe_left','heel_left','palm_left',
+    keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left',
+    'elbow_left','wrist_left','spine_base','hip_right','knee_right','ankle_right','hip_left',
+    'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left',
+    'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right','palm_left',
     'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left',
     'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left',
     'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left',
