@@ -10,6 +10,9 @@ class PlotType(Enum):
     POINT_CLOUD = 1
     CENTROID = 2
     POS_SPEC = 3
+    CENT_DIST = 4
+    CENT_DIST_NORM = 5
+
 
 def ReadData(file_path):
     vals =[]
@@ -121,6 +124,34 @@ def PlotLocSpectrum(data, keypoints):
     ax[1].set_xticklabels(y_dict.keys())
     plt.show()
 
+def PlotDistFromCenter(normalized, data, keypoints):
+    np_vals = np.array(data)
+    
+    int_arg = stoi_map['spine_top'] - 1
+    mid_x = np_vals[:,0,int_arg]
+    mid_y = np_vals[:,1,int_arg]
+
+    for point in keypoints:
+        start_iter = (point - 1)
+        selected = np_vals[:,:,start_iter]
+        if normalized:
+            selected[:,0] = abs(mid_x - selected[:,0])
+            selected[:,1] = abs(mid_y - selected[:,1])
+        else:    
+            selected[:,0] = mid_x - selected[:,0]
+            selected[:,1] = mid_y - selected[:,1]
+
+        plt.scatter(selected[:,0], selected[:,1], alpha=np_vals[:,2, start_iter], s=1)
+
+    labels = [itos_map[x] for x in keypoints]
+    plt.legend(labels)
+    plt.title("Distance from Center")
+    plt.xlabel("x Pixel Distance")
+    plt.ylabel("y Pixel Distance")
+    if not normalized:
+        plt.axhline(0, color='black')
+        plt.axvline(0, color='black')
+    plt.show()
 
 def Plot(data, keypoints, type):
     match type:
@@ -132,6 +163,12 @@ def Plot(data, keypoints, type):
             return True
         case PlotType.POS_SPEC:
             PlotLocSpectrum(data, keypoints)
+            return True
+        case PlotType.CENT_DIST:
+            PlotDistFromCenter(False, data, keypoints)
+            return True
+        case PlotType.CENT_DIST_NORM:
+            PlotDistFromCenter(True, data, keypoints)
             return True
         case _:
             return False
@@ -178,6 +215,12 @@ if __name__ == '__main__':
         if arg == '--pos_spectrum':
             gather_keypoints = True
             plot_type = PlotType.POS_SPEC
+        if arg == '--dist_from_center':
+            gather_keypoints = True
+            plot_type = PlotType.CENT_DIST
+        if arg == '--dist_from_center_norm':
+            gather_keypoints = True
+            plot_type = PlotType.CENT_DIST_NORM
 
 
     data = ReadData(file_path)
