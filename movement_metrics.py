@@ -82,15 +82,15 @@ def PlotCentroid(data, keypoints):
     for point in keypoints:
         start_iter = (point - 1)
         selected = np_vals[:,:,start_iter]
-        selected[:,0] = mid_x - selected[:,0]
-        selected[:,1] = mid_y - selected[:,1]
         selected_vals.append(selected)
     
     selected_vals = np.stack(selected_vals, axis=2)
-
     np_means_avg = np.mean(selected_vals, axis=2)
+    
+    shifted_x = [x - mid_x for x in np_means_avg[:,0]]
+    shifted_y = [y - mid_y for y in np_means_avg[:,1]]
 
-    plt.scatter(np_means_avg[:,0], np_means_avg[:,1], alpha=np_means_avg[:,2], s=1)
+    plt.scatter(shifted_x, shifted_y, alpha=np_means_avg[:,2], s=1)
 
     plt.title("Centroid of movement")
     plt.xlabel("x Pixel Position")
@@ -111,7 +111,7 @@ def PlotLocSpectrum(data, keypoints):
         np_vals = np.array(data)
         name = itos_map[point]
 
-        x_dict[name] = np_vals[:,0, start_iter]
+        x_dict[name] = [1280 - x for x in np_vals[:,0, start_iter]]
         y_dict[name] = np_vals[:,1, start_iter]
 
     fig, ax = plt.subplots(len(keypoints))
@@ -138,14 +138,17 @@ def PlotDistFromCenter(normalized, data, keypoints):
             selected[:,0] = abs(mid_x - selected[:,0])
             selected[:,1] = abs(mid_y - selected[:,1])
         else:    
-            selected[:,0] = mid_x - selected[:,0]
-            selected[:,1] = mid_y - selected[:,1]
+            selected[:,0] = selected[:,0] - mid_x
+            selected[:,1] = selected[:,1] - mid_y
 
         plt.scatter(selected[:,0], selected[:,1], alpha=np_vals[:,2, start_iter], s=1)
 
     labels = [itos_map[x] for x in keypoints]
     plt.legend(labels)
-    plt.title("Distance from Center")
+    if normalized:
+        plt.title("Normalized Distance from Center")
+    else:
+        plt.title("Distance from Center")
     plt.xlabel("x Pixel Distance")
     plt.ylabel("y Pixel Distance")
     if not normalized:
