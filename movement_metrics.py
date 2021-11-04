@@ -61,8 +61,12 @@ def PlotPointCloud(data, keypoints):
         
         np_vals = np.array(data)
         plt.scatter(np_vals[:,0, start_iter], np_vals[:,1, start_iter], alpha=np_vals[:,2, start_iter], s=1)
-    
+    int_arg = stoi_map['spine_top'] - 1
+    mid_x = [np_vals[:,0,int_arg]]
+    mid_y = [np_vals[:,1,int_arg]]
+    plt.scatter(mid_x, mid_y, s=1, color="black")
     labels = [itos_map[x] for x in keypoints]
+    labels.append("center")
     plt.legend(labels)
     plt.title("Position Point Cloud")
     plt.xlabel("x Pixel Position")
@@ -113,6 +117,12 @@ def PlotLocSpectrum(data, keypoints):
 
         x_dict[name] = [1280 - x for x in np_vals[:,0, start_iter]]
         y_dict[name] = np_vals[:,1, start_iter]
+    
+    int_arg = stoi_map['spine_top'] - 1
+    mid_x = np_vals[:,0,int_arg]
+    mid_y = np_vals[:,1,int_arg]
+    x_dict["center"] = mid_x
+    y_dict["center"] = mid_y
 
     fig, ax = plt.subplots(len(keypoints))
     fig.tight_layout(pad=2.0)
