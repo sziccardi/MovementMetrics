@@ -177,56 +177,52 @@ def PlotVelocityHeatMap(data, keypoints):
     if len(keypoints) > 1:    
         do_iter = True
     fig, ax = plt.subplots(len(keypoints))
-    heat_map = np.zeros((1280,720))
+    heat_map = np.zeros((720, 1280))
     for i, point in enumerate(keypoints):
         start_iter = (point - 1)
         xs = np_vals[:,0, start_iter]
+        xs = np.where(xs>1279, 1279, xs)
         ys = np_vals[:,1, start_iter]
+        ys = np.where(ys>719, 719, ys)
+
         confs = np_vals[:,2, start_iter]
-        print("xs shape = " + str(xs.shape))
         x_ints = np.full_like(xs, 0) # x positions that have velocity
         np.rint(xs, out=x_ints)
-        print("old x_ints size = " + str(x_ints.shape))
         x_ints = x_ints[:-1]
-        print("new x_ints size = " + str(x_ints.shape))
         
         y_ints = np.full_like(ys, 0) # y positions that have velocity
         np.rint(ys, out=y_ints)
-        print("old y_ints size = " + str(y_ints.shape))
         y_ints = y_ints[:-1]
-        print("new y_ints size = " + str(y_ints.shape))
 
         cp_np_vals = np_vals[:,:, start_iter].copy()
-        print("cp_np_vals = " + str(cp_np_vals.shape))
         shifted_np_vals = cp_np_vals[1:,:]
-        print("shifted_np_vals = " + str(shifted_np_vals.shape))
-        print("np_vals = " + str(np_vals.shape))
         new_np_vals = np_vals[:-1,:, start_iter]
-        print("new_np_vals = " + str(new_np_vals.shape))
 
         delta_pos = shifted_np_vals - new_np_vals
         vels = delta_pos * video_fps
-        print("vels shape = " + str(vels.shape))
-        print(vels)
         
-        heat_map[x_ints.astype(int), y_ints.astype(int)] = vels[:, 0]
+        total_vels = [np.sqrt(vels[i,0] * vels[i, 0] + vels[i, 1] * vels[i,1]) for i in range(vels.shape[0])]
+
+        heat_map[y_ints.astype(int), x_ints.astype(int)] = total_vels
 
         if do_iter:
-            ax[i].imshow(heat_map, cmap='cool')
+            im = ax[i].imshow(heat_map, cmap='cool', vmin = 0.0, vmax = 250.0)
 
-            ax[i].set_title(itos_map[point])
+            ax[i].set_title("Velocity of " + str(itos_map[point]))
             ax[i].set_xlabel("x Pixel Position")
             ax[i].set_ylabel("y Pixel Position")
             ax[i].set_xlim([0, 1280])
             ax[i].set_ylim([0, 720])
+            fig.colorbar(im)
         else:
-            ax.imshow(heat_map, cmap='cool')
+            im = ax.imshow(heat_map, cmap='cool', vmin = 0.0, vmax = 250.0)
 
-            ax.set_title("velocity of " + str(itos_map[point]))
+            ax.set_title("Velocity of " + str(itos_map[point]))
             ax.set_xlabel("x Pixel Position")
             ax.set_ylabel("y Pixel Position")
             ax.set_xlim([0, 1280])
             ax.set_ylim([0, 720])
+            fig.colorbar(im)
     plt.show()
 
 def Plot(data, keypoints, type):
