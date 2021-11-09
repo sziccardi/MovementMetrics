@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from enum import Enum
 
+video_fps = 30
+
 class PlotType(Enum):
     NONE = 0
     POINT_CLOUD = 1
@@ -12,6 +14,8 @@ class PlotType(Enum):
     POS_SPEC = 3
     CENT_DIST = 4
     CENT_DIST_NORM = 5
+
+    VEL_HEAT_MAP = 6
 
 
 def ReadData(file_path):
@@ -166,6 +170,65 @@ def PlotDistFromCenter(normalized, data, keypoints):
         plt.axvline(0, color='black')
     plt.show()
 
+
+def PlotVelocityHeatMap(data, keypoints):
+    np_vals = np.array(data)
+    do_iter = False
+    if len(keypoints) > 1:    
+        do_iter = True
+    fig, ax = plt.subplots(len(keypoints))
+    heat_map = np.zeros((1280,720))
+    for i, point in enumerate(keypoints):
+        start_iter = (point - 1)
+        xs = np_vals[:,0, start_iter]
+        ys = np_vals[:,1, start_iter]
+        confs = np_vals[:,2, start_iter]
+        print("xs shape = " + str(xs.shape))
+        x_ints = np.full_like(xs, 0) # x positions that have velocity
+        np.rint(xs, out=x_ints)
+        print("old x_ints size = " + str(x_ints.shape))
+        x_ints = x_ints[:-1]
+        print("new x_ints size = " + str(x_ints.shape))
+        
+        y_ints = np.full_like(ys, 0) # y positions that have velocity
+        np.rint(ys, out=y_ints)
+        print("old y_ints size = " + str(y_ints.shape))
+        y_ints = y_ints[:-1]
+        print("new y_ints size = " + str(y_ints.shape))
+
+        cp_np_vals = np_vals[:,:, start_iter].copy()
+        print("cp_np_vals = " + str(cp_np_vals.shape))
+        shifted_np_vals = cp_np_vals[1:,:]
+        print("shifted_np_vals = " + str(shifted_np_vals.shape))
+        print("np_vals = " + str(np_vals.shape))
+        new_np_vals = np_vals[:-1,:, start_iter]
+        print("new_np_vals = " + str(new_np_vals.shape))
+
+        delta_pos = shifted_np_vals - new_np_vals
+        vels = delta_pos * video_fps
+        print("vels shape = " + str(vels.shape))
+        print(vels)
+        
+        heat_map[x_ints.astype(int), y_ints.astype(int)] = vels[:, 0]
+
+        if do_iter:
+            ax[i].imshow(heat_map, cmap='cool')
+
+            ax[i].set_title(itos_map[point])
+            ax[i].set_xlabel("x Pixel Position")
+            ax[i].set_ylabel("y Pixel Position")
+            ax[i].set_xlim([0, 1280])
+            ax[i].set_ylim([0, 720])
+        else:
+            ax.imshow(heat_map, cmap='cool')
+
+            ax.set_title("velocity of " + str(itos_map[point]))
+            ax.set_xlabel("x Pixel Position")
+            ax.set_ylabel("y Pixel Position")
+            ax.set_xlim([0, 1280])
+            ax.set_ylim([0, 720])
+    plt.show()
+
 def Plot(data, keypoints, type):
     match type:
         case PlotType.POINT_CLOUD:
@@ -182,6 +245,9 @@ def Plot(data, keypoints, type):
             return True
         case PlotType.CENT_DIST_NORM:
             PlotDistFromCenter(True, data, keypoints)
+            return True
+        case PlotType.VEL_HEAT_MAP:
+            PlotVelocityHeatMap(data, keypoints)
             return True
         case _:
             return False
@@ -234,6 +300,9 @@ if __name__ == '__main__':
         if arg == '--dist_from_center_norm':
             gather_keypoints = True
             plot_type = PlotType.CENT_DIST_NORM
+        if arg == '--velocity_heat_map':
+            gather_keypoints = True
+            plot_type = PlotType.VEL_HEAT_MAP
 
 
     data = ReadData(file_path)
