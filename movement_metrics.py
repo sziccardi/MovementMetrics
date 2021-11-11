@@ -16,6 +16,8 @@ class PlotType(Enum):
     CENT_DIST_NORM = 5
 
     VEL_HEAT_MAP = 6
+    TOTAL_VEL_OVER_TIME = 7
+    VEL_OVER_TIME = 8
 
 
 def ReadData(file_path):
@@ -225,6 +227,82 @@ def PlotVelocityHeatMap(data, keypoints):
             fig.colorbar(im)
     plt.show()
 
+def PlotSpeedOverTime(data, keypoints):
+    for point in keypoints:
+        start_iter = (point - 1)
+        
+        np_vals = np.array(data)
+        name = itos_map[point]
+
+        xs = np_vals[:,0, start_iter]
+        xs = np.where(xs>1279, 1279, xs)
+        ys = np_vals[:,1, start_iter]
+        ys = np.where(ys>719, 719, ys)
+
+        confs = np_vals[:,2, start_iter]
+        x_ints = np.full_like(xs, 0) # x positions that have velocity
+        np.rint(xs, out=x_ints)
+        x_ints = x_ints[:-1]
+        
+        y_ints = np.full_like(ys, 0) # y positions that have velocity
+        np.rint(ys, out=y_ints)
+        y_ints = y_ints[:-1]
+
+        cp_np_vals = np_vals[:,:, start_iter].copy()
+        shifted_np_vals = cp_np_vals[1:,:]
+        new_np_vals = np_vals[:-1,:, start_iter]
+
+        delta_pos = shifted_np_vals - new_np_vals
+        vels = delta_pos * video_fps
+        
+        total_vels = [np.sqrt(vels[i,0] * vels[i, 0] + vels[i, 1] * vels[i,1]) for i in range(vels.shape[0])]
+
+        plt.plot(np.arange(0, len(total_vels)/video_fps, 1.0/video_fps), total_vels)
+
+    
+    labels = [itos_map[x] for x in keypoints]
+    labels.append("center")
+    plt.legend(labels)
+    plt.title("Speed over time")
+    plt.xlabel("seconds")
+    plt.ylabel("total speed")
+    plt.show()
+
+def PlotVelocitiesOverTime(data, keypoints):
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    for point in keypoints:
+        start_iter = (point - 1)
+        
+        np_vals = np.array(data)
+        name = itos_map[point]
+
+        xs = np_vals[:,0, start_iter]
+        xs = np.where(xs>1279, 1279, xs)
+        ys = np_vals[:,1, start_iter]
+        ys = np.where(ys>719, 719, ys)
+
+        cp_np_vals = np_vals[:,:, start_iter].copy()
+        shifted_np_vals = cp_np_vals[1:,:]
+        new_np_vals = np_vals[:-1,:, start_iter]
+
+        delta_pos = shifted_np_vals - new_np_vals
+        vels = delta_pos * video_fps
+        list_vels_x = vels[:,0].tolist()
+        list_vels_y = vels[:,1].tolist()
+        ax1.plot(np.arange(0, len(list_vels_x)/video_fps, 1.0/video_fps), list_vels_x)
+        ax2.plot(np.arange(0, len(list_vels_x)/video_fps, 1.0/video_fps), list_vels_y)
+
+    
+    labels = [itos_map[x] for x in keypoints]
+    labels.append("center")
+    plt.legend(labels)
+    ax1.set_title("X velocity over time")
+    ax2.set_title("Y velocity over time")
+    plt.xlabel("seconds")
+    ax1.set_ylabel("velocity")
+    ax2.set_ylabel("velocity")
+    plt.show()
+
 def Plot(data, keypoints, type):
     match type:
         case PlotType.POINT_CLOUD:
@@ -244,6 +322,12 @@ def Plot(data, keypoints, type):
             return True
         case PlotType.VEL_HEAT_MAP:
             PlotVelocityHeatMap(data, keypoints)
+            return True
+        case PlotType.TOTAL_VEL_OVER_TIME:
+            PlotSpeedOverTime(data, keypoints)
+            return True
+        case PlotType.VEL_OVER_TIME:
+            PlotVelocitiesOverTime(data, keypoints)
             return True
         case _:
             return False
@@ -299,6 +383,12 @@ if __name__ == '__main__':
         if arg == '--velocity_heat_map':
             gather_keypoints = True
             plot_type = PlotType.VEL_HEAT_MAP
+        if arg == '--speed_over_time':
+            gather_keypoints = True
+            plot_type = PlotType.TOTAL_VEL_OVER_TIME
+        if arg == '--velocity_over_time':
+            gather_keypoints = True
+            plot_type = PlotType.VEL_OVER_TIME
 
 
     data = ReadData(file_path)
