@@ -6,6 +6,7 @@ import numpy as np
 from enum import Enum
 
 video_fps = 30
+video_pix_per_m = -1
 
 class PlotType(Enum):
     NONE = 0
@@ -62,23 +63,35 @@ def ReadData(file_path):
 
 # [frame, x/y/c, keypoint]
 def PlotPointCloud(data, keypoints):
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        plt.xlabel("x Position (m)")
+        plt.ylabel("y Position (m)")
+        plt.xlim([0, 1280 / video_pix_per_m])
+        plt.ylim([0, 720 / video_pix_per_m])
+    else:
+        plt.xlabel("x Pixel Position")
+        plt.ylabel("y Pixel Position")
+        plt.xlim([0, 1280])
+        plt.ylim([0, 720])
     for point in keypoints:
         start_iter = (point - 1)
         
-        np_vals = np.array(data)
+        np_vals = np.array(data) 
+        np_vals[:,0, start_iter] /= scale
+        np_vals[:,1, start_iter] /= scale
         plt.scatter(np_vals[:,0, start_iter], np_vals[:,1, start_iter], alpha=np_vals[:,2, start_iter], s=1)
     int_arg = stoi_map['spine_top'] - 1
-    mid_x = [np_vals[:,0,int_arg]]
-    mid_y = [np_vals[:,1,int_arg]]
+    mid_x = np_vals[:,0,int_arg]
+    mid_y = np_vals[:,1,int_arg]
+    mid_x /= scale
+    mid_y /= scale
     plt.scatter(mid_x, mid_y, s=1, color="black")
     labels = [itos_map[x] for x in keypoints]
     labels.append("center")
     plt.legend(labels)
     plt.title("Position Point Cloud")
-    plt.xlabel("x Pixel Position")
-    plt.ylabel("y Pixel Position")
-    plt.xlim([0, 1280])
-    plt.ylim([0, 720])
     plt.show()
 
 def PlotCentroid(data, keypoints):
@@ -96,17 +109,20 @@ def PlotCentroid(data, keypoints):
     
     selected_vals = np.stack(selected_vals, axis=2)
     np_means_avg = np.mean(selected_vals, axis=2)
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        plt.xlabel("x Position (m)")
+        plt.ylabel("y Position (m)")
+    else:
+        plt.xlabel("x Pixel Position")
+        plt.ylabel("y Pixel Position")
+    shifted_x = [(x - mid_x) / scale for x in np_means_avg[:,0]]
+    shifted_y = [(y - mid_y) / scale for y in np_means_avg[:,1]]
     
-    shifted_x = [x - mid_x for x in np_means_avg[:,0]]
-    shifted_y = [y - mid_y for y in np_means_avg[:,1]]
-
     plt.scatter(shifted_x, shifted_y, alpha=np_means_avg[:,2], s=1)
 
     plt.title("Centroid of movement")
-    plt.xlabel("x Pixel Position")
-    plt.ylabel("y Pixel Position")
-    plt.xlim([-640, 640])
-    plt.ylim([-360, 360])
     plt.axhline(0, color='black')
     plt.axvline(0, color='black')
     plt.show()
@@ -114,26 +130,31 @@ def PlotCentroid(data, keypoints):
 def PlotLocSpectrum(data, keypoints):
     x_dict = {}
     y_dict = {}
-
+    fig, ax = plt.subplots(len(keypoints))
+    fig.tight_layout(pad=2.0)
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        ax[0].set_title('Spectrum of X Values (m)')
+        ax[1].set_title('Spectrum of Y Values (m)')
+    else:
+        ax[0].set_title('Spectrum of X Values (pixels)')
+        ax[1].set_title('Spectrum of Y Values (pixels)')
     for point in keypoints:
         start_iter = (point - 1)
         
         np_vals = np.array(data)
         name = itos_map[point]
 
-        x_dict[name] = [1280 - x for x in np_vals[:,0, start_iter]]
-        y_dict[name] = np_vals[:,1, start_iter]
+        x_dict[name] = [(1280 - x) / scale for x in np_vals[:,0, start_iter]]
+        y_dict[name] = np_vals[:,1, start_iter] / scale
     
     int_arg = stoi_map['spine_top'] - 1
-    mid_x = np_vals[:,0,int_arg]
-    mid_y = np_vals[:,1,int_arg]
+    mid_x = [(1280 - x) / scale for x in np_vals[:,0, int_arg]]
+    mid_y = np_vals[:,1,int_arg] / scale
     x_dict["center"] = mid_x
     y_dict["center"] = mid_y
 
-    fig, ax = plt.subplots(len(keypoints))
-    fig.tight_layout(pad=2.0)
-    ax[0].set_title('Spectrum of X Values')
-    ax[1].set_title('Spectrum of Y Values')
     ax[0].boxplot(x_dict.values(), vert=False)
     ax[1].boxplot(y_dict.values())
     ax[0].set_yticklabels(x_dict.keys())
@@ -142,7 +163,14 @@ def PlotLocSpectrum(data, keypoints):
 
 def PlotDistFromCenter(normalized, data, keypoints):
     np_vals = np.array(data)
-    
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        plt.xlabel("x Distance (m)")
+        plt.ylabel("y Distance (m)")
+    else:
+        plt.xlabel("x Pixel Distance")
+        plt.ylabel("y Pixel Distance")
     int_arg = stoi_map['spine_top'] - 1
     mid_x = np_vals[:,0,int_arg]
     mid_y = np_vals[:,1,int_arg]
@@ -151,11 +179,11 @@ def PlotDistFromCenter(normalized, data, keypoints):
         start_iter = (point - 1)
         selected = np_vals[:,:,start_iter]
         if normalized:
-            selected[:,0] = abs(mid_x - selected[:,0])
-            selected[:,1] = abs(mid_y - selected[:,1])
+            selected[:,0] = abs(mid_x - selected[:,0]) / scale
+            selected[:,1] = abs(mid_y - selected[:,1]) / scale
         else:    
-            selected[:,0] = selected[:,0] - mid_x
-            selected[:,1] = selected[:,1] - mid_y
+            selected[:,0] = (selected[:,0] - mid_x) / scale
+            selected[:,1] = (selected[:,1] - mid_y) / scale
 
         plt.scatter(selected[:,0], selected[:,1], alpha=np_vals[:,2, start_iter], s=1)
 
@@ -165,14 +193,13 @@ def PlotDistFromCenter(normalized, data, keypoints):
         plt.title("Normalized Distance from Center")
     else:
         plt.title("Distance from Center")
-    plt.xlabel("x Pixel Distance")
-    plt.ylabel("y Pixel Distance")
+    
     if not normalized:
         plt.axhline(0, color='black')
         plt.axvline(0, color='black')
     plt.show()
 
-
+vel_blocks = 15
 def PlotVelocityHeatMap(data, keypoints):
     np_vals = np.array(data)
     do_iter = False
@@ -180,14 +207,20 @@ def PlotVelocityHeatMap(data, keypoints):
         do_iter = True
     fig, ax = plt.subplots(len(keypoints))
     heat_map = np.zeros((720, 1280))
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        
     for i, point in enumerate(keypoints):
         start_iter = (point - 1)
         xs = np_vals[:,0, start_iter]
-        xs = np.where(xs>1279, 1279, xs)
+        xs /= vel_blocks
+        xs = np.where(xs>(1279), int(1279), xs)
         ys = np_vals[:,1, start_iter]
-        ys = np.where(ys>719, 719, ys)
+        ys /= vel_blocks
+        ys = np.where(ys>(719), int(719), ys)
 
-        confs = np_vals[:,2, start_iter]
+        #confs = np_vals[:,2, start_iter]
         x_ints = np.full_like(xs, 0) # x positions that have velocity
         np.rint(xs, out=x_ints)
         x_ints = x_ints[:-1]
@@ -213,8 +246,8 @@ def PlotVelocityHeatMap(data, keypoints):
             ax[i].set_title("Velocity of " + str(itos_map[point]))
             ax[i].set_xlabel("x Pixel Position")
             ax[i].set_ylabel("y Pixel Position")
-            ax[i].set_xlim([0, 1280])
-            ax[i].set_ylim([0, 720])
+            ax[i].set_xlim([0, 1280 / vel_blocks])
+            ax[i].set_ylim([0, 720 / vel_blocks])
             fig.colorbar(im)
         else:
             im = ax.imshow(heat_map, cmap='cool', vmin = 0.0, vmax = 250.0)
@@ -222,12 +255,19 @@ def PlotVelocityHeatMap(data, keypoints):
             ax.set_title("Velocity of " + str(itos_map[point]))
             ax.set_xlabel("x Pixel Position")
             ax.set_ylabel("y Pixel Position")
-            ax.set_xlim([0, 1280])
-            ax.set_ylim([0, 720])
+            ax.set_xlim([0, 1280/ vel_blocks])
+            ax.set_ylim([0, 720 / vel_blocks])
             fig.colorbar(im)
     plt.show()
 
 def PlotSpeedOverTime(data, keypoints):
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        plt.ylabel("total speed (m/s)")
+    else:
+        plt.ylabel("total speed (pixels/s)")
+    
     for point in keypoints:
         start_iter = (point - 1)
         
@@ -253,11 +293,22 @@ def PlotSpeedOverTime(data, keypoints):
         new_np_vals = np_vals[:-1,:, start_iter]
 
         delta_pos = shifted_np_vals - new_np_vals
-        vels = delta_pos * video_fps
+        vels = delta_pos / scale * video_fps
         
         total_vels = [np.sqrt(vels[i,0] * vels[i, 0] + vels[i, 1] * vels[i,1]) for i in range(vels.shape[0])]
 
-        plt.plot(np.arange(0, len(total_vels)/video_fps, 1.0/video_fps), total_vels)
+        # avged_vels = []
+        # running_total = 0
+        # for i, val in enumerate(total_vels):
+        #     running_total += val
+        #     if i % vel_blocks == 0:
+        #         avg_vel = running_total / vel_blocks
+        #         avged_vels.append(avg_vel)
+        #         running_total = 0
+        avged_vels = np.convolve(total_vels, np.ones(vel_blocks), 'valid') / vel_blocks
+
+
+        plt.plot(np.arange(0, len(total_vels)/ video_fps, 1.0/video_fps)[:len(avged_vels)], avged_vels)
 
     
     labels = [itos_map[x] for x in keypoints]
@@ -265,11 +316,22 @@ def PlotSpeedOverTime(data, keypoints):
     plt.legend(labels)
     plt.title("Speed over time")
     plt.xlabel("seconds")
-    plt.ylabel("total speed")
+    
     plt.show()
 
 def PlotVelocitiesOverTime(data, keypoints):
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        ax1.set_ylabel("velocity (m/s)")
+        ax2.set_ylabel("velocity (m/s)")
+    else:
+        ax1.set_ylabel("velocity (pixels/s)")
+        ax2.set_ylabel("velocity (pixels/s)")
+    
+    my_min = 100000000000
+    my_max = -100000000000
     for point in keypoints:
         start_iter = (point - 1)
         
@@ -280,27 +342,56 @@ def PlotVelocitiesOverTime(data, keypoints):
         xs = np.where(xs>1279, 1279, xs)
         ys = np_vals[:,1, start_iter]
         ys = np.where(ys>719, 719, ys)
+        cs = np_vals[:,2,start_iter]
+        # mask = cs > 0.6
+        # xs = xs[mask]
+        # ys = ys[mask]
 
         cp_np_vals = np_vals[:,:, start_iter].copy()
         shifted_np_vals = cp_np_vals[1:,:]
         new_np_vals = np_vals[:-1,:, start_iter]
 
         delta_pos = shifted_np_vals - new_np_vals
-        vels = delta_pos * video_fps
+        vels = delta_pos / scale * video_fps
         list_vels_x = vels[:,0].tolist()
         list_vels_y = vels[:,1].tolist()
-        ax1.plot(np.arange(0, len(list_vels_x)/video_fps, 1.0/video_fps), list_vels_x)
-        ax2.plot(np.arange(0, len(list_vels_x)/video_fps, 1.0/video_fps), list_vels_y)
 
-    
+        # avged_vels_x = []
+        # avged_vels_y = []
+        # running_total_x = 0
+        # running_total_y = 0
+        # for i, x_val in enumerate(list_vels_x):
+        #     y_val = list_vels_y[i]
+        #     running_total_x += x_val
+        #     running_total_y += y_val
+        #     if i % vel_blocks == 0:
+        #         avg_vel_y = running_total_y / vel_blocks
+        #         avg_vel_x = running_total_x / vel_blocks
+        #         avged_vels_x.append(avg_vel_x)
+        #         avged_vels_y.append(avg_vel_y)
+        #         running_total_x = 0
+        #         running_total_y = 0
+
+        avged_vels_x = np.convolve(list_vels_x, np.ones(vel_blocks), 'valid') / vel_blocks
+        avged_vels_y = np.convolve(list_vels_y, np.ones(vel_blocks), 'valid') / vel_blocks
+        temp_max = np.amax(avged_vels_y)
+        temp_min = np.amin(avged_vels_y)
+        if (temp_max > my_max):
+            my_max = temp_max
+        if (temp_min < my_min):
+            my_min = temp_min
+
+        ax1.plot(np.arange(0, len(list_vels_x)/video_fps, 1.0/video_fps)[:len(avged_vels_x)], avged_vels_x)
+        ax2.plot(np.arange(0, len(list_vels_y)/video_fps, 1.0/video_fps)[:len(avged_vels_y)], avged_vels_y)
+
+    ax1.set_ylim([my_min, my_max])
+    ax2.set_ylim([my_min, my_max])
     labels = [itos_map[x] for x in keypoints]
     labels.append("center")
     plt.legend(labels)
     ax1.set_title("X velocity over time")
     ax2.set_title("Y velocity over time")
     plt.xlabel("seconds")
-    ax1.set_ylabel("velocity")
-    ax2.set_ylabel("velocity")
     plt.show()
 
 def Plot(data, keypoints, type):
@@ -357,10 +448,9 @@ if __name__ == '__main__':
     gather_keypoints = False
     for i, arg in enumerate(sys.argv):
         if gather_keypoints:
-            print("arg = " + arg)
-            int_arg = stoi_map[arg]
-            print(int_arg)
-            keypoints.append(int_arg)
+            if arg in stoi_map:
+                int_arg = stoi_map[arg]
+                keypoints.append(int_arg)
 
         if arg == '--frame_files':
             gather_keypoints = False
@@ -390,6 +480,14 @@ if __name__ == '__main__':
             gather_keypoints = True
             plot_type = PlotType.VEL_OVER_TIME
 
+        if arg == '--fps':
+            gather_keypoints = False
+            video_fps = sys.argv[i+1]
+        if arg == '--pix_to_m':
+            gather_keypoints = False
+            pix = float(sys.argv[i+1])
+            m = float(sys.argv[i+2])
+            video_pix_per_m = pix / m
 
     data = ReadData(file_path)
     flag = Plot(data, keypoints, plot_type)
