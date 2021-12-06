@@ -234,7 +234,7 @@ def PlotVelocityHeatMap(data, keypoints):
         new_np_vals = np_vals[:-1,:, start_iter]
 
         delta_pos = shifted_np_vals - new_np_vals
-        vels = delta_pos * video_fps
+        vels = delta_pos * float(video_fps)
         
         total_vels = [np.sqrt(vels[i,0] * vels[i, 0] + vels[i, 1] * vels[i,1]) for i in range(vels.shape[0])]
 
@@ -293,7 +293,7 @@ def PlotSpeedOverTime(data, keypoints):
         new_np_vals = np_vals[:-1,:, start_iter]
 
         delta_pos = shifted_np_vals - new_np_vals
-        vels = delta_pos / scale * video_fps
+        vels = delta_pos / float(scale) * float(video_fps)
         
         total_vels = [np.sqrt(vels[i,0] * vels[i, 0] + vels[i, 1] * vels[i,1]) for i in range(vels.shape[0])]
 
@@ -308,7 +308,7 @@ def PlotSpeedOverTime(data, keypoints):
         avged_vels = np.convolve(total_vels, np.ones(vel_blocks), 'valid') / vel_blocks
 
 
-        plt.plot(np.arange(0, len(total_vels)/ video_fps, 1.0/video_fps)[:len(avged_vels)], avged_vels)
+        plt.plot(np.arange(0, len(total_vels) / float(video_fps), 1.0 / float(video_fps))[:len(avged_vels)], avged_vels)
 
     
     labels = [itos_map[x] for x in keypoints]
@@ -352,7 +352,7 @@ def PlotVelocitiesOverTime(data, keypoints):
         new_np_vals = np_vals[:-1,:, start_iter]
 
         delta_pos = shifted_np_vals - new_np_vals
-        vels = delta_pos / scale * video_fps
+        vels = delta_pos / float(scale) * float(video_fps)
         list_vels_x = vels[:,0].tolist()
         list_vels_y = vels[:,1].tolist()
 
@@ -381,8 +381,8 @@ def PlotVelocitiesOverTime(data, keypoints):
         if (temp_min < my_min):
             my_min = temp_min
 
-        ax1.plot(np.arange(0, len(list_vels_x)/video_fps, 1.0/video_fps)[:len(avged_vels_x)], avged_vels_x)
-        ax2.plot(np.arange(0, len(list_vels_y)/video_fps, 1.0/video_fps)[:len(avged_vels_y)], avged_vels_y)
+        ax1.plot(np.arange(0, len(list_vels_x)/float(video_fps), 1.0/float(video_fps))[:len(avged_vels_x)], avged_vels_x)
+        ax2.plot(np.arange(0, len(list_vels_y)/float(video_fps), 1.0/float(video_fps))[:len(avged_vels_y)], avged_vels_y)
 
     ax1.set_ylim([my_min, my_max])
     ax2.set_ylim([my_min, my_max])
