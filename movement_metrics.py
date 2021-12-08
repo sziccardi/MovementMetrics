@@ -515,7 +515,7 @@ if __name__ == '__main__':
             gather_keypoints = True
             plot_type = PlotType.VEL_OVER_TIME
 
-        if arg == '--aperature_over_time':
+        if arg == '--aperture_over_time':
             gather_keypoints = True
             plot_type = PlotType.APERATURE
 
