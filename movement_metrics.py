@@ -27,7 +27,7 @@ def ReadData(file_path):
     vals =[]
     for filename in os.listdir(file_path):
         with open(os.path.join(file_path, filename), 'r') as f: 
-            print("read " + filename)
+            #print("read " + filename)
             lines = f.readlines()
             json_file = json.loads(lines[0])
 
