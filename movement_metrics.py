@@ -20,6 +20,8 @@ class PlotType(Enum):
     TOTAL_VEL_OVER_TIME = 7
     VEL_OVER_TIME = 8
 
+    APERATURE = 9
+
 
 def ReadData(file_path):
     vals =[]
@@ -394,6 +396,37 @@ def PlotVelocitiesOverTime(data, keypoints):
     plt.xlabel("seconds")
     plt.show()
 
+
+def PlotAperatureOverTime(data, keypoints):
+    if len(keypoints) < 3:
+        print("WARNING: you need at least 3 points to compute an aperature.")
+        return
+    
+    total_area = np.zeros(len(data))
+    for i in range(len(keypoints) - 2):
+        key1 = int(keypoints[0])
+        key2 = int(keypoints[i+1])
+        key3 = int(keypoints[i+2])
+        np_vals = np.array(data)
+        x1 = np_vals[:, 0, key1]
+        x2 = np_vals[:, 0, key2]
+        x3 = np_vals[:, 0, key3]
+        y1 = np_vals[:, 1, key1]
+        y2 = np_vals[:, 1, key2]
+        y3 = np_vals[:, 1, key3]
+        area_of_tri = np.abs((x1*y2 + x2*y3 + x3*y1 - y1*x2 - y2*x3 - y3*x1))
+        total_area += area_of_tri
+    
+    avged_vels = np.convolve(total_area, np.ones(vel_blocks), 'valid') / vel_blocks
+    plt.plot(np.arange(0, len(total_area)/ video_fps, 1.0/video_fps)[:len(total_area)], total_area)
+
+    plt.title("Aperature over time")
+    plt.xlabel("time (seconds)")
+    plt.ylabel("aperature (pixels)")
+    
+    plt.show()
+
+
 def Plot(data, keypoints, type):
     match type:
         case PlotType.POINT_CLOUD:
@@ -420,6 +453,8 @@ def Plot(data, keypoints, type):
         case PlotType.VEL_OVER_TIME:
             PlotVelocitiesOverTime(data, keypoints)
             return True
+        case PlotType.APERATURE:
+            PlotAperatureOverTime(data, keypoints)
         case _:
             return False
 
@@ -479,6 +514,10 @@ if __name__ == '__main__':
         if arg == '--velocity_over_time':
             gather_keypoints = True
             plot_type = PlotType.VEL_OVER_TIME
+
+        if arg == '--aperature_over_time':
+            gather_keypoints = True
+            plot_type = PlotType.APERATURE
 
         if arg == '--fps':
             gather_keypoints = False
