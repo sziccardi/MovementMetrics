@@ -414,16 +414,16 @@ def PlotAperatureOverTime(data, keypoints):
         y1 = np_vals[:, 1, key1]
         y2 = np_vals[:, 1, key2]
         y3 = np_vals[:, 1, key3]
-        area_of_tri = np.abs((x1*y2 + x2*y3 + x3*y1 - y1*x2 - y2*x3 - y3*x1))
+        area_of_tri = np.abs((x1*y2 + x2*y3 + x3*y1 - y1*x2 - y2*x3 - y3*x1) / 2.0)
         total_area += area_of_tri
     
     avged_vels = np.convolve(total_area, np.ones(vel_blocks), 'valid') / vel_blocks
-    plt.plot(np.arange(0, len(total_area)/ video_fps, 1.0/video_fps)[:len(total_area)], total_area)
+    plt.plot(np.arange(0, len(avged_vels)/ video_fps, 1.0/video_fps)[:len(avged_vels)], avged_vels)
 
     plt.title("Aperature over time")
     plt.xlabel("time (seconds)")
     plt.ylabel("aperature (pixels)")
-    
+    print("showing aperture")
     plt.show()
 
 
@@ -530,6 +530,7 @@ if __name__ == '__main__':
 
     data = ReadData(file_path)
     flag = Plot(data, keypoints, plot_type)
+    print("plotted")
 
     
     
