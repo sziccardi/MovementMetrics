@@ -455,6 +455,7 @@ def Plot(data, keypoints, type):
             return True
         case PlotType.APERATURE:
             PlotAperatureOverTime(data, keypoints)
+            return True
         case _:
             return False
 
@@ -527,10 +528,15 @@ if __name__ == '__main__':
             pix = float(sys.argv[i+1])
             m = float(sys.argv[i+2])
             video_pix_per_m = pix / m
+        if arg == '--avg_width':
+            gather_keypoints = False
+            vel_blocks = int(sys.argv[i+1])
+
 
     data = ReadData(file_path)
     flag = Plot(data, keypoints, plot_type)
-    print("plotted")
+    if not flag:
+        print("ERROR: Couldn't find that plot")
 
     
     
