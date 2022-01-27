@@ -423,7 +423,7 @@ def PlotAperatureOverTime(data, keypoints):
     plt.title("Aperature over time")
     plt.xlabel("time (seconds)")
     plt.ylabel("aperature (pixels)")
-    print("showing aperture")
+    
     plt.show()
 
 
