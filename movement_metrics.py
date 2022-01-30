@@ -506,7 +506,9 @@ def Plot(data, keypoints, type, filename = ""):
             return False
         
     if filename:
-        plt.savefig(filename)
+        figure = plt.gcf()
+        figure.set_size_inches(4.5, 3)
+        plt.savefig(filename, bbox_inches='tight')
     else:
         plt.show()
     return True
