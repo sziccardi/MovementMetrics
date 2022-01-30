@@ -1,3 +1,4 @@
+from fileinput import filename
 import os
 import sys
 import json
@@ -7,6 +8,7 @@ from enum import Enum
 
 video_fps = 30
 video_pix_per_m = -1
+vel_blocks = 15
 
 class PlotType(Enum):
     NONE = 0
@@ -22,8 +24,47 @@ class PlotType(Enum):
 
     APERATURE = 9
 
+def ReadDataFromList(files):
+    vals =[]
+    for filename in files:
+        with open(filename, 'r') as f: 
+            #print("read " + filename)
+            lines = f.readlines()
+            json_file = json.loads(lines[0])
 
-def ReadData(file_path):
+            data_array = json_file['people'][0]['pose_keypoints_2d']
+            x_pose = data_array[::3]
+            y_pose = [700 - x for x in data_array[1::3]]
+            c_pose = data_array[2::3]
+
+            #flipped left and right to respect participant left/right vs frame left/right
+            data_array = json_file['people'][0]['hand_left_keypoints_2d'] 
+            x_right_hand = data_array[::3]
+            y_right_hand = [700 - x for x in data_array[1::3]]
+            c_right_hand = data_array[2::3]
+
+            data_array = json_file['people'][0]['hand_right_keypoints_2d']
+            x_left_hand = data_array[::3]
+            y_left_hand = [700 - x for x in data_array[1::3]]
+            c_left_hand = data_array[2::3]
+
+            x = []
+            x.extend(x_pose)
+            x.extend(x_right_hand)
+            x.extend(x_left_hand)
+            y = []
+            y.extend(y_pose)
+            y.extend(y_right_hand)
+            y.extend(y_left_hand)
+            c = []
+            c.extend(c_pose)
+            c.extend(c_right_hand)
+            c.extend(c_left_hand)
+
+            vals.append([x,y,c])
+    return vals
+
+def ReadDataInFolder(file_path):
     vals =[]
     for filename in os.listdir(file_path):
         with open(os.path.join(file_path, filename), 'r') as f: 
@@ -94,7 +135,6 @@ def PlotPointCloud(data, keypoints):
     labels.append("center")
     plt.legend(labels)
     plt.title("Position Point Cloud")
-    plt.show()
 
 def PlotCentroid(data, keypoints):
     np_vals = np.array(data)
@@ -127,7 +167,6 @@ def PlotCentroid(data, keypoints):
     plt.title("Centroid of movement")
     plt.axhline(0, color='black')
     plt.axvline(0, color='black')
-    plt.show()
 
 def PlotLocSpectrum(data, keypoints):
     x_dict = {}
@@ -161,7 +200,6 @@ def PlotLocSpectrum(data, keypoints):
     ax[1].boxplot(y_dict.values())
     ax[0].set_yticklabels(x_dict.keys())
     ax[1].set_xticklabels(y_dict.keys())
-    plt.show()
 
 def PlotDistFromCenter(normalized, data, keypoints):
     np_vals = np.array(data)
@@ -199,9 +237,8 @@ def PlotDistFromCenter(normalized, data, keypoints):
     if not normalized:
         plt.axhline(0, color='black')
         plt.axvline(0, color='black')
-    plt.show()
 
-vel_blocks = 15
+
 def PlotVelocityHeatMap(data, keypoints):
     np_vals = np.array(data)
     do_iter = False
@@ -260,7 +297,6 @@ def PlotVelocityHeatMap(data, keypoints):
             ax.set_xlim([0, 1280/ vel_blocks])
             ax.set_ylim([0, 720 / vel_blocks])
             fig.colorbar(im)
-    plt.show()
 
 def PlotSpeedOverTime(data, keypoints):
     scale = 1.0
@@ -319,7 +355,6 @@ def PlotSpeedOverTime(data, keypoints):
     plt.title("Speed over time")
     plt.xlabel("seconds")
     
-    plt.show()
 
 def PlotVelocitiesOverTime(data, keypoints):
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
@@ -394,7 +429,6 @@ def PlotVelocitiesOverTime(data, keypoints):
     ax1.set_title("X velocity over time")
     ax2.set_title("Y velocity over time")
     plt.xlabel("seconds")
-    plt.show()
 
 
 def PlotAperatureOverTime(data, keypoints):
@@ -424,41 +458,50 @@ def PlotAperatureOverTime(data, keypoints):
     plt.xlabel("time (seconds)")
     plt.ylabel("aperature (pixels)")
     
-    plt.show()
+    
 
 
-def Plot(data, keypoints, type):
+def Plot(data, keypoints, type, filename = ""):
     match type:
         case PlotType.POINT_CLOUD:
             PlotPointCloud(data, keypoints)
-            return True
         case PlotType.CENTROID:
             PlotCentroid(data, keypoints)
-            return True
         case PlotType.POS_SPEC:
             PlotLocSpectrum(data, keypoints)
-            return True
         case PlotType.CENT_DIST:
             PlotDistFromCenter(False, data, keypoints)
-            return True
         case PlotType.CENT_DIST_NORM:
             PlotDistFromCenter(True, data, keypoints)
-            return True
         case PlotType.VEL_HEAT_MAP:
             PlotVelocityHeatMap(data, keypoints)
-            return True
         case PlotType.TOTAL_VEL_OVER_TIME:
             PlotSpeedOverTime(data, keypoints)
-            return True
         case PlotType.VEL_OVER_TIME:
             PlotVelocitiesOverTime(data, keypoints)
-            return True
         case PlotType.APERATURE:
             PlotAperatureOverTime(data, keypoints)
-            return True
         case _:
             return False
+        
+    if filename:
+        plt.savefig(filename)
+    else:
+        plt.show()
 
+def run_script(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
+    video_fps = fps
+    video_pix_per_m = pix_in_m
+    vel_blocks = cov_width
+    plot_type_dict = {"point cloud":PlotType.POINT_CLOUD, "centroid of motion":PlotType.CENTROID, 
+    "position spectrum":PlotType.POS_SPEC, "distance from center":PlotType.CENT_DIST, 
+    "normalized distance from center":PlotType.CENT_DIST_NORM, "velocity heat map":PlotType.VEL_HEAT_MAP, 
+    "speed over time":PlotType.TOTAL_VEL_OVER_TIME, "velocity over time":PlotType.VEL_OVER_TIME, 
+    "aperature over time":PlotType.APERATURE}
+    data = ReadDataFromList(frame_files)
+    flag = Plot(data, keypoints, plot_type_dict[plot_type], "TEMP.png")
+    if not flag:
+        print("ERROR: Couldn't find that plot")
 
 if __name__ == '__main__':
     keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left',
@@ -533,7 +576,7 @@ if __name__ == '__main__':
             vel_blocks = int(sys.argv[i+1])
 
 
-    data = ReadData(file_path)
+    data = ReadDataInFolder(file_path)
     flag = Plot(data, keypoints, plot_type)
     if not flag:
         print("ERROR: Couldn't find that plot")
