@@ -24,6 +24,27 @@ class PlotType(Enum):
 
     APERATURE = 9
 
+plot_type_dict = dict({"point cloud":PlotType.POINT_CLOUD, "centroid of motion":PlotType.CENTROID, 
+    "position spectrum":PlotType.POS_SPEC, "distance from center":PlotType.CENT_DIST, 
+    "normalized distance from center":PlotType.CENT_DIST_NORM, "velocity heat map":PlotType.VEL_HEAT_MAP, 
+    "speed over time":PlotType.TOTAL_VEL_OVER_TIME, "velocity over time":PlotType.VEL_OVER_TIME, 
+    "aperature over time":PlotType.APERATURE})
+keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left',
+'elbow_left','wrist_left','spine_base','hip_right','knee_right','ankle_right','hip_left',
+'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left',
+'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right','palm_left',
+'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left',
+'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left',
+'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left',
+'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right',
+'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right',
+'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right',
+'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right',
+'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right']
+keypoint_nums = list(np.arange(1,len(keypoint_names)+1))
+stoi_map = dict(zip(keypoint_names, keypoint_nums))
+itos_map = dict(zip(keypoint_nums, keypoint_names))
+
 def ReadDataFromList(files):
     vals =[]
     for filename in files:
@@ -488,38 +509,21 @@ def Plot(data, keypoints, type, filename = ""):
         plt.savefig(filename)
     else:
         plt.show()
+    return True
 
 def run_script(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
     video_fps = fps
     video_pix_per_m = pix_in_m
     vel_blocks = cov_width
-    plot_type_dict = {"point cloud":PlotType.POINT_CLOUD, "centroid of motion":PlotType.CENTROID, 
-    "position spectrum":PlotType.POS_SPEC, "distance from center":PlotType.CENT_DIST, 
-    "normalized distance from center":PlotType.CENT_DIST_NORM, "velocity heat map":PlotType.VEL_HEAT_MAP, 
-    "speed over time":PlotType.TOTAL_VEL_OVER_TIME, "velocity over time":PlotType.VEL_OVER_TIME, 
-    "aperature over time":PlotType.APERATURE}
+
+    real_keypoints = [stoi_map[k] for k in keypoints]
+
     data = ReadDataFromList(frame_files)
-    flag = Plot(data, keypoints, plot_type_dict[plot_type], "TEMP.png")
+    flag = Plot(data, real_keypoints, plot_type_dict[plot_type], "TEMP.png")
     if not flag:
         print("ERROR: Couldn't find that plot")
 
 if __name__ == '__main__':
-    keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left',
-    'elbow_left','wrist_left','spine_base','hip_right','knee_right','ankle_right','hip_left',
-    'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left',
-    'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right','palm_left',
-    'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left',
-    'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left',
-    'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left',
-    'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right',
-    'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right',
-    'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right',
-    'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right',
-    'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right']
-    keypoint_nums = list(np.arange(1,len(keypoint_names)+1))
-    stoi_map = dict(zip(keypoint_names, keypoint_nums))
-    itos_map = dict(zip(keypoint_nums, keypoint_names))
-
     file_path = ''
     plot_type = PlotType.NONE
     keypoints = []

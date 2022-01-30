@@ -124,14 +124,12 @@ def display_file_select(chosen_files):
                 file_list = os.listdir(file_loc)
             except:
                 file_list = []
-            #fnames = []
             selected_i = []
             for i, f in enumerate(file_list):
                 if os.path.isfile(os.path.join(file_loc, f)) and f.lower().endswith((".json")):
                     file_options.append(f)
                     if f in chosen_files:
                         selected_i.append(i)
-            #file_options = fnames
             sub_window["-FILE LIST OPTIONS-"].update(values=file_options, set_to_index=selected_i)
 
         elif event == "-FILE LIST OPTIONS-":  # A file was chosen from the listbox
@@ -143,12 +141,11 @@ def display_file_select(chosen_files):
         elif event == "-SELECT ALL FILES-":
             try:
                 all_indices_len = len(file_options)
-                #print(range(all_indices_len))
                 sub_window["-FILE LIST OPTIONS-"].update(values=file_options, set_to_index=[i for i in range(all_indices_len)])
                 chosen_files = file_options
                 sub_window["-CHOSEN FILES-"].update(chosen_files)
             except:
-                print("WARNING: Could not select all")
+                print("ERROR: Could not select all")
                 pass
         if event == "Exit" or event == sg.WIN_CLOSED:
             break
@@ -181,9 +178,12 @@ if __name__ == '__main__':
             if len(chosen_files) > 0:
                 window["-FILE LIST-"].update(values=chosen_files, visible=True)
             window.enable()
+        #lets run plotting!
         elif event == "-RUN SCRIPT-":
             real_files = [os.path.join(file_loc, f) for f in chosen_files]
-            mm.run_script(real_files, values["-PLOT LIST-"], values["-TRACK POINT LIST-"], 
+            plot_type = values["-PLOT LIST-"]
+            track_points = values["-TRACK POINT LIST-"]
+            mm.run_script(real_files, plot_type[0], track_points, 
             values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
             window["-PLOT IMAGE-"].update(filename="TEMP.png")
 
