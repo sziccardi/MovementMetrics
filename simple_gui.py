@@ -71,7 +71,7 @@ def get_main_layout():
         [
             sg.Column(left_column, key="-MAIN OPTIONS COL-", size=(200, 600)),
             sg.VSeperator(),
-            sg.Column(main_column, key="-MAIN PLOT DISPLAY-", size=(450, 600)),
+            sg.Column(main_column, key="-MAIN PLOT DISPLAY-", size=(500, 600)),
             sg.VSeperator(),
             sg.Column(right_column, key="-MAIN SCRIPT SETTINGS-", size=(150,600))
         ]

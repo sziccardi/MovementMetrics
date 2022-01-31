@@ -156,6 +156,8 @@ def PlotPointCloud(data, keypoints):
     labels.append("center")
     plt.legend(labels)
     plt.title("Position Point Cloud")
+    figure = plt.gcf()
+    figure.set_size_inches(5.25, 3.5)
 
 def PlotCentroid(data, keypoints):
     np_vals = np.array(data)
@@ -188,6 +190,8 @@ def PlotCentroid(data, keypoints):
     plt.title("Centroid of movement")
     plt.axhline(0, color='black')
     plt.axvline(0, color='black')
+    figure = plt.gcf()
+    figure.set_size_inches(5.25, 3.5)
 
 def PlotLocSpectrum(data, keypoints):
     x_dict = {}
@@ -221,6 +225,7 @@ def PlotLocSpectrum(data, keypoints):
     ax[1].boxplot(y_dict.values())
     ax[0].set_yticklabels(x_dict.keys())
     ax[1].set_xticklabels(y_dict.keys())
+    fig.set_size_inches(5.25, 5.5)
 
 def PlotDistFromCenter(normalized, data, keypoints):
     np_vals = np.array(data)
@@ -258,6 +263,8 @@ def PlotDistFromCenter(normalized, data, keypoints):
     if not normalized:
         plt.axhline(0, color='black')
         plt.axvline(0, color='black')
+    figure = plt.gcf()
+    figure.set_size_inches(5.25, 3.5)
 
 
 def PlotVelocityHeatMap(data, keypoints):
@@ -318,6 +325,7 @@ def PlotVelocityHeatMap(data, keypoints):
             ax.set_xlim([0, 1280/ vel_blocks])
             ax.set_ylim([0, 720 / vel_blocks])
             fig.colorbar(im)
+    fig.set_size_inches(5.25, 3.5)
 
 def PlotSpeedOverTime(data, keypoints):
     scale = 1.0
@@ -375,6 +383,8 @@ def PlotSpeedOverTime(data, keypoints):
     plt.legend(labels)
     plt.title("Speed over time")
     plt.xlabel("seconds")
+    figure = plt.gcf()
+    figure.set_size_inches(5.25, 3.5)
     
 
 def PlotVelocitiesOverTime(data, keypoints):
@@ -450,7 +460,8 @@ def PlotVelocitiesOverTime(data, keypoints):
     ax1.set_title("X velocity over time")
     ax2.set_title("Y velocity over time")
     plt.xlabel("seconds")
-
+    
+    fig.set_size_inches(5.25, 5.5)
 
 def PlotAperatureOverTime(data, keypoints):
     if len(keypoints) < 3:
@@ -478,11 +489,14 @@ def PlotAperatureOverTime(data, keypoints):
     plt.title("Aperature over time")
     plt.xlabel("time (seconds)")
     plt.ylabel("aperature (pixels)")
+    figure = plt.gcf()
+    figure.set_size_inches(5.25, 3.5)
     
     
 
 
 def Plot(data, keypoints, type, filename = ""):
+    
     match type:
         case PlotType.POINT_CLOUD:
             PlotPointCloud(data, keypoints)
@@ -506,8 +520,6 @@ def Plot(data, keypoints, type, filename = ""):
             return False
         
     if filename:
-        figure = plt.gcf()
-        figure.set_size_inches(4.5, 3)
         plt.savefig(filename, bbox_inches='tight')
     else:
         plt.show()
