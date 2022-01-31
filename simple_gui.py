@@ -48,7 +48,11 @@ def get_main_layout():
     main_column = [[sg.Text('Plots')],
     [sg.HSep()],
     [sg.HSep()],
-    [sg.Image(filename='placeholder.png', key="-PLOT IMAGE-")]
+    [sg.Image(filename='placeholder.png', key="-PLOT IMAGE-")],
+    [sg.Text("Export plot as:"), 
+        sg.InputText(size=(20,1), key="-PLOT NAME-"), 
+        sg.Text(".png"),
+        sg.Button("Save Plot", key="-EXPORT PLOT-")]
     ]
     right_column = [[sg.Text('Script settings')],
     [sg.HSep()],
@@ -186,7 +190,12 @@ if __name__ == '__main__':
             mm.run_script(real_files, plot_type[0], track_points, 
             values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
             window["-PLOT IMAGE-"].update(filename="TEMP.png")
-
+        elif event == "-EXPORT PLOT-":
+            try:
+                os.rename("TEMP.png", values["-PLOT NAME-"] + ".png")
+                window["-PLOT NAME-"].update("")
+            except:
+                print("ERROR: Couldn't save plot")
         if len(chosen_files) > 0 and len(values["-PLOT LIST-"]) > 0 and len(values["-TRACK POINT LIST-"]) > 0:
             window["-RUN SCRIPT-"].update(visible=True)
         else:
