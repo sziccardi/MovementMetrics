@@ -43,7 +43,7 @@ def get_main_layout():
             )
         ],
         [sg.HSep()],
-        [sg.Button(button_text='Plot', size=(25,1),enable_events=True,key="-RUN SCRIPT-", visible=False)]
+        [sg.Button(button_text='PLOT', size=(25,1),enable_events=True,key="-RUN SCRIPT-", visible=False)]
     ]
     main_column = [[sg.Text('Plots')],
     [sg.HSep()],
@@ -94,7 +94,8 @@ def get_frame_select_layout(chosen_files):
     ]
 
     image_viewer_column = [
-        [sg.Text("Choose the frame info files from the list on left:")],
+        [sg.Text("Choose the frame info files from the list on left:"), 
+            sg.Button("Clear", key="-CLEAR CURRENT-")],
         [sg.Listbox(
                 values=chosen_files, size=(40,18), key="-CHOSEN FILES-"
             )],
@@ -151,6 +152,10 @@ def display_file_select(chosen_files):
             except:
                 print("ERROR: Could not select all")
                 pass
+        elif event == "-CLEAR CURRENT-":
+            chosen_files.clear()
+            sub_window["-CHOSEN FILES-"].update(chosen_files)
+            sub_window["-FILE LIST OPTIONS-"].update(set_to_index=[])
         if event == "Exit" or event == sg.WIN_CLOSED:
             break
         

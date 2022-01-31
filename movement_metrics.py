@@ -514,6 +514,12 @@ def Plot(data, keypoints, type, filename = ""):
     return True
 
 def run_script(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
+    fig_numbers = [x.num for x in plt._pylab_helpers.Gcf.get_all_fig_managers()]
+    if len(fig_numbers) > 0:
+        plt.figure().clear()
+        plt.close('all')
+        plt.cla()
+        plt.clf()
     video_fps = fps
     video_pix_per_m = pix_in_m
     vel_blocks = cov_width
