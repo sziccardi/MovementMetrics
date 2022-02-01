@@ -242,20 +242,21 @@ def PlotDistFromCenter(normalized, data, keypoints):
     int_arg = stoi_map['spine_top'] - 1
     mid_x = np_vals[:,0,int_arg]
     mid_y = np_vals[:,1,int_arg]
-
+    labels = []
     for point in keypoints:
-        start_iter = (point - 1)
-        selected = np_vals[:,:,start_iter]
-        if normalized:
-            selected[:,0] = abs(mid_x - selected[:,0]) / scale
-            selected[:,1] = abs(mid_y - selected[:,1]) / scale
-        else:    
-            selected[:,0] = (selected[:,0] - mid_x) / scale
-            selected[:,1] = (selected[:,1] - mid_y) / scale
+        if (point != stoi_map['spine_top']):
+            start_iter = (point - 1)
+            selected = np_vals[:,:,start_iter]
+            if normalized:
+                selected[:,0] = abs(mid_x - selected[:,0]) / scale
+                selected[:,1] = abs(mid_y - selected[:,1]) / scale
+            else:    
+                selected[:,0] = (selected[:,0] - mid_x) / scale
+                selected[:,1] = (selected[:,1] - mid_y) / scale
 
-        plt.scatter(selected[:,0], selected[:,1], alpha=np_vals[:,2, start_iter], s=1)
-
-    labels = [itos_map[x] for x in keypoints]
+            plt.scatter(selected[:,0], selected[:,1], alpha=np_vals[:,2, start_iter], s=1)
+            labels.append(itos_map[point])
+    
     plt.legend(labels)
     if normalized:
         plt.title("Normalized Distance from Center")
