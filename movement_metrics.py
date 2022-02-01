@@ -196,7 +196,7 @@ def PlotCentroid(data, keypoints):
 def PlotLocSpectrum(data, keypoints):
     x_dict = {}
     y_dict = {}
-    fig, ax = plt.subplots(len(keypoints))
+    fig, ax = plt.subplots(2)
     fig.tight_layout(pad=2.0)
     scale = 1.0
     if video_pix_per_m > 0:
@@ -221,9 +221,11 @@ def PlotLocSpectrum(data, keypoints):
     x_dict["center"] = mid_x
     y_dict["center"] = mid_y
 
-    ax[0].boxplot(x_dict.values(), vert=False)
+    x_vals = [x for x in x_dict.values()]
+    x_keys = [x for x in x_dict.keys()]
+    ax[0].boxplot(x_vals[::-1], vert=False)
     ax[1].boxplot(y_dict.values())
-    ax[0].set_yticklabels(x_dict.keys())
+    ax[0].set_yticklabels(x_keys[::-1])
     ax[1].set_xticklabels(y_dict.keys())
     fig.set_size_inches(5.25, 5.5)
 
