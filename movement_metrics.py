@@ -272,15 +272,11 @@ def PlotDistFromCenter(normalized, data, keypoints):
 
 def PlotVelocityHeatMap(data, keypoints):
     np_vals = np.array(data)
-    do_iter = False
-    if len(keypoints) > 1:    
-        do_iter = True
-    fig, ax = plt.subplots(len(keypoints))
     heat_map = np.zeros((720, 1280))
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
-        
+    title = ""
     for i, point in enumerate(keypoints):
         start_iter = (point - 1)
         xs = np_vals[:,0, start_iter]
@@ -308,27 +304,19 @@ def PlotVelocityHeatMap(data, keypoints):
         
         total_vels = [np.sqrt(vels[i,0] * vels[i, 0] + vels[i, 1] * vels[i,1]) for i in range(vels.shape[0])]
 
-        heat_map[y_ints.astype(int), x_ints.astype(int)] = total_vels
-
-        if do_iter:
-            im = ax[i].imshow(heat_map, cmap='cool', vmin = 0.0, vmax = 250.0)
-
-            ax[i].set_title("Velocity of " + str(itos_map[point]))
-            ax[i].set_xlabel("x Pixel Position")
-            ax[i].set_ylabel("y Pixel Position")
-            ax[i].set_xlim([0, 1280 / vel_blocks])
-            ax[i].set_ylim([0, 720 / vel_blocks])
-            fig.colorbar(im)
-        else:
-            im = ax.imshow(heat_map, cmap='cool', vmin = 0.0, vmax = 250.0)
-
-            ax.set_title("Velocity of " + str(itos_map[point]))
-            ax.set_xlabel("x Pixel Position")
-            ax.set_ylabel("y Pixel Position")
-            ax.set_xlim([0, 1280/ vel_blocks])
-            ax.set_ylim([0, 720 / vel_blocks])
-            fig.colorbar(im)
-    fig.set_size_inches(5.25, 3.5)
+        heat_map[y_ints.astype(int), x_ints.astype(int)] += total_vels
+        title += (str(itos_map[point]))
+        if i < len(keypoints) - 1:
+            title += " and "
+        
+    im = plt.imshow(heat_map, cmap='cool', vmin = 0.0, vmax = 250.0)
+    
+    plt.title("Velocity of " + title)
+    plt.xlabel("x Pixel Position")
+    plt.ylabel("y Pixel Position")
+    plt.xlim([0, 1280/ vel_blocks])
+    plt.ylim([0, 720 / vel_blocks])
+    plt.colorbar(im)
 
 def PlotSpeedOverTime(data, keypoints):
     scale = 1.0
@@ -547,6 +535,12 @@ def run_script(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
         print("ERROR: Couldn't find that plot")
 
 if __name__ == '__main__':
+    fig_numbers = [x.num for x in plt._pylab_helpers.Gcf.get_all_fig_managers()]
+    if len(fig_numbers) > 0:
+        plt.figure().clear()
+        plt.close('all')
+        plt.cla()
+        plt.clf()
     file_path = ''
     plot_type = PlotType.NONE
     keypoints = []
@@ -586,9 +580,9 @@ if __name__ == '__main__':
             gather_keypoints = True
             plot_type = PlotType.VEL_OVER_TIME
 
-        if arg == '--aperture_over_time':
-            gather_keypoints = True
-            plot_type = PlotType.APERATURE
+        # if arg == '--aperture_over_time':
+        #     gather_keypoints = True
+        #     plot_type = PlotType.APERATURE
 
         if arg == '--fps':
             gather_keypoints = False
