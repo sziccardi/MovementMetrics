@@ -29,18 +29,7 @@ plot_type_dict = dict({"point cloud":PlotType.POINT_CLOUD, "centroid of motion":
     "normalized distance from center":PlotType.CENT_DIST_NORM, "velocity heat map":PlotType.VEL_HEAT_MAP, 
     "speed over time":PlotType.TOTAL_VEL_OVER_TIME, "velocity over time":PlotType.VEL_OVER_TIME, 
     "aperature over time":PlotType.APERATURE})
-keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left',
-'elbow_left','wrist_left','spine_base','hip_right','knee_right','ankle_right','hip_left',
-'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left',
-'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right','palm_left',
-'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left',
-'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left',
-'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left',
-'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right',
-'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right',
-'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right',
-'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right',
-'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right']
+keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left', 'elbow_left','wrist_left','spine_base','hip_right','knee_right','ankle_right','hip_left', 'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left', 'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right','palm_left', 'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left', 'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left', 'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left', 'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right', 'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right', 'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right', 'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right', 'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right']
 keypoint_nums = list(np.arange(1,len(keypoint_names)+1))
 stoi_map = dict(zip(keypoint_names, keypoint_nums))
 itos_map = dict(zip(keypoint_nums, keypoint_names))
@@ -490,27 +479,24 @@ def PlotAperatureOverTime(data, keypoints):
 
 def Plot(data, keypoints, type, filename = ""):
     
-    match type:
-        case PlotType.POINT_CLOUD:
+    if type == PlotType.POINT_CLOUD:
             PlotPointCloud(data, keypoints)
-        case PlotType.CENTROID:
+    elif type == PlotType.CENTROID:
             PlotCentroid(data, keypoints)
-        case PlotType.POS_SPEC:
+    elif type == PlotType.POS_SPEC:
             PlotLocSpectrum(data, keypoints)
-        case PlotType.CENT_DIST:
+    elif type == PlotType.CENT_DIST:
             PlotDistFromCenter(False, data, keypoints)
-        case PlotType.CENT_DIST_NORM:
+    elif type == PlotType.CENT_DIST_NORM:
             PlotDistFromCenter(True, data, keypoints)
-        case PlotType.VEL_HEAT_MAP:
+    elif type == PlotType.VEL_HEAT_MAP:
             PlotVelocityHeatMap(data, keypoints)
-        case PlotType.TOTAL_VEL_OVER_TIME:
+    elif type == PlotType.TOTAL_VEL_OVER_TIME:
             PlotSpeedOverTime(data, keypoints)
-        case PlotType.VEL_OVER_TIME:
+    elif type == PlotType.VEL_OVER_TIME:
             PlotVelocitiesOverTime(data, keypoints)
-        case PlotType.APERATURE:
+    elif type == PlotType.APERATURE:
             PlotAperatureOverTime(data, keypoints)
-        case _:
-            return False
         
     if filename:
         plt.savefig(filename, bbox_inches='tight')
