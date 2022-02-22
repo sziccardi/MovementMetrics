@@ -24,11 +24,13 @@ class PlotType(Enum):
 
     APERATURE = 9
 
+    ACCEL_TREE = 10
+
 plot_type_dict = dict({"point cloud":PlotType.POINT_CLOUD, "centroid of motion":PlotType.CENTROID, 
     "position spectrum":PlotType.POS_SPEC, "distance from center":PlotType.CENT_DIST, 
     "normalized distance from center":PlotType.CENT_DIST_NORM, "velocity heat map":PlotType.VEL_HEAT_MAP, 
     "speed over time":PlotType.TOTAL_VEL_OVER_TIME, "velocity over time":PlotType.VEL_OVER_TIME, 
-    "aperature over time":PlotType.APERATURE})
+    "aperature over time":PlotType.APERATURE, "accelerometer tree":PlotType.ACCEL_TREE})
 keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left', 'elbow_left','wrist_left','spine_base','hip_right','knee_right','ankle_right','hip_left', 'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left', 'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right','palm_left', 'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left', 'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left', 'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left', 'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right', 'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right', 'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right', 'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right', 'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right']
 keypoint_nums = list(np.arange(1,len(keypoint_names)+1))
 stoi_map = dict(zip(keypoint_names, keypoint_nums))
@@ -446,6 +448,57 @@ def PlotVelocitiesOverTime(data, keypoints):
     
     fig.set_size_inches(5.25, 5.5)
 
+    
+def PlotAccelerometerTree(data, keypoints, fig, axes):
+    plt.xlabel("x Pixel Position")
+    plt.ylabel("y Pixel Position")
+    plt.xlim([0, 1280/ vel_blocks])
+    plt.ylim([0, 720 / vel_blocks])
+    
+    np_vals = np.array(data)
+    heat_map = np.zeros((720, 1280))
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+    title = ""
+    max_accels = []
+    for i, point in enumerate(keypoints):
+        start_iter = (point - 1)
+
+        cp_np_vals = np_vals[:,:, start_iter].copy()
+        shifted_np_vals = cp_np_vals[1:,:]
+        new_np_vals = np_vals[:-1,:, start_iter]
+
+        delta_pos = shifted_np_vals - new_np_vals
+        vels = delta_pos * float(video_fps)
+        
+        cp_np_vels = vels.copy()
+        shifted_np_vels = cp_np_vels[1:,:]
+        new_np_vels = vels[:-1,:]
+        delta_vel = shifted_np_vels - new_np_vels
+        accels = delta_vel * float(video_fps)
+        
+        total_accels = [np.sqrt(accels[i,0] * accels[i, 0] + accels[i, 1] * accels[i,1]) for i in range(accels.shape[0])]
+
+        max_accels.append([])
+        for i in range(int(len(total_accels) / vel_blocks) - 1):
+            max_val = max(total_accels[i * vel_blocks:(i+1)*vel_blocks])
+            max_accels[i].append(max_val)
+
+        # heat_map[y_ints.astype(int), x_ints.astype(int)] += total_vels
+        title += (str(itos_map[point]))
+        if i < len(keypoints) - 1:
+            title += " and "
+    
+    # natural log of non-dominant/dominant
+    x_val = [ np.log(max_accels[0,i] / max_accels[1,i]) for i in range(len(max_accels[0]))]
+    y_val = [ max_accels[0,i] + max_accels[1,i] for i in range(len(max_accels[0]))]
+        
+    #im = plt.imshow(heat_map, cmap='cool', vmin = 0.0, vmax = 250.0)
+    plt.plot(x_val, y_val)
+
+
+
 def PlotAperatureOverTime(data, keypoints):
     if len(keypoints) < 3:
         print("WARNING: you need at least 3 points to compute an aperature.")
@@ -481,23 +534,25 @@ def PlotAperatureOverTime(data, keypoints):
 def Plot(data, keypoints, type, filename = ""):
     
     if type == PlotType.POINT_CLOUD:
-            PlotPointCloud(data, keypoints)
+        PlotPointCloud(data, keypoints)
     elif type == PlotType.CENTROID:
-            PlotCentroid(data, keypoints)
+        PlotCentroid(data, keypoints)
     elif type == PlotType.POS_SPEC:
-            PlotLocSpectrum(data, keypoints)
+        PlotLocSpectrum(data, keypoints)
     elif type == PlotType.CENT_DIST:
-            PlotDistFromCenter(False, data, keypoints)
+        PlotDistFromCenter(False, data, keypoints)
     elif type == PlotType.CENT_DIST_NORM:
-            PlotDistFromCenter(True, data, keypoints)
+        PlotDistFromCenter(True, data, keypoints)
     elif type == PlotType.VEL_HEAT_MAP:
-            PlotVelocityHeatMap(data, keypoints)
+        PlotVelocityHeatMap(data, keypoints)
     elif type == PlotType.TOTAL_VEL_OVER_TIME:
-            PlotSpeedOverTime(data, keypoints)
+        PlotSpeedOverTime(data, keypoints)
     elif type == PlotType.VEL_OVER_TIME:
-            PlotVelocitiesOverTime(data, keypoints)
+        PlotVelocitiesOverTime(data, keypoints)
     elif type == PlotType.APERATURE:
-            PlotAperatureOverTime(data, keypoints)
+        PlotAperatureOverTime(data, keypoints)
+    elif type == PlotType.ACCEL_TREE:
+        PlotAccelerometerTree(data, keypoints)
         
     if filename:
         plt.savefig(filename, bbox_inches='tight')
