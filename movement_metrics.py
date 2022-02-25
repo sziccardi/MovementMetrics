@@ -1,3 +1,4 @@
+from asyncio import gather
 from fileinput import filename
 import os
 import sys
@@ -449,13 +450,10 @@ def PlotVelocitiesOverTime(data, keypoints):
     fig.set_size_inches(5.25, 5.5)
 
     
-def PlotAccelerometerTree(data, keypoints, fig, axes):
-    plt.xlabel("x Pixel Position")
-    plt.ylabel("y Pixel Position")
-    plt.xlim([0, 1280/ vel_blocks])
-    plt.ylim([0, 720 / vel_blocks])
+def PlotAccelerometerTree(data, keypoints):
     
     np_vals = np.array(data)
+    
     heat_map = np.zeros((720, 1280))
     scale = 1.0
     if video_pix_per_m > 0:
@@ -481,8 +479,8 @@ def PlotAccelerometerTree(data, keypoints, fig, axes):
         total_accels = [np.sqrt(accels[i,0] * accels[i, 0] + accels[i, 1] * accels[i,1]) for i in range(accels.shape[0])]
 
         max_accels.append([])
-        for i in range(int(len(total_accels) / vel_blocks) - 1):
-            max_val = max(total_accels[i * vel_blocks:(i+1)*vel_blocks])
+        for j in range(int(len(total_accels) / vel_blocks) - 1):
+            max_val = max(total_accels[j * vel_blocks:(j+1)*vel_blocks])
             max_accels[i].append(max_val)
 
         # heat_map[y_ints.astype(int), x_ints.astype(int)] += total_vels
@@ -490,12 +488,13 @@ def PlotAccelerometerTree(data, keypoints, fig, axes):
         if i < len(keypoints) - 1:
             title += " and "
     
+    
     # natural log of non-dominant/dominant
-    x_val = [ np.log(max_accels[0,i] / max_accels[1,i]) for i in range(len(max_accels[0]))]
-    y_val = [ max_accels[0,i] + max_accels[1,i] for i in range(len(max_accels[0]))]
-        
-    #im = plt.imshow(heat_map, cmap='cool', vmin = 0.0, vmax = 250.0)
-    plt.plot(x_val, y_val)
+    x_val = np.array([ np.log(max_accels[0][i] / max_accels[1][i]) for i in range(len(max_accels[0]))])
+    y_val = np.array([ max_accels[0][i] + max_accels[1][i] for i in range(len(max_accels[0]))])
+    y_val = y_val / np.min(y_val)
+
+    plt.hist2d(x_val, y_val, vel_blocks)
 
 
 
@@ -623,6 +622,9 @@ if __name__ == '__main__':
         if arg == '--velocity_over_time':
             gather_keypoints = True
             plot_type = PlotType.VEL_OVER_TIME
+        if arg == '--accelerometer_tree':
+            gather_keypoints = True
+            plot_type = PlotType.ACCEL_TREE
 
         # if arg == '--aperture_over_time':
         #     gather_keypoints = True
