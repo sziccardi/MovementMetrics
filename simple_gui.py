@@ -2,6 +2,9 @@ from fileinput import filename
 import PySimpleGUI as sg
 import os.path
 import movement_metrics as mm
+import numpy as np
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib
 
 win_size = (800, 600)
 window = None
@@ -48,7 +51,8 @@ def get_main_layout():
     main_column = [[sg.Text('Plots')],
     [sg.HSep()],
     [sg.HSep()],
-    [sg.Image(filename='placeholder.png', key="-PLOT IMAGE-")],
+    #[sg.Video()], ##TODO
+    [sg.Canvas(key="-PLOT CANVAS-")],
     [sg.Text("Export plot as:"), 
         sg.InputText(size=(20,1), key="-PLOT NAME-"), 
         sg.Text(".png"),
@@ -162,9 +166,16 @@ def display_file_select(chosen_files):
     sub_window.close()
     return file_loc, chosen_files
 
+    
+def draw_figure(canvas, figure):
+    figure_canvas_agg = FigureCanvasTkAgg(figure, canvas)
+    figure_canvas_agg.draw()
+    figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=1)
+    return figure_canvas_agg
+
 
 if __name__ == '__main__':
-    
+    matplotlib.use('TkAgg')
     current_layout = get_main_layout()
     window = sg.Window(title="Bilateral Coordination Metric Viewer", layout=current_layout)
     
@@ -192,9 +203,11 @@ if __name__ == '__main__':
             real_files = [os.path.join(file_loc, f) for f in chosen_files]
             plot_type = values["-PLOT LIST-"]
             track_points = values["-TRACK POINT LIST-"]
-            mm.run_script(real_files, plot_type[0], track_points, 
+            
+            fig = mm.run_script(real_files, plot_type[0], track_points, 
             values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
-            window["-PLOT IMAGE-"].update(filename="TEMP.png")
+            draw_figure(window['-PLOT CANVAS-'].TKCanvas, fig)
+
         elif event == "-EXPORT PLOT-":
             try:
                 os.rename("TEMP.png", values["-PLOT NAME-"] + ".png")

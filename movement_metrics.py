@@ -553,11 +553,9 @@ def Plot(data, keypoints, type, filename = ""):
     elif type == PlotType.ACCEL_TREE:
         PlotAccelerometerTree(data, keypoints)
         
-    if filename:
-        plt.savefig(filename, bbox_inches='tight')
-    else:
+    if not filename:
         plt.show()
-    return True
+    return True, plt.gcf()
 
 def run_script(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
     fig_numbers = [x.num for x in plt._pylab_helpers.Gcf.get_all_fig_managers()]
@@ -573,9 +571,10 @@ def run_script(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
     real_keypoints = [stoi_map[k] for k in keypoints]
 
     data = ReadDataFromList(frame_files)
-    flag = Plot(data, real_keypoints, plot_type_dict[plot_type], "TEMP.png")
+    flag, fig = Plot(data, real_keypoints, plot_type_dict[plot_type], "TEMP.png")
     if not flag:
         print("ERROR: Couldn't find that plot")
+    return fig
 
 if __name__ == '__main__':
     fig_numbers = [x.num for x in plt._pylab_helpers.Gcf.get_all_fig_managers()]
@@ -644,7 +643,7 @@ if __name__ == '__main__':
 
 
     data = ReadDataInFolder(file_path)
-    flag = Plot(data, keypoints, plot_type)
+    flag, fig = Plot(data, keypoints, plot_type)
     if not flag:
         print("ERROR: Couldn't find that plot")
 
