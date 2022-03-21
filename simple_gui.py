@@ -210,7 +210,7 @@ if __name__ == '__main__':
 
         elif event == "-EXPORT PLOT-":
             try:
-                os.rename("TEMP.png", values["-PLOT NAME-"] + ".png")
+                matplotlib.pyplot.savefig(values["-PLOT NAME-"] + ".png", bbox_inches='tight')
                 window["-PLOT NAME-"].update("")
             except:
                 print("ERROR: Couldn't save plot")
