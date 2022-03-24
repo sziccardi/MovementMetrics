@@ -14,11 +14,9 @@ def get_main_layout():
         [sg.Text("Plot Settings")],
         [sg.HSep()],
         [sg.HSep()],
-        [sg.Text('Mocap Files')],
-        [sg.Button(button_text='Browse', size=(23,1),enable_events=True,key="-BROWSE FILES-")], 
-        [sg.Listbox(
-            values=[], key="-FILE LIST-", size=(25,10), enable_events=False, visible=False
-        )], 
+        [sg.Text('Video to process')],
+        [sg.Text(key="-VIDEO FILE-", size=(25,1), enable_events=False, visible=False)], 
+        [sg.Button(button_text='Browse', size=(23,1),enable_events=True,key="-VIDEO BUTTON-")], 
         [sg.HSep()],
         [sg.Text('Track Points')],
         [sg.Listbox(
@@ -82,42 +80,43 @@ def get_main_layout():
     ]
     return layout
 
-def get_frame_select_layout(chosen_files):
+def get_frame_select_layout():
     file_list_column = [
-        [
-            sg.Text("File Explorer"), 
-            sg.In(size=(25, 1), enable_events=True, key="-FOLDER-"), 
-            sg.FolderBrowse(),
-            sg.Button("Select All", size=(10, 1), enable_events=True, key="-SELECT ALL FILES-")
+        [sg.Text("Where is the video you wish to process?")],
+        [ 
+            sg.In(size=(55, 1), enable_events=True, key="-FOLDER-"), 
+            sg.FolderBrowse()
+            #sg.Button("Select All", size=(10, 1), enable_events=True, key="-SELECT ALL FILES-")
         ],
         [ 
             sg.Listbox(
-                values=[], enable_events=True, size=(60,20), key="-FILE LIST OPTIONS-",select_mode='multiple'
+                values=[], enable_events=True, size=(60,20), key="-FILE LIST OPTIONS-"
             )
-        ]
+        ],
+        [sg.Button(button_text='Next',size=(5,1),enable_events=True,key="-NEXT BUTTON-")]
     ]
 
-    image_viewer_column = [
-        [sg.Text("Choose the frame info files from the list on left:"), 
-            sg.Button("Clear", key="-CLEAR CURRENT-")],
-        [sg.Listbox(
-                values=chosen_files, size=(40,18), key="-CHOSEN FILES-"
-            )],
-        [sg.Button(button_text='Next',size=(10,2),enable_events=True,key="-NEXT BUTTON-")],
-    ]
+    # image_viewer_column = [
+    #     [sg.Text("Choose the frame info files from the list on left:"), 
+    #         sg.Button("Clear", key="-CLEAR CURRENT-")],
+    #     [sg.Listbox(
+    #             values=chosen_files, size=(40,18), key="-CHOSEN FILES-"
+    #         )],
+    #     [sg.Button(button_text='Next',size=(10,2),enable_events=True,key="-NEXT BUTTON-")],
+    # ]
 
     layout = [
         [
             sg.Column(file_list_column),
-            sg.VSeperator(),
-            sg.Column(image_viewer_column),
+            #sg.VSeperator(),
+            #sg.Column(image_viewer_column),
         ]
     ]
 
     return layout
 
-def display_file_select(chosen_files):
-    sub_window = sg.Window("Mocap Files", get_frame_select_layout(chosen_files), modal=True)
+def display_file_select(chosen_file):
+    sub_window = sg.Window("Video Selection", get_frame_select_layout(), modal=True)
     file_loc = ""
     file_options = []
     while True:
@@ -125,7 +124,7 @@ def display_file_select(chosen_files):
         if event == "-NEXT BUTTON-":
             break
         elif event == "-BACK BUTTON-":
-            chosen_files.clear()
+            chosen_file = ''
             break
         elif event == "-FOLDER-":
             file_loc = values["-FOLDER-"]
@@ -133,38 +132,37 @@ def display_file_select(chosen_files):
                 file_list = os.listdir(file_loc)
             except:
                 file_list = []
-            selected_i = []
+            selected_i = -1
             for i, f in enumerate(file_list):
-                if os.path.isfile(os.path.join(file_loc, f)) and f.lower().endswith((".json")):
+                if os.path.isfile(os.path.join(file_loc, f)) and (f.lower().endswith((".mp4")) or f.lower().endswith((".mov"))):
                     file_options.append(f)
-                    if f in chosen_files:
+                    if f == chosen_file:
                         selected_i.append(i)
             sub_window["-FILE LIST OPTIONS-"].update(values=file_options, set_to_index=selected_i)
 
         elif event == "-FILE LIST OPTIONS-":  # A file was chosen from the listbox
             try:
-                chosen_files = values["-FILE LIST OPTIONS-"]
-                sub_window["-CHOSEN FILES-"].update(chosen_files)
+                chosen_file = values["-FILE LIST OPTIONS-"][0]
             except:
                 pass
-        elif event == "-SELECT ALL FILES-":
-            try:
-                all_indices_len = len(file_options)
-                sub_window["-FILE LIST OPTIONS-"].update(values=file_options, set_to_index=[i for i in range(all_indices_len)])
-                chosen_files = file_options
-                sub_window["-CHOSEN FILES-"].update(chosen_files)
-            except:
-                print("ERROR: Could not select all")
-                pass
-        elif event == "-CLEAR CURRENT-":
-            chosen_files.clear()
-            sub_window["-CHOSEN FILES-"].update(chosen_files)
-            sub_window["-FILE LIST OPTIONS-"].update(set_to_index=[])
+        # elif event == "-SELECT ALL FILES-":
+        #     try:
+        #         all_indices_len = len(file_options)
+        #         sub_window["-FILE LIST OPTIONS-"].update(values=file_options, set_to_index=[i for i in range(all_indices_len)])
+        #         chosen_files = file_options
+        #         sub_window["-CHOSEN FILES-"].update(chosen_files)
+        #     except:
+        #         print("ERROR: Could not select all")
+        #         pass
+        # elif event == "-CLEAR CURRENT-":
+        #     chosen_files.clear()
+        #     sub_window["-CHOSEN FILES-"].update(chosen_files)
+        #     sub_window["-FILE LIST OPTIONS-"].update(set_to_index=[])
         if event == "Exit" or event == sg.WIN_CLOSED:
             break
         
     sub_window.close()
-    return file_loc, chosen_files
+    return file_loc, chosen_file
 
     
 def draw_figure(canvas, figure):
@@ -180,7 +178,7 @@ if __name__ == '__main__':
     window = sg.Window(title="Bilateral Coordination Metric Viewer", layout=current_layout)
     
     #mocap file select variables
-    chosen_files = []
+    chosen_file = ''
     
 
     #event loop
@@ -192,21 +190,28 @@ if __name__ == '__main__':
         if event == "Exit" or event == sg.WIN_CLOSED:
             break
         #file select events
-        if event == "-BROWSE FILES-":
-            window.disable()
-            file_loc, chosen_files = display_file_select(chosen_files)
-            if len(chosen_files) > 0:
-                window["-FILE LIST-"].update(values=chosen_files, visible=True)
-            window.enable()
+        if event == "-VIDEO BUTTON-":
+            if window["-VIDEO BUTTON-"].get_text() == "Process":
+                #run open pose
+                #process_video(chosen_file)
+                print(chosen_file)
+            elif window["-VIDEO BUTTON-"].get_text() == "Browse":
+                window.disable()
+                file_loc, chosen_file = display_file_select(chosen_file)
+                if len(chosen_file) > 0:
+                    window["-VIDEO FILE-"].update(value=chosen_file, visible=True)
+                    window["-VIDEO BUTTON-"].update("Process")
+                window.enable()
         #lets run plotting!
         elif event == "-RUN SCRIPT-":
-            real_files = [os.path.join(file_loc, f) for f in chosen_files]
+            #real_files = [os.path.join(file_loc, f) for f in chosen_files]
+            
             plot_type = values["-PLOT LIST-"]
             track_points = values["-TRACK POINT LIST-"]
             
-            fig = mm.run_script(real_files, plot_type[0], track_points, 
-            values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
-            draw_figure(window['-PLOT CANVAS-'].TKCanvas, fig)
+            #fig = mm.run_script(real_files, plot_type[0], track_points, 
+            #values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
+            #draw_figure(window['-PLOT CANVAS-'].TKCanvas, fig)
 
         elif event == "-EXPORT PLOT-":
             try:
@@ -214,7 +219,7 @@ if __name__ == '__main__':
                 window["-PLOT NAME-"].update("")
             except:
                 print("ERROR: Couldn't save plot")
-        if len(chosen_files) > 0 and len(values["-PLOT LIST-"]) > 0 and len(values["-TRACK POINT LIST-"]) > 0:
+        if len(chosen_file) > 0 and len(values["-PLOT LIST-"]) > 0 and len(values["-TRACK POINT LIST-"]) > 0:
             window["-RUN SCRIPT-"].update(visible=True)
         else:
             window["-RUN SCRIPT-"].update(visible=False)
