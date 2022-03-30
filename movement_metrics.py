@@ -480,9 +480,10 @@ def PlotAccelerometerTree(data, keypoints):
 
         max_accels.append([])
         for j in range(int(len(total_accels) / vel_blocks) - 1):
-            max_val = max(total_accels[j * vel_blocks:(j+1)*vel_blocks])
+            max_val = max(np.abs(total_accels[j * vel_blocks:(j+1)*vel_blocks]))
             max_accels[i].append(max_val)
 
+        print(max_accels)
         # heat_map[y_ints.astype(int), x_ints.astype(int)] += total_vels
         title += (str(itos_map[point]))
         if i < len(keypoints) - 1:
@@ -492,7 +493,7 @@ def PlotAccelerometerTree(data, keypoints):
     # natural log of non-dominant/dominant
     x_val = np.array([ np.log(max_accels[0][i] / max_accels[1][i]) for i in range(len(max_accels[0]))])
     y_val = np.array([ max_accels[0][i] + max_accels[1][i] for i in range(len(max_accels[0]))])
-    y_val = y_val / np.min(y_val)
+    #y_val = y_val / np.min(y_val)
 
     plt.hist2d(x_val, y_val, vel_blocks)
 
