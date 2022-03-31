@@ -83,7 +83,7 @@ def get_main_layout():
     ]
     return layout
 
-def get_frame_select_layout():
+def get_video_select_layout():
     file_list_column = [
         [sg.Text("Where is the video you wish to process?")],
         [ 
@@ -99,27 +99,35 @@ def get_frame_select_layout():
         [sg.Button(button_text='Next',size=(5,1),enable_events=True,key="-NEXT BUTTON-")]
     ]
 
-    # image_viewer_column = [
-    #     [sg.Text("Choose the frame info files from the list on left:"), 
-    #         sg.Button("Clear", key="-CLEAR CURRENT-")],
-    #     [sg.Listbox(
-    #             values=chosen_files, size=(40,18), key="-CHOSEN FILES-"
-    #         )],
-    #     [sg.Button(button_text='Next',size=(10,2),enable_events=True,key="-NEXT BUTTON-")],
-    # ]
+    layout = [
+        [
+            sg.Column(file_list_column)
+        ]
+    ]
+
+    return layout
+
+def get_frame_select_layout():
+    file_list_column = [
+        [sg.Text("Which folder are the processed files in?")],
+        [ 
+            sg.In(size=(55, 1), enable_events=True, key="-FOLDER-"), 
+            sg.FolderBrowse()
+        ],
+        [sg.Button(button_text='Next',size=(5,1),enable_events=True,key="-NEXT BUTTON-")]
+    ]
 
     layout = [
         [
-            sg.Column(file_list_column),
-            #sg.VSeperator(),
-            #sg.Column(image_viewer_column),
+            sg.Column(file_list_column)
         ]
     ]
 
     return layout
 
 def display_file_select(chosen_file, existing):
-    sub_window = sg.Window("Video Selection", get_frame_select_layout(), modal=True)
+    my_layout = get_frame_select_layout() if existing else get_video_select_layout()
+    sub_window = sg.Window("Video Selection", my_layout, modal=True)
     file_loc = ""
     file_options = []
     while True:
@@ -141,9 +149,10 @@ def display_file_select(chosen_file, existing):
                     file_options.append(f)
                     if f == chosen_file:
                         selected_i.append(i)
+                    sub_window["-FILE LIST OPTIONS-"].update(values=file_options, set_to_index=selected_i)
                 elif existing:
                     file_options = []
-            sub_window["-FILE LIST OPTIONS-"].update(values=file_options, set_to_index=selected_i)
+            
 
         elif event == "-FILE LIST OPTIONS-":  # A file was chosen from the listbox
             try:
@@ -219,23 +228,22 @@ if __name__ == '__main__':
                     window["-NEW VIDEO BUTTON-"].update("Process Current")
                     window["-PROCESSING GIF-"].update(visible=True)
                 window.enable()
-            elif window["-NEW VIDEO BUTTON-"].get_text() == "Browse Existing":
-                window.disable()
-                file_loc, chosen_file = display_file_select(chosen_file, False)
-                chosen_files.clear()
-                chosen_files = []
-                video_file = ""
-                file_list = os.listdir(file_loc)
-                for f in file_list:
-                    if f.lower().endswith((".mp4")) or f.lower().endswith((".mov")):
-                        video_file = f
-                    elif f.lower().endswith((".json")):
-                        chosen_files.append(f)
-                
+        if event == "-EXISTING VIDEO BUTTON-":
+            window.disable()
+            file_loc, chosen_file = display_file_select(chosen_file, True)
+            chosen_files.clear()
+            chosen_files = []
+            video_file = ""
+            file_list = os.listdir(file_loc)
+            for f in file_list:
+                if f.lower().endswith((".mp4")) or f.lower().endswith((".mov")):
+                    video_file = f
+                elif f.lower().endswith((".json")):
+                    chosen_files.append(f)
+            
 
-                folder_name = os.path.GetFileName(file_loc)
-                window["-VIDEO FILE-"].update(value=folder_name, visible=True)
-                window.enable()
+            window["-VIDEO FILE-"].update(value=video_file, visible=True)
+            window.enable()
 
         #lets run plotting!
         elif event == "-RUN SCRIPT-":
