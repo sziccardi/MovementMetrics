@@ -201,14 +201,16 @@ if __name__ == '__main__':
     
     #mocap file select variables
     chosen_file = ''
+    chosen_files = []
     
+    #plotting canvas variables
+    curr_canvas = None
 
     #event loop
     file_loc = ""
     while current_layout:
         event, values = window.read()
         current_process = None
-        chosen_files = []
         #overall events
         if event == "Exit" or event == sg.WIN_CLOSED:
             break
@@ -247,14 +249,19 @@ if __name__ == '__main__':
 
         #lets run plotting!
         elif event == "-RUN SCRIPT-":
-            #real_files = [os.path.join(file_loc, f) for f in chosen_files]
+            if curr_canvas is not None:
+                curr_canvas.get_tk_widget().forget()
+                matplotlib.pyplot.close('all')
+            real_files = [os.path.join(file_loc, f) for f in chosen_files]
             
             plot_type = values["-PLOT LIST-"]
             track_points = values["-TRACK POINT LIST-"]
             
-            #fig = mm.run_script(real_files, plot_type[0], track_points, 
-            #values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
-            #draw_figure(window['-PLOT CANVAS-'].TKCanvas, fig)
+            fig = mm.run_script(real_files, plot_type[0], track_points, 
+            values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
+            print("got fig")
+            curr_canvas = draw_figure(window['-PLOT CANVAS-'].TKCanvas, fig)
+            print("drew fig")
 
         elif event == "-EXPORT PLOT-":
             try:
@@ -262,8 +269,8 @@ if __name__ == '__main__':
                 window["-PLOT NAME-"].update("")
             except:
                 print("ERROR: Couldn't save plot")
-
-        if len(chosen_file) > 0 and len(values["-PLOT LIST-"]) > 0 and len(values["-TRACK POINT LIST-"]) > 0 and (current_process is not None and current_process.poll() is not None) and os.path.isfile(os.path.join(file_loc, "TEMP_FILES/", os.path.splitext(chosen_file)[0])):
+        # and ((current_process is not None and current_process.poll() is not None) or (current_process is None))
+        if len(chosen_files) > 0 and len(values["-PLOT LIST-"]) > 0 and len(values["-TRACK POINT LIST-"]) > 0:
             window["-RUN SCRIPT-"].update(visible=True)
         else:
             window["-RUN SCRIPT-"].update(visible=False)
