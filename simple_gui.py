@@ -16,9 +16,10 @@ def get_main_layout():
         [sg.Text("Plot Settings")],
         [sg.HSep()],
         [sg.HSep()],
-        [sg.Text('Video to process')],
+        [sg.Text('Currently selected:')],
         [sg.Text(key="-VIDEO FILE-", size=(25,1), enable_events=False, visible=False)], 
-        [sg.Button(button_text='Browse', size=(23,1),enable_events=True,key="-VIDEO BUTTON-"), sg.Image(data=processing_gif, size=(2,2), key="-PROCESSING GIF-", visible=False)], 
+        [sg.Button(button_text='Browse New', size=(23,1),enable_events=True,key="-NEW VIDEO BUTTON-"), sg.Image(data=processing_gif, size=(2,2), key="-PROCESSING GIF-", visible=False)], 
+        [sg.Button(button_text='Browse Existing', size=(23,1),enable_events=True,key="-EXISTING VIDEO BUTTON-")],
         [sg.HSep()],
         [sg.Text('Track Points')],
         [sg.Listbox(
@@ -117,7 +118,7 @@ def get_frame_select_layout():
 
     return layout
 
-def display_file_select(chosen_file):
+def display_file_select(chosen_file, existing):
     sub_window = sg.Window("Video Selection", get_frame_select_layout(), modal=True)
     file_loc = ""
     file_options = []
@@ -136,10 +137,12 @@ def display_file_select(chosen_file):
                 file_list = []
             selected_i = -1
             for i, f in enumerate(file_list):
-                if os.path.isfile(os.path.join(file_loc, f)) and (f.lower().endswith((".mp4")) or f.lower().endswith((".mov"))):
+                if not existing and os.path.isfile(os.path.join(file_loc, f)) and (f.lower().endswith((".mp4")) or f.lower().endswith((".mov"))):
                     file_options.append(f)
                     if f == chosen_file:
                         selected_i.append(i)
+                elif existing:
+                    file_options = []
             sub_window["-FILE LIST OPTIONS-"].update(values=file_options, set_to_index=selected_i)
 
         elif event == "-FILE LIST OPTIONS-":  # A file was chosen from the listbox
@@ -196,23 +199,44 @@ if __name__ == '__main__':
     while current_layout:
         event, values = window.read()
         current_process = None
+        chosen_files = []
         #overall events
         if event == "Exit" or event == sg.WIN_CLOSED:
             break
         #file select events
-        if event == "-VIDEO BUTTON-":
-            if window["-VIDEO BUTTON-"].get_text() == "Process":
+        if event == "-NEW VIDEO BUTTON-":
+            if window["-NEW VIDEO BUTTON-"].get_text() == "Process Current":
                 #run open pose
-                print(chosen_file)
+                print("Processing ", chosen_file)
+                chosen_files.clear()
+                chosen_files = []
                 current_process = process_video(chosen_file)
-            elif window["-VIDEO BUTTON-"].get_text() == "Browse":
+            elif window["-NEW VIDEO BUTTON-"].get_text() == "Browse New":
                 window.disable()
-                file_loc, chosen_file = display_file_select(chosen_file)
+                file_loc, chosen_file = display_file_select(chosen_file, False)
                 if len(chosen_file) > 0:
                     window["-VIDEO FILE-"].update(value=chosen_file, visible=True)
-                    window["-VIDEO BUTTON-"].update("Process")
+                    window["-NEW VIDEO BUTTON-"].update("Process Current")
                     window["-PROCESSING GIF-"].update(visible=True)
                 window.enable()
+            elif window["-NEW VIDEO BUTTON-"].get_text() == "Browse Existing":
+                window.disable()
+                file_loc, chosen_file = display_file_select(chosen_file, False)
+                chosen_files.clear()
+                chosen_files = []
+                video_file = ""
+                file_list = os.listdir(file_loc)
+                for f in file_list:
+                    if f.lower().endswith((".mp4")) or f.lower().endswith((".mov")):
+                        video_file = f
+                    elif f.lower().endswith((".json")):
+                        chosen_files.append(f)
+                
+
+                folder_name = os.path.GetFileName(file_loc)
+                window["-VIDEO FILE-"].update(value=folder_name, visible=True)
+                window.enable()
+
         #lets run plotting!
         elif event == "-RUN SCRIPT-":
             #real_files = [os.path.join(file_loc, f) for f in chosen_files]
@@ -241,6 +265,10 @@ if __name__ == '__main__':
             window['-PROCESSING GIF-'].update_animation(processing_gif,  time_between_frames=100)
         elif current_process is not None and current_process.poll() is not None:
             window["-PROCESSING GIF-"].update(visible=False)
+            file_list = os.listdir(file_loc)
+            for f in file_list:
+                if f.lower().endswith((".json")):
+                    chosen_files.append(f)
             current_process = None
 
                 
