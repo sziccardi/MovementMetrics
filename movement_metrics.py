@@ -149,7 +149,7 @@ def PlotPointCloud(data, keypoints):
     plt.scatter(mid_x, mid_y, s=1, color="black")
     labels = [itos_map[x] for x in keypoints]
     labels.append("center")
-    plt.legend(labels)
+    plt.legend(labels, markerscale=6)
     plt.title("Position Point Cloud")
     figure = plt.gcf()
     figure.set_size_inches(5.25, 3.5)
@@ -252,7 +252,7 @@ def PlotDistFromCenter(normalized, data, keypoints):
             plt.scatter(selected[:,0], selected[:,1], alpha=np_vals[:,2, start_iter], s=1)
             labels.append(itos_map[point])
     
-    plt.legend(labels)
+    plt.legend(labels, markerscale=6)
     if normalized:
         plt.title("Normalized Distance from Center")
     else:
@@ -366,7 +366,7 @@ def PlotSpeedOverTime(data, keypoints):
     
     labels = [itos_map[x] for x in keypoints]
     labels.append("center")
-    plt.legend(labels)
+    plt.legend(labels, markerscale=6)
     plt.title("Speed over time")
     plt.xlabel("seconds")
     figure = plt.gcf()
@@ -442,7 +442,7 @@ def PlotVelocitiesOverTime(data, keypoints):
     ax2.set_ylim([my_min, my_max])
     labels = [itos_map[x] for x in keypoints]
     labels.append("center")
-    plt.legend(labels)
+    plt.legend(labels, markerscale=6)
     ax1.set_title("X velocity over time")
     ax2.set_title("Y velocity over time")
     plt.xlabel("seconds")
@@ -552,7 +552,8 @@ def Plot(data, keypoints, type, filename = ""):
         PlotAperatureOverTime(data, keypoints)
     elif type == PlotType.ACCEL_TREE:
         PlotAccelerometerTree(data, keypoints)
-        
+    
+
     if filename:
         plt.savefig(filename, bbox_inches='tight')
     else:
