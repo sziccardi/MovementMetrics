@@ -148,9 +148,9 @@ def PlotPointCloud(data, keypoints):
         select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
         vals_cleaned = np_vals[select,:,start_iter]
         
-        vals_cleaned[:,0, start_iter] /= scale
-        vals_cleaned[:,1, start_iter] /= scale
-        plt.scatter(vals_cleaned[:,0, start_iter], vals_cleaned[:,1, start_iter], alpha=vals_cleaned[:,2, start_iter], s=1)
+        vals_cleaned[:,0] /= scale
+        vals_cleaned[:,1] /= scale
+        plt.scatter(vals_cleaned[:,0], vals_cleaned[:,1], s=1)
     int_arg = stoi_map['spine_top'] - 1
     mid_x = np_vals[:,0,int_arg]
     mid_y = np_vals[:,1,int_arg]
@@ -235,12 +235,16 @@ def PlotLocSpectrum(data, keypoints):
        
         name = itos_map[point]
 
-        x_dict[name] = [(1280 - x) / scale for x in vals_cleaned[:,0, start_iter]]
-        y_dict[name] = vals_cleaned[:,1, start_iter] / scale
+        x_dict[name] = [(1280 - x) / scale for x in vals_cleaned[:,0]]
+        y_dict[name] = vals_cleaned[:,1] / scale
     
     int_arg = stoi_map['spine_top'] - 1
-    mid_x = [(1280 - x) / scale for x in np_vals[:,0, int_arg]]
-    mid_y = np_vals[:,1,int_arg] / scale
+    z_x = np.abs(stats.zscore(np_vals[:,0,int_arg]))
+    z_y = np.abs(stats.zscore(np_vals[:,1,int_arg]))
+    select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
+    vals_cleaned = np_vals[select,:,int_arg]
+    mid_x = [(1280 - x) / scale for x in vals_cleaned[:,0]]
+    mid_y = vals_cleaned[:,1] / scale
     x_dict["center"] = mid_x
     y_dict["center"] = mid_y
 
