@@ -181,6 +181,10 @@ def PlotCentroid(data, keypoints):
     shifted_y = [(y - mid_y) / scale for y in np_means_avg[:,1]]
     
     plt.scatter(shifted_x, shifted_y, alpha=np_means_avg[:,2], s=1)
+    
+    total_mean_x = np.mean(shifted_x)
+    total_mean_y = np.mean(shifted_y)
+    plt.plot([total_mean_x], [total_mean_y], marker="o", markersize=3, markeredgecolor='black', markerfacecolor="black")
 
     plt.title("Centroid of movement")
     plt.axhline(0, color='black')
