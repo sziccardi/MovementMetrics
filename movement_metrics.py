@@ -178,15 +178,11 @@ def PlotCentroid(data, keypoints):
         
         selected = np_vals[:,:,start_iter]
         selected_vals.append(selected)
-    
+    #print(np.array(selected_vals).shape)
     selected_vals = np.stack(selected_vals, axis=2)
+    #print(selected_vals.shape)
     np_means_avg = np.mean(selected_vals, axis=2)
-    
-    z_x = np.abs(stats.zscore(np_means_avg[:,0]))
-    z_y = np.abs(stats.zscore(np_means_avg[:,1]))
-    select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
-    vals_cleaned = np_vals[select,:,start_iter]
-
+    #print(np_means_avg.shape)
 
     scale = 1.0
     if video_pix_per_m > 0:
@@ -196,16 +192,27 @@ def PlotCentroid(data, keypoints):
     else:
         plt.xlabel("x Pixel Position")
         plt.ylabel("y Pixel Position")
-    shifted_x = [(x - mid_x) / scale for x in vals_cleaned[:,0]]
-    shifted_y = [(y - mid_y) / scale for y in vals_cleaned[:,1]]
+    x = np_means_avg[:,0]
+    y = np_means_avg[:,1]
+    shifted_x = [(x[i] - mid_x[i]) / scale for i in range(np_means_avg[:,0].shape[0])]
+    shifted_y = [(y[i] - mid_y[i]) / scale for i in range(np_means_avg[:,0].shape[0])]
     
-    plt.scatter(shifted_x, shifted_y, s=1)
+    z_x = np.abs(stats.zscore(shifted_x))
+    z_y = np.abs(stats.zscore(shifted_y))
+    select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
     
-    total_mean_x = np.mean(shifted_x)
-    total_mean_y = np.mean(shifted_y)
+    cleaned_shifted_x = np.array(shifted_x)[select]
+    cleaned_shifted_y = np.array(shifted_y)[select]
+    
+    plt.scatter(cleaned_shifted_x, cleaned_shifted_y, s=1)
+    
+    total_mean_x = np.mean(cleaned_shifted_x)
+    total_mean_y = np.mean(cleaned_shifted_y)
     plt.plot([total_mean_x], [total_mean_y], marker="o", markersize=3, markeredgecolor='black', markerfacecolor="black")
 
     plt.title("Centroid of movement")
+    #plt.xlim([-1280/ (scale), 1280/ (scale)])
+    #plt.ylim([-720 / (scale), 720 / (scale)])
     plt.axhline(0, color='black')
     plt.axvline(0, color='black')
     figure = plt.gcf()
