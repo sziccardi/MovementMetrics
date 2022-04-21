@@ -213,6 +213,7 @@ def PlotCentroid(data, keypoints):
     plt.title("Centroid of movement")
     #plt.xlim([-1280/ (scale), 1280/ (scale)])
     #plt.ylim([-720 / (scale), 720 / (scale)])
+    
     plt.axhline(0, color='black')
     plt.axvline(0, color='black')
     figure = plt.gcf()
@@ -268,11 +269,11 @@ def PlotDistFromCenter(normalized, data, keypoints):
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
-        plt.xlabel("x Distance (m)")
-        plt.ylabel("y Distance (m)")
+        plt.xlabel("x Distance from Center (m)")
+        plt.ylabel("y Distance from Center (m)")
     else:
-        plt.xlabel("x Pixel Distance")
-        plt.ylabel("y Pixel Distance")
+        plt.xlabel("x Distance from Center (pixel)")
+        plt.ylabel("y Distance from Center (pixel)")
     int_arg = stoi_map['spine_top'] - 1
     mid_x = np_vals[:,0,int_arg]
     mid_y = np_vals[:,1,int_arg]
@@ -300,13 +301,14 @@ def PlotDistFromCenter(normalized, data, keypoints):
     
     plt.legend(labels, markerscale=6)
     if normalized:
-        plt.title("Normalized Distance from Center")
+        plt.title("Absolute Distance from Center")
     else:
         plt.title("Distance from Center")
     
     if not normalized:
         plt.axhline(0, color='black')
         plt.axvline(0, color='black')
+    
     figure = plt.gcf()
     figure.set_size_inches(5.25, 3.5)
 
@@ -435,11 +437,11 @@ def PlotVelocitiesOverTime(data, keypoints):
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
-        ax1.set_ylabel("velocity (m/s)")
-        ax2.set_ylabel("velocity (m/s)")
+        ax1.set_ylabel("Horizontal velocity (m/s)")
+        ax2.set_ylabel("Vertical velocity (m/s)")
     else:
-        ax1.set_ylabel("velocity (pixels/s)")
-        ax2.set_ylabel("velocity (pixels/s)")
+        ax1.set_ylabel("Horizontal velocity (pixels/s)")
+        ax2.set_ylabel("Vertical velocity (pixels/s)")
     
     my_min = 100000000000
     my_max = -100000000000
@@ -514,7 +516,9 @@ def PlotVelocitiesOverTime(data, keypoints):
     plt.legend(labels, markerscale=6)
     ax1.set_title("X velocity over time")
     ax2.set_title("Y velocity over time")
-    plt.xlabel("seconds")
+    plt.xlabel("Time (s)")
+    
+    plt.ylim([-0.65, 0.5])
     
     fig.set_size_inches(5.25, 5.5)
 
