@@ -235,7 +235,7 @@ if __name__ == '__main__':
             file_loc, chosen_file = display_file_select(chosen_file, True)
             chosen_files.clear()
             video_file = ""
-            file_list = os.listdir(file_loc)
+            file_list = os.listdir(file_loc+'/pose_info')
             chosen_files = [val for val in file_list if val.lower().endswith((".json"))]
             loc_name = file_loc[file_loc.rfind('/')+1:]
 
@@ -248,7 +248,7 @@ if __name__ == '__main__':
             if curr_canvas is not None:
                 curr_canvas.get_tk_widget().forget()
                 matplotlib.pyplot.close('all')
-            real_files = [os.path.join(file_loc, f) for f in chosen_files]
+            real_files = [os.path.join(file_loc+'/pose_info', f) for f in chosen_files]
             
             plot_type = values["-PLOT LIST-"]
             track_points = values["-TRACK POINT LIST-"]
@@ -274,7 +274,7 @@ if __name__ == '__main__':
             window['-PROCESSING GIF-'].update_animation(processing_gif,  time_between_frames=100)
         elif current_process is not None and current_process.poll() is not None:
             window["-PROCESSING GIF-"].update(visible=False)
-            file_list = os.listdir(file_loc)
+            file_list = os.listdir(file_loc+'/pose_info')
             for f in file_list:
                 if f.lower().endswith((".json")):
                     chosen_files.append(f)

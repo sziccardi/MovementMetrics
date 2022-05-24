@@ -83,7 +83,9 @@ def ReadDataFromList(files):
 
 def ReadDataInFolder(file_path):
     vals =[]
-    for filename in os.listdir(file_path):
+    
+    for filename in os.listdir(file_path+'/pose_info'):
+        
         if ".json" in filename:
             with open(os.path.join(file_path, filename), 'r') as f: 
                 #print("read " + filename)
