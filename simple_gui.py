@@ -17,7 +17,7 @@ def get_main_layout():
         [sg.HSep()],
         [sg.HSep()],
         [sg.Text('Currently selected:')],
-        [sg.Text(key="-VIDEO FILE-", size=(25,1), enable_events=False, visible=False)], 
+        [sg.Text(key="-SELECTED FILE-", size=(25,1), enable_events=False, visible=False)], 
         [sg.Button(button_text='Browse New', size=(23,1),enable_events=True,key="-NEW VIDEO BUTTON-"), sg.Image(data=processing_gif, size=(2,2), key="-PROCESSING GIF-", visible=False)], 
         [sg.Button(button_text='Browse Existing', size=(23,1),enable_events=True,key="-EXISTING VIDEO BUTTON-")],
         [sg.HSep()],
@@ -42,8 +42,8 @@ def get_main_layout():
         [ 
             sg.Listbox(
                 values=["point cloud", "centroid of motion", "position spectrum", "distance from center", 
-                "normalized distance from center", "velocity heat map", "speed over time", "velocity over time", 
-                "aperature over time"], enable_events=True, size=(25,5), key="-PLOT LIST-"
+                "normalized distance from center", "velocity heat map", "speed over time", "velocity over time"], 
+                enable_events=True, size=(25,5), key="-PLOT LIST-"
             )
         ],
         [sg.HSep()],
@@ -52,7 +52,7 @@ def get_main_layout():
     main_column = [[sg.Text('Plots')],
     [sg.HSep()],
     [sg.HSep()],
-    #[sg.Video()], ##TODO
+    #[sg.Image(key='-FRAME IMAGE-')], ##TODO
     [sg.Canvas(key="-PLOT CANVAS-")],
     [sg.Text("Export plot as:"), 
         sg.InputText(size=(20,1), key="-PLOT NAME-"), 
@@ -223,29 +223,25 @@ if __name__ == '__main__':
                 chosen_files = []
                 current_process = process_video(chosen_file)
             elif window["-NEW VIDEO BUTTON-"].get_text() == "Browse New":
-                window.disable()
                 file_loc, chosen_file = display_file_select(chosen_file, False)
+                loc_name = file_loc[file_loc.rfind('/')+1:]
                 if len(chosen_file) > 0:
-                    window["-VIDEO FILE-"].update(value=chosen_file, visible=True)
+                    window["-SELECTED FILE-"].update(value=loc_name, visible=True)
                     window["-NEW VIDEO BUTTON-"].update("Process Current")
                     window["-PROCESSING GIF-"].update(visible=True)
-                window.enable()
+                window.TKroot.attributes('-topmost', 1)
+                window.TKroot.attributes('-topmost', 0)
         if event == "-EXISTING VIDEO BUTTON-":
-            window.disable()
             file_loc, chosen_file = display_file_select(chosen_file, True)
             chosen_files.clear()
-            chosen_files = []
             video_file = ""
             file_list = os.listdir(file_loc)
-            for f in file_list:
-                if f.lower().endswith((".mp4")) or f.lower().endswith((".mov")):
-                    video_file = f
-                elif f.lower().endswith((".json")):
-                    chosen_files.append(f)
-            
+            chosen_files = [val for val in file_list if val.lower().endswith((".json"))]
+            loc_name = file_loc[file_loc.rfind('/')+1:]
 
-            window["-VIDEO FILE-"].update(value=video_file, visible=True)
-            window.enable()
+            window["-SELECTED FILE-"].update(value=loc_name, visible=True)
+            window.TKroot.attributes('-topmost', 1)
+            window.TKroot.attributes('-topmost', 0)
 
         #lets run plotting!
         elif event == "-RUN SCRIPT-":
@@ -259,9 +255,7 @@ if __name__ == '__main__':
             
             fig = mm.run_script(real_files, plot_type[0], track_points, 
             values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
-            print("got fig")
             curr_canvas = draw_figure(window['-PLOT CANVAS-'].TKCanvas, fig)
-            print("drew fig")
 
         elif event == "-EXPORT PLOT-":
             try:

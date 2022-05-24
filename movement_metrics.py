@@ -223,7 +223,7 @@ def PlotLocSpectrum(data, keypoints):
     x_dict = {}
     y_dict = {}
     fig, ax = plt.subplots(2)
-    fig.tight_layout(pad=2.0)
+    fig.tight_layout(pad=2.2)
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
@@ -258,11 +258,17 @@ def PlotLocSpectrum(data, keypoints):
 
     x_vals = [x for x in x_dict.values()]
     x_keys = [x for x in x_dict.keys()]
+    x_keys = x_keys[::-1]
+    y_keys = y_dict.keys()
+    x_keys = [sub.replace('_', '\n') for sub in x_keys]
+    y_keys = [sub.replace('_', '\n') for sub in y_keys]
     ax[0].boxplot(x_vals[::-1], vert=False)
     ax[1].boxplot(y_dict.values())
-    ax[0].set_yticklabels(x_keys[::-1])
-    ax[1].set_xticklabels(y_dict.keys())
-    fig.set_size_inches(5.25, 5.5)
+    ax[0].set_yticklabels(x_keys)
+    ax[1].set_xticklabels(y_keys)
+    ax[0].tick_params(labelsize=8)
+    ax[1].tick_params(labelsize=8)
+    fig.set_size_inches(5.25, 5)
 
 def PlotDistFromCenter(normalized, data, keypoints):
     np_vals = np.array(data)
@@ -518,9 +524,7 @@ def PlotVelocitiesOverTime(data, keypoints):
     ax2.set_title("Y velocity over time")
     plt.xlabel("Time (s)")
     
-    plt.ylim([-0.65, 0.5])
-    
-    fig.set_size_inches(5.25, 5.5)
+    fig.set_size_inches(5.25, 5)
 
     
 def PlotAccelerometerTree(data, keypoints):
@@ -561,7 +565,6 @@ def PlotAccelerometerTree(data, keypoints):
             max_val = max(np.abs(total_accels[j * vel_blocks:(j+1)*vel_blocks]))
             max_accels[i].append(max_val)
 
-        print(max_accels)
         # heat_map[y_ints.astype(int), x_ints.astype(int)] += total_vels
         title += (str(itos_map[point]))
         if i < len(keypoints) - 1:
