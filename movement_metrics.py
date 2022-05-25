@@ -164,7 +164,7 @@ def PlotPointCloud(data, keypoints):
     plt.legend(labels, markerscale=6)
     plt.title("Position Point Cloud")
     figure = plt.gcf()
-    figure.set_size_inches(5.25, 3.5)
+    figure.set_size_inches(5, 3.25)
 
 def PlotCentroid(data, keypoints):
     np_vals = np.array(data)
@@ -219,7 +219,7 @@ def PlotCentroid(data, keypoints):
     plt.axhline(0, color='black')
     plt.axvline(0, color='black')
     figure = plt.gcf()
-    figure.set_size_inches(5.25, 3.5)
+    figure.set_size_inches(5, 3.25)
 
 def PlotLocSpectrum(data, keypoints):
     x_dict = {}
@@ -270,7 +270,7 @@ def PlotLocSpectrum(data, keypoints):
     ax[1].set_xticklabels(y_keys)
     ax[0].tick_params(labelsize=8)
     ax[1].tick_params(labelsize=8)
-    fig.set_size_inches(5.25, 5)
+    fig.set_size_inches(5, 4.75)
 
 def PlotDistFromCenter(normalized, data, keypoints):
     np_vals = np.array(data)
@@ -318,7 +318,7 @@ def PlotDistFromCenter(normalized, data, keypoints):
         plt.axvline(0, color='black')
     
     figure = plt.gcf()
-    figure.set_size_inches(5.25, 3.5)
+    figure.set_size_inches(5, 3.25)
 
 
 def PlotVelocityHeatMap(data, keypoints):
@@ -437,7 +437,7 @@ def PlotSpeedOverTime(data, keypoints):
     plt.title("Speed over time")
     plt.xlabel("seconds")
     figure = plt.gcf()
-    figure.set_size_inches(5.25, 3.5)
+    figure.set_size_inches(5, 3.25)
     
 
 def PlotVelocitiesOverTime(data, keypoints):
@@ -526,7 +526,7 @@ def PlotVelocitiesOverTime(data, keypoints):
     ax2.set_title("Y velocity over time")
     plt.xlabel("Time (s)")
     
-    fig.set_size_inches(5.25, 5)
+    fig.set_size_inches(5, 4.75)
 
     
 def PlotAccelerometerTree(data, keypoints):
@@ -609,7 +609,7 @@ def PlotAperatureOverTime(data, keypoints):
     plt.xlabel("time (seconds)")
     plt.ylabel("aperature (pixels)")
     figure = plt.gcf()
-    figure.set_size_inches(5.25, 3.5)
+    figure.set_size_inches(5, 3.25)
     
     
 

@@ -1,3 +1,4 @@
+from cgitb import enable
 from fileinput import filename
 import PySimpleGUI as sg
 import os.path
@@ -6,6 +7,8 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 import subprocess
+from PIL import Image, ImageTk
+import io
 
 win_size = (800, 600)
 window = None
@@ -49,15 +52,25 @@ def get_main_layout():
         [sg.HSep()],
         [sg.Button(button_text='PLOT', size=(25,1),enable_events=True,key="-RUN SCRIPT-", visible=False)]
     ]
+
+    image_column = [
+        [sg.Image(key='-FRAME IMAGE-')],
+        [sg.Slider(range=(0, 100), default_value=0, disable_number_display=True, orientation='horizontal', size=(53,7), key="-SCRUB BAR-", visible=False)],
+        [sg.Button(button_text='Prev Frame', size=(8,1),enable_events=True,key="-LEFT FRAME-"), sg.Button(button_text='Next Frame', size=(8,1),enable_events=True,key="-RIGHT FRAME-")],
+    ]
+
+    plot_column = [
+        [sg.Canvas(key="-PLOT CANVAS-")],
+        [sg.Text("Export plot as:", key="-EXPORT TEXT 1-"), 
+        sg.InputText(size=(20,1), key="-PLOT NAME-"), 
+        sg.Text(".png", key="-EXPORT TEXT 2-"),
+        sg.Button("Save Plot", key="-EXPORT PLOT-")]
+    ]
+
     main_column = [[sg.Text('Plots')],
     [sg.HSep()],
     [sg.HSep()],
-    #[sg.Image(key='-FRAME IMAGE-')], ##TODO
-    [sg.Canvas(key="-PLOT CANVAS-")],
-    [sg.Text("Export plot as:"), 
-        sg.InputText(size=(20,1), key="-PLOT NAME-"), 
-        sg.Text(".png"),
-        sg.Button("Save Plot", key="-EXPORT PLOT-")]
+    [sg.Column(image_column, key="-FRAME COLUMN-", element_justification='c'), sg.Column(plot_column, key="-PLOT COLUMN-", element_justification='c')]   
     ]
     right_column = [[sg.Text('Script settings')],
     [sg.HSep()],
@@ -74,11 +87,11 @@ def get_main_layout():
 
     layout = [
         [
-            sg.Column(left_column, key="-MAIN OPTIONS COL-", size=(200, 600)),
+            sg.Column(left_column, key="-MAIN OPTIONS COL-", size=(200, 700)),
             sg.VSeperator(),
-            sg.Column(main_column, key="-MAIN PLOT DISPLAY-", size=(500, 600)),
+            sg.Column(main_column, key="-MAIN PLOT DISPLAY-", size=(1000, 700)),
             sg.VSeperator(),
-            sg.Column(right_column, key="-MAIN SCRIPT SETTINGS-", size=(150,600))
+            sg.Column(right_column, key="-MAIN SCRIPT SETTINGS-", size=(150,700))
         ]
     ]
     return layout
@@ -193,6 +206,33 @@ def process_video(filename):
     p = subprocess.Popen(cmd)
     return p
 
+def read_frame_files(file_loc):
+    try:
+        file_list = os.listdir(file_loc+'/video_frames')
+    except:
+        file_list = []
+    frames = [(file_loc+'/video_frames/'+val) for val in file_list if val.lower().endswith((".jpg"))]
+        
+    return frames
+
+def read_pose_files(file_loc):
+    try:
+        file_list = os.listdir(file_loc+'/pose_info')
+    except:
+        file_list = []
+    
+    chosen_files = [val for val in file_list if val.lower().endswith((".json"))]
+    return chosen_files
+
+def get_img_data(f, maxsize=(480, 600), first=False):
+    img = Image.open(f)
+    img.thumbnail(maxsize)
+    if first:                     # tkinter is inactive the first time
+        bio = io.BytesIO()
+        img.save(bio, format="PNG")
+        del img
+        return bio.getvalue()
+    return ImageTk.PhotoImage(img)
 
 if __name__ == '__main__':
     matplotlib.use('TkAgg')
@@ -202,6 +242,10 @@ if __name__ == '__main__':
     #mocap file select variables
     chosen_file = ''
     chosen_files = []
+
+    #mocap video frames
+    current_frame = 0
+    frames = []
     
     #plotting canvas variables
     curr_canvas = None
@@ -234,10 +278,10 @@ if __name__ == '__main__':
         if event == "-EXISTING VIDEO BUTTON-":
             file_loc, chosen_file = display_file_select(chosen_file, True)
             chosen_files.clear()
-            video_file = ""
-            file_list = os.listdir(file_loc+'/pose_info')
-            chosen_files = [val for val in file_list if val.lower().endswith((".json"))]
+            frames.clear()
+            chosen_files = read_pose_files(file_loc)
             loc_name = file_loc[file_loc.rfind('/')+1:]
+            frames = read_frame_files(file_loc)
 
             window["-SELECTED FILE-"].update(value=loc_name, visible=True)
             window.TKroot.attributes('-topmost', 1)
@@ -257,6 +301,10 @@ if __name__ == '__main__':
             values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
             curr_canvas = draw_figure(window['-PLOT CANVAS-'].TKCanvas, fig)
 
+            window["-SCRUB BAR-"].update(visible=True)
+
+            window['-FRAME IMAGE-'].update(data=get_img_data(frames[current_frame], first=True))
+
         elif event == "-EXPORT PLOT-":
             try:
                 matplotlib.pyplot.savefig(values["-PLOT NAME-"] + ".png", bbox_inches='tight')
@@ -274,11 +322,12 @@ if __name__ == '__main__':
             window['-PROCESSING GIF-'].update_animation(processing_gif,  time_between_frames=100)
         elif current_process is not None and current_process.poll() is not None:
             window["-PROCESSING GIF-"].update(visible=False)
-            file_list = os.listdir(file_loc+'/pose_info')
-            for f in file_list:
-                if f.lower().endswith((".json")):
-                    chosen_files.append(f)
-            current_process = None
+            if file_loc:
+                file_list = os.listdir(file_loc+'/pose_info')
+                for f in file_list:
+                    if f.lower().endswith((".json")):
+                        chosen_files.append(f)
+                current_process = None
 
                 
     
