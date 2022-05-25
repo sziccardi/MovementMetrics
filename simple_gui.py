@@ -7,7 +7,7 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 import subprocess
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageColor, ImageDraw
 import io
 
 win_size = (800, 600)
@@ -60,7 +60,7 @@ def get_main_layout():
     ]
 
     plot_column = [
-        [sg.Canvas(key="-PLOT CANVAS-")],
+        [sg.Graph(canvas_size=(470,500), graph_bottom_left=(0, 0), graph_top_right=(470,500), key="-PLOT CANVAS-")],
         [sg.Text("Export plot as:", key="-EXPORT TEXT 1-"), 
         sg.InputText(size=(20,1), key="-PLOT NAME-"), 
         sg.Text(".png", key="-EXPORT TEXT 2-"),
@@ -235,7 +235,7 @@ def get_img_data(f, maxsize=(480, 600), first=False):
     return ImageTk.PhotoImage(img)
 
 if __name__ == '__main__':
-    matplotlib.use('TkAgg')
+    #matplotlib.use('TkAgg')
     current_layout = get_main_layout()
     window = sg.Window(title="Bilateral Coordination Metric Viewer", layout=current_layout)
     
@@ -247,8 +247,10 @@ if __name__ == '__main__':
     current_frame = 0
     frames = []
     
-    #plotting canvas variables
-    curr_canvas = None
+    #plotting variables
+    graph = window.Element("-PLOT CANVAS-")
+    dragging = False
+    start_point = end_point = prior_rect = prior_plot = None
 
     #event loop
     file_loc = ""
@@ -289,9 +291,7 @@ if __name__ == '__main__':
 
         #lets run plotting!
         elif event == "-RUN SCRIPT-":
-            if curr_canvas is not None:
-                curr_canvas.get_tk_widget().forget()
-                matplotlib.pyplot.close('all')
+            
             real_files = [os.path.join(file_loc+'/pose_info', f) for f in chosen_files]
             
             plot_type = values["-PLOT LIST-"]
@@ -299,7 +299,13 @@ if __name__ == '__main__':
             
             fig = mm.run_script(real_files, plot_type[0], track_points, 
             values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
-            curr_canvas = draw_figure(window['-PLOT CANVAS-'].TKCanvas, fig)
+            
+            axes = matplotlib.pyplot.gca()
+            y_min, y_max = axes.get_ylim()
+            if prior_plot:
+                graph.delete_figure(prior_plot)
+            prior_plot = graph.DrawImage(filename="TEMP.png", location=(0, 500))
+            
 
             window["-SCRUB BAR-"].update(visible=True, range=(0, len(frames)-1))
 
@@ -319,7 +325,22 @@ if __name__ == '__main__':
 
         if event == "-SCRUB BAR-":
             window['-FRAME IMAGE-'].update(data=get_img_data(frames[int(values['-SCRUB BAR-'])], first=False))
-            
+
+        if event == "-PLOT CANVAS-":
+            x, y = values["-PLOT CANVAS-"]
+            if not dragging:
+                start_point = (x, y)
+                dragging = True
+            else:
+                end_point = (x, y)
+            if prior_rect:
+                window["-PLOT CANVAS-"].delete_figure(prior_rect)
+            if None not in (start_point, end_point):
+                prior_rect = window["-PLOT CANVAS-"].draw_rectangle(start_point, end_point, line_color='red')
+        elif event.endswith('+UP'):  # The drawing has ended because mouse up
+            print(f"grabbed rectangle from {start_point} to {end_point}")
+            start_point, end_point = None, None  # enable grabbing a new rect
+            dragging = False    
 
 
         if current_process is not None and current_process.poll() is None:
