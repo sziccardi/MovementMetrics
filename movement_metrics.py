@@ -1,4 +1,5 @@
 from asyncio import gather
+from cProfile import label
 from fileinput import filename
 import os
 import sys
@@ -166,6 +167,42 @@ def PlotPointCloud(data, keypoints):
     figure = plt.gcf()
     figure.set_size_inches(5, 3.25)
 
+def GetPointCloudData(data, keypoints):
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+    
+    processed_data = []
+    
+    for i,point in enumerate(keypoints):
+        start_iter = (point - 1)
+        
+        np_vals = np.array(data) 
+        
+        z_x = np.abs(stats.zscore(np_vals[:,0,start_iter]))
+        z_y = np.abs(stats.zscore(np_vals[:,1,start_iter]))
+        select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
+        vals_cleaned = np_vals[select,:,start_iter]
+        
+        vals_cleaned[:,0] /= scale
+        vals_cleaned[:,1] /= scale
+        processed_data.append(vals_cleaned[:,:2])
+        
+
+    int_arg = stoi_map['spine_top'] - 1
+    mid_x = np_vals[:,0,int_arg]
+    mid_y = np_vals[:,1,int_arg]
+    mid_x /= scale
+    mid_y /= scale
+    processed_data.append(np.column_stack((mid_x, mid_y)))
+
+    labels = [itos_map[x] for x in keypoints]
+    labels.append("center")
+    
+    return processed_data, labels
+    
+    
+
 def PlotCentroid(data, keypoints):
     np_vals = np.array(data)
     selected_vals = []
@@ -220,6 +257,53 @@ def PlotCentroid(data, keypoints):
     plt.axvline(0, color='black')
     figure = plt.gcf()
     figure.set_size_inches(5, 3.25)
+
+def GetCentroidData(data, keypoints):
+    np_vals = np.array(data)
+    selected_vals = []
+    
+    int_arg = stoi_map['spine_top'] - 1
+    mid_x = np_vals[:,0,int_arg]
+    mid_y = np_vals[:,1,int_arg]
+
+    for point in keypoints:
+        start_iter = (point - 1)
+        np_vals = np.array(data) 
+        
+        selected = np_vals[:,:,start_iter]
+        selected_vals.append(selected)
+    #print(np.array(selected_vals).shape)
+    selected_vals = np.stack(selected_vals, axis=2)
+    #print(selected_vals.shape)
+    np_means_avg = np.mean(selected_vals, axis=2)
+    #print(np_means_avg.shape)
+
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        
+    x = np_means_avg[:,0]
+    y = np_means_avg[:,1]
+    shifted_x = [(x[i] - mid_x[i]) / scale for i in range(np_means_avg[:,0].shape[0])]
+    shifted_y = [(y[i] - mid_y[i]) / scale for i in range(np_means_avg[:,0].shape[0])]
+    
+    z_x = np.abs(stats.zscore(shifted_x))
+    z_y = np.abs(stats.zscore(shifted_y))
+    select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
+    
+    cleaned_shifted_x = np.array(shifted_x)[select]
+    cleaned_shifted_y = np.array(shifted_y)[select]
+    
+    processed_data = []
+    processed_data.append(np.column_stack((cleaned_shifted_x, cleaned_shifted_y)))
+    
+    total_mean_x = np.mean(cleaned_shifted_x)
+    total_mean_y = np.mean(cleaned_shifted_y)
+    processed_data.append(np.column_stack(([total_mean_x], [total_mean_y])))
+
+    labels = ["centroid", "average centroid"]
+
+    return processed_data, labels
 
 def PlotLocSpectrum(data, keypoints):
     x_dict = {}
@@ -319,6 +403,41 @@ def PlotDistFromCenter(normalized, data, keypoints):
     
     figure = plt.gcf()
     figure.set_size_inches(5, 3.25)
+
+def GetDistFromCenterData(normalized, data, keypoints):
+    np_vals = np.array(data)
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        
+    int_arg = stoi_map['spine_top'] - 1
+    mid_x = np_vals[:,0,int_arg]
+    mid_y = np_vals[:,1,int_arg]
+    labels = []
+    processed_data = []
+    for point in keypoints:
+        if (point != stoi_map['spine_top']):
+            start_iter = (point - 1)
+            
+            selected = selected = np_vals[:,:,start_iter]
+            if normalized:
+                selected[:,0] = abs(mid_x - selected[:,0]) / scale
+                selected[:,1] = abs(mid_y - selected[:,1]) / scale
+            else:    
+                selected[:,0] = (selected[:,0] - mid_x) / scale
+                selected[:,1] = (selected[:,1] - mid_y) / scale
+
+            
+            z_x = np.abs(stats.zscore(selected[:,0]))
+            z_y = np.abs(stats.zscore(selected[:,1]))
+            select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
+            vals_cleaned = selected[select,:]
+
+            processed_data.append(vals_cleaned[:,:2])
+            
+            labels.append(itos_map[point])
+    
+    return processed_data, labels
 
 
 def PlotVelocityHeatMap(data, keypoints):
@@ -439,6 +558,56 @@ def PlotSpeedOverTime(data, keypoints):
     figure = plt.gcf()
     figure.set_size_inches(5, 3.25)
     
+def GetSpeedOverTimeData(data, keypoints):
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+    
+    processed_data = []
+    
+    for point in keypoints:
+        start_iter = (point - 1)
+        
+        np_vals = np.array(data)
+        name = itos_map[point]
+        
+        z_x = np.abs(stats.zscore(np_vals[:,0,start_iter]))
+        z_y = np.abs(stats.zscore(np_vals[:,1,start_iter]))
+        select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
+        vals_cleaned = np_vals[select,:,start_iter]
+
+        xs = vals_cleaned[:,0]
+        xs = np.where(xs>1279, 1279, xs)
+        ys = vals_cleaned[:,1]
+        ys = np.where(ys>719, 719, ys)
+
+        confs = vals_cleaned[:,2]
+        x_ints = np.full_like(xs, 0) # x positions that have velocity
+        np.rint(xs, out=x_ints)
+        x_ints = x_ints[:-1]
+        
+        y_ints = np.full_like(ys, 0) # y positions that have velocity
+        np.rint(ys, out=y_ints)
+        y_ints = y_ints[:-1]
+
+        cp_np_vals = vals_cleaned[:,:].copy()
+        shifted_np_vals = cp_np_vals[1:,:]
+        new_np_vals = vals_cleaned[:-1,:]
+
+        delta_pos = shifted_np_vals - new_np_vals
+        vels = delta_pos / float(scale) * float(video_fps)
+        
+        total_vels = [np.sqrt(vels[i,0] * vels[i, 0] + vels[i, 1] * vels[i,1]) for i in range(vels.shape[0])]
+
+        avged_vels = np.convolve(total_vels, np.ones(vel_blocks), 'valid') / vel_blocks
+
+        processed_data.append(np.column_stack((np.arange(0, len(total_vels) / float(video_fps), 1.0 / float(video_fps))[:len(avged_vels)], avged_vels)))
+
+    
+    labels = [itos_map[x] for x in keypoints]
+    labels.append("center")
+    
+    return processed_data, labels
 
 def PlotVelocitiesOverTime(data, keypoints):
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
@@ -662,6 +831,27 @@ def run_script(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
     if not flag:
         print("ERROR: Couldn't find that plot")
     return fig
+
+def run_script_get_data(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
+    real_keypoints = [stoi_map[k] for k in keypoints]
+    data = ReadDataFromList(frame_files)
+    
+    processed_data = labels = None
+    if plot_type_dict[plot_type] == PlotType.POINT_CLOUD:
+        processed_data, labels = GetPointCloudData(data, real_keypoints)
+    elif plot_type_dict[plot_type] == PlotType.CENTROID:
+        processed_data, labels = GetCentroidData(data, real_keypoints)
+    elif plot_type_dict[plot_type] == PlotType.CENT_DIST:
+        processed_data, labels = GetDistFromCenterData(False, data, real_keypoints)
+    elif plot_type_dict[plot_type] == PlotType.CENT_DIST_NORM:
+        processed_data, labels = GetDistFromCenterData(True, data, real_keypoints)
+    elif plot_type_dict[plot_type] == PlotType.TOTAL_VEL_OVER_TIME:
+        processed_data, labels = GetSpeedOverTimeData(data, real_keypoints)
+    
+    if processed_data == None or labels == None:
+        print("WARNING: Could not process data as provided.")
+    
+    return processed_data, labels
 
 if __name__ == '__main__':
     fig_numbers = [x.num for x in plt._pylab_helpers.Gcf.get_all_fig_managers()]
