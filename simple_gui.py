@@ -55,7 +55,7 @@ def get_main_layout():
 
     image_column = [
         [sg.Image(key='-FRAME IMAGE-')],
-        [sg.Slider(range=(0, 100), default_value=0, disable_number_display=True, orientation='horizontal', size=(53,7), key="-SCRUB BAR-", visible=False)],
+        [sg.Slider(range=(0, 100), default_value=0, disable_number_display=True, orientation='horizontal', size=(53,7), key="-SCRUB BAR-", visible=False, enable_events=True)],
         [sg.Button(button_text='Prev Frame', size=(8,1),enable_events=True,key="-LEFT FRAME-"), sg.Button(button_text='Next Frame', size=(8,1),enable_events=True,key="-RIGHT FRAME-")],
     ]
 
@@ -301,7 +301,7 @@ if __name__ == '__main__':
             values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
             curr_canvas = draw_figure(window['-PLOT CANVAS-'].TKCanvas, fig)
 
-            window["-SCRUB BAR-"].update(visible=True)
+            window["-SCRUB BAR-"].update(visible=True, range=(0, len(frames)-1))
 
             window['-FRAME IMAGE-'].update(data=get_img_data(frames[current_frame], first=True))
 
@@ -316,6 +316,10 @@ if __name__ == '__main__':
             window["-RUN SCRIPT-"].update(visible=True)
         else:
             window["-RUN SCRIPT-"].update(visible=False)
+
+        if event == "-SCRUB BAR-":
+            window['-FRAME IMAGE-'].update(data=get_img_data(frames[int(values['-SCRUB BAR-'])], first=False))
+            
 
 
         if current_process is not None and current_process.poll() is None:
