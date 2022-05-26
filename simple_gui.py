@@ -57,7 +57,8 @@ def get_main_layout():
     ]
 
     image_column = [
-        [sg.Image(key='-FRAME IMAGE-')],
+        [sg.Text("Processed video will show up here", key="-IMAGE TITLE-")],
+        [sg.Image(filename="placeholder.png", size=image_size, key='-FRAME IMAGE-')],
         [sg.Slider(range=(0, 100), default_value=0, disable_number_display=True, orientation='horizontal', size=(53,7), key="-SCRUB BAR-", visible=False, enable_events=True)],
         [sg.Button(button_text='Prev Frame', size=(8,1),enable_events=True,key="-LEFT FRAME-"), sg.Button(button_text='Next Frame', size=(8,1),enable_events=True,key="-RIGHT FRAME-")],
     ]
@@ -384,6 +385,8 @@ if __name__ == '__main__':
             window["-SCRUB BAR-"].update(visible=True, range=(0, len(frames)-1))
 
             window['-FRAME IMAGE-'].update(data=get_img_data(frames[current_frame], first=True))
+            img_name = frames[current_frame][file_loc.rfind('/')+1:]
+            window['-IMAGE TITLE-'].update(value=img_name)
 
         elif event == "-EXPORT PLOT-":
             try:
@@ -399,6 +402,9 @@ if __name__ == '__main__':
 
         if event == "-SCRUB BAR-":
             window['-FRAME IMAGE-'].update(data=get_img_data(frames[int(values['-SCRUB BAR-'])], first=False))
+            current_frame = int(values['-SCRUB BAR-'])
+            img_name = frames[current_frame][file_loc.rfind('/')+1:]
+            window['-IMAGE TITLE-'].update(value=img_name)
 
         if event == "-PLOT CANVAS-":
             x, y = values["-PLOT CANVAS-"]
