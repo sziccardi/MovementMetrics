@@ -291,101 +291,102 @@ def create_basic_plot(graph, data, data_labels, axes_labels):
             graph.draw_point((data[key][point][0], data[key][point][1]), dot_size, color=color_select[key])
 
 def create_two_plots(graphs, data, data_labels, axes_labels, box_n_whisk):
-    print("WARNING: This graph is not yet supported")
-    
-    color_select = random.sample(colors, len(labels))
-    for i in range(len(data)):
-        plot_data = data[i]
-        #because it can be ragged...
-        y_min = x_min = 1000000000
-        y_max = x_max = -1000000000
-        
-        for key in range(len(plot_data)):
-            np_data = np.array(plot_data[key])
-        
-            temp_y_min = np.amin(np_data[:, 1])
-            temp_y_max = np.amax(np_data[:, 1])
-            temp_x_min = np.amin(np_data[:, 0])
-            temp_x_max = np.amax(np_data[:, 0])
+    if box_n_whisk:
+        print("WARNING: This graph is not yet supported")
+    else:
+        color_select = random.sample(colors, len(labels))
+        for i in range(len(data)):
+            plot_data = data[i]
+            #because it can be ragged...
+            y_min = x_min = 1000000000
+            y_max = x_max = -1000000000
             
-            if temp_y_min < y_min:
-                y_min = temp_y_min
-            if temp_x_min < x_min:
-                x_min = temp_x_min
-            if temp_y_max > y_max:
-                y_max = temp_y_max
-            if temp_x_max > x_max:
-                x_max = temp_x_max
-        
-        x_range = x_max - x_min
-        y_range = y_max - y_min
-
-        scaled_y_min = y_min-y_range/7.0
-        scaled_x_min = x_min-x_range/7.0
-        scaled_y_max = y_max+y_range/7.0
-        scaled_x_max = x_max+x_range/7.0
-        
-        dot_size=x_range/150
-
-        graphs[i].change_coordinates((scaled_x_min, scaled_y_min),(scaled_x_max, scaled_y_max))
-
-        #draw axes
-        ax_x_min = x_min if scaled_x_min > 0 else scaled_x_min
-        ax_x_max = x_max if scaled_x_max < 0 else scaled_x_max
-        ax_y_min = y_min if scaled_y_min > 0 else scaled_y_min
-        ax_y_max = y_max if scaled_y_max < 0 else scaled_y_max
-
-        x_ax_label_pos = y_ax_label_pos = 0
-        x_ax_label_anch = y_ax_label_anch = "center"
-        if scaled_x_min > 0:
-            x_ax_label_pos = x_range/2 + ax_x_min
-        else:
-            if abs(scaled_x_min) > abs(scaled_x_max):
-                x_ax_label_pos = ax_x_min + x_range/75
-                x_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
-            else:
-                x_ax_label_pos = ax_x_max - x_range/75
-                x_ax_label_anch = sg.TEXT_LOCATION_TOP_RIGHT
-
-        if scaled_y_min > 0:
-            y_ax_label_pos = y_range/2 + ax_y_min
-        else:
-            if abs(scaled_y_min) > abs(scaled_y_max):
-                y_ax_label_pos = ax_y_min + y_range/75
-                y_ax_label_anch = sg.TEXT_LOCATION_BOTTOM_LEFT
-            else:
-                y_ax_label_pos = ax_y_max - y_range/75
-                y_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
-
-        h_tick_len = x_range/60.0
-        v_tick_len = y_range/60.0
-
-        graphs[i].draw_line(
-            (ax_x_min, max(0, scaled_y_min + y_range/ 10.0)), 
-            (ax_x_max, max(0, scaled_y_min + y_range/ 10.0)), color="black", width=dot_size*0.75) #x axis
+            for key in range(len(plot_data)):
+                np_data = np.array(plot_data[key])
             
-        for x in range(int(ax_x_min), int(ax_x_max), int(x_range/10.0)):
-            graphs[i].draw_line((x, max(0, scaled_y_min + y_range/ 10.0)-v_tick_len), (x, max(0, scaled_y_min + y_range/ 10.0)+v_tick_len))  #Draw a scale
-            if x != 0:
-                graphs[i].draw_text(str(x), (x, max(0, scaled_y_min + y_range/ 10.0)-2.5*v_tick_len), color='black')  #Draw the value of the scale
-        
-        graphs[i].draw_text(axes_labels[i][0], (x_ax_label_pos, max(0, scaled_y_min + y_range/ 10.0)+5.5*v_tick_len), text_location = x_ax_label_anch, color="black")
+                temp_y_min = np.amin(np_data[:, 1])
+                temp_y_max = np.amax(np_data[:, 1])
+                temp_x_min = np.amin(np_data[:, 0])
+                temp_x_max = np.amax(np_data[:, 0])
+                
+                if temp_y_min < y_min:
+                    y_min = temp_y_min
+                if temp_x_min < x_min:
+                    x_min = temp_x_min
+                if temp_y_max > y_max:
+                    y_max = temp_y_max
+                if temp_x_max > x_max:
+                    x_max = temp_x_max
+            
+            x_range = x_max - x_min
+            y_range = y_max - y_min
 
-        graphs[i].draw_line(
-            (max(0, scaled_x_min + x_range/ 10.0), ax_y_min), 
-            (max(0, scaled_x_min + x_range/ 10.0), ax_y_max), color="black", width=dot_size*0.75) #y axis
-        
-        for y in range(int(ax_y_min), int(ax_y_max), int(y_range/10.0)):
-            graphs[i].draw_line((max(0, scaled_x_min + x_range/ 10.0)-h_tick_len, y), (max(0, scaled_x_min + x_range/ 10.0)+h_tick_len, y))
-            if y != 0:
-                graphs[i].draw_text(str(y), (max(0, scaled_x_min + x_range/ 10.0)-2.5*h_tick_len, y), color='black')
-        
-        graphs[i].draw_text(axes_labels[i][1], (max(0, scaled_x_min + x_range/ 10.0)+2*h_tick_len, y_ax_label_pos), angle=0, text_location = y_ax_label_anch, color="black")
-        
-        
-        for key in range(len(plot_data)):
-            for point in range(len(plot_data[key])):
-                graphs[i].draw_point((plot_data[key][point][0], plot_data[key][point][1]), dot_size, color=color_select[key])
+            scaled_y_min = y_min-y_range/7.0
+            scaled_x_min = x_min-x_range/7.0
+            scaled_y_max = y_max+y_range/7.0
+            scaled_x_max = x_max+x_range/7.0
+            
+            dot_size=x_range/150
+
+            graphs[i].change_coordinates((scaled_x_min, scaled_y_min),(scaled_x_max, scaled_y_max))
+
+            #draw axes
+            ax_x_min = x_min if scaled_x_min > 0 else scaled_x_min
+            ax_x_max = x_max if scaled_x_max < 0 else scaled_x_max
+            ax_y_min = y_min if scaled_y_min > 0 else scaled_y_min
+            ax_y_max = y_max if scaled_y_max < 0 else scaled_y_max
+
+            x_ax_label_pos = y_ax_label_pos = 0
+            x_ax_label_anch = y_ax_label_anch = "center"
+            if scaled_x_min > 0:
+                x_ax_label_pos = x_range/2 + ax_x_min
+            else:
+                if abs(scaled_x_min) > abs(scaled_x_max):
+                    x_ax_label_pos = ax_x_min + x_range/75
+                    x_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
+                else:
+                    x_ax_label_pos = ax_x_max - x_range/75
+                    x_ax_label_anch = sg.TEXT_LOCATION_TOP_RIGHT
+
+            if scaled_y_min > 0:
+                y_ax_label_pos = y_range/2 + ax_y_min
+            else:
+                if abs(scaled_y_min) > abs(scaled_y_max):
+                    y_ax_label_pos = ax_y_min + y_range/75
+                    y_ax_label_anch = sg.TEXT_LOCATION_BOTTOM_LEFT
+                else:
+                    y_ax_label_pos = ax_y_max - y_range/75
+                    y_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
+
+            h_tick_len = x_range/60.0
+            v_tick_len = y_range/60.0
+
+            graphs[i].draw_line(
+                (ax_x_min, max(0, scaled_y_min + y_range/ 10.0)), 
+                (ax_x_max, max(0, scaled_y_min + y_range/ 10.0)), color="black", width=dot_size*0.75) #x axis
+                
+            for x in range(int(ax_x_min), int(ax_x_max), int(x_range/10.0)):
+                graphs[i].draw_line((x, max(0, scaled_y_min + y_range/ 10.0)-v_tick_len), (x, max(0, scaled_y_min + y_range/ 10.0)+v_tick_len))  #Draw a scale
+                if x != 0:
+                    graphs[i].draw_text(str(x), (x, max(0, scaled_y_min + y_range/ 10.0)-2.5*v_tick_len), color='black')  #Draw the value of the scale
+            
+            graphs[i].draw_text(axes_labels[i][0], (x_ax_label_pos, max(0, scaled_y_min + y_range/ 10.0)+5.5*v_tick_len), text_location = x_ax_label_anch, color="black")
+
+            graphs[i].draw_line(
+                (max(0, scaled_x_min + x_range/ 10.0), ax_y_min), 
+                (max(0, scaled_x_min + x_range/ 10.0), ax_y_max), color="black", width=dot_size*0.75) #y axis
+            
+            for y in range(int(ax_y_min), int(ax_y_max), int(y_range/10.0)):
+                graphs[i].draw_line((max(0, scaled_x_min + x_range/ 10.0)-h_tick_len, y), (max(0, scaled_x_min + x_range/ 10.0)+h_tick_len, y))
+                if y != 0:
+                    graphs[i].draw_text(str(y), (max(0, scaled_x_min + x_range/ 10.0)-2.5*h_tick_len, y), color='black')
+            
+            graphs[i].draw_text(axes_labels[i][1], (max(0, scaled_x_min + x_range/ 10.0)+2*h_tick_len, y_ax_label_pos), angle=0, text_location = y_ax_label_anch, color="black")
+            
+            
+            for key in range(len(plot_data)):
+                for point in range(len(plot_data[key])):
+                    graphs[i].draw_point((plot_data[key][point][0], plot_data[key][point][1]), dot_size, color=color_select[key])
 
 
 
