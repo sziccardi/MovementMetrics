@@ -2,6 +2,8 @@ from cgitb import enable
 from fileinput import filename
 import PySimpleGUI as sg
 import os.path
+
+from matplotlib.pyplot import plot
 import movement_metrics as mm
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -60,12 +62,13 @@ def get_main_layout():
         [sg.Text("Processed video will show up here", key="-IMAGE TITLE-")],
         [sg.Image(filename="placeholder.png", size=image_size, key='-FRAME IMAGE-')],
         [sg.Slider(range=(0, 100), default_value=0, disable_number_display=True, orientation='horizontal', size=(53,7), key="-SCRUB BAR-", visible=False, enable_events=True)],
-        [sg.Button(button_text='Prev Frame', size=(8,1),enable_events=True,key="-LEFT FRAME-"), sg.Button(button_text='Next Frame', size=(8,1),enable_events=True,key="-RIGHT FRAME-")],
+        [sg.Button(button_text='Prev Key Frame', enable_events=True,key="-LEFT FRAME-"), sg.Button(button_text='Next Key Frame', enable_events=True,key="-RIGHT FRAME-")],
     ]
 
     plot_column = [
         [sg.Text("Plotted data will show up here", key="-PLOT TITLE-")],
         [sg.Graph(canvas_size=graph_size, graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS-")],
+        [sg.Graph(canvas_size=(graph_size[0], graph_size[1]/2-3), graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS 2-", visible=False)],
         [sg.Text("Export plot as:", key="-EXPORT TEXT 1-"), 
         sg.InputText(size=(20,1), key="-PLOT NAME-"), 
         sg.Text(".png", key="-EXPORT TEXT 2-"),
@@ -196,7 +199,7 @@ def display_file_select(chosen_file, existing):
     sub_window.close()
     return file_loc, chosen_file
 
-def create_plot(graph, data, data_labels, axes_labels):
+def create_basic_plot(graph, data, data_labels, axes_labels):
     #because it can be ragged...
     y_min = x_min = 1000000000
     y_max = x_max = -1000000000
@@ -270,6 +273,8 @@ def create_plot(graph, data, data_labels, axes_labels):
         for point in range(len(data[key])):
             graph.draw_point((data[key][point][0], data[key][point][1]), dot_size, color=color_select[key])
 
+def create_two_plots(graph, data, data_labels, axes_labels, box_n_whisk):
+    print("WARNING: This graph is not yet supported")
 
 
 def process_video(filename):
@@ -380,7 +385,15 @@ if __name__ == '__main__':
             graph.Erase()
 
             window["-PLOT TITLE-"].update(value=plot_type[0])
-            create_plot(graph, data, labels, ax_labels)
+            print(plot_type[0])
+            if plot_type[0] == "point cloud" or plot_type[0] == "centroid of motion" or plot_type[0] == "distance from center" or plot_type[0] == "normalized distance from center" or plot_type[0] == "speed over time":
+                window["-PLOT CANVAS-"].set_size(graph_size)
+                window["-PLOT CANVAS 2-"].update(visible=False)
+                create_basic_plot(graph, data, labels, ax_labels)
+            elif plot_type[0] == "position spectrum" or plot_type[0] == "velocity over time":
+                window["-PLOT CANVAS-"].set_size((graph_size[0], graph_size[1]/2-3))
+                window["-PLOT CANVAS 2-"].update(visible=True)
+                create_two_plots(graph, data, labels, ax_labels, plot_type[0] == "position spectrum")
             
             window["-SCRUB BAR-"].update(visible=True, range=(0, len(frames)-1))
 
