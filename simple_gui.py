@@ -323,12 +323,43 @@ if __name__ == '__main__':
             
             x_range = x_max - x_min
             y_range = y_max - y_min
-            
-            dot_size=x_range/140
 
-            graph.change_coordinates((x_min-x_range/10.0, y_min-y_range/10.0),(x_max+x_range/10.0, y_max+y_range/10.0))
-            graph.draw_line((x_min-x_range/10.0, 0), (x_max+x_range/10.0, 0), color="black", width=dot_size)
-            graph.draw_line((0, y_min-y_range/10.0), (0, y_max+y_range/10.0), color="black", width=dot_size)
+            scaled_y_min = y_min-y_range/7.0
+            scaled_x_min = x_min-x_range/7.0
+            scaled_y_max = y_max+y_range/7.0
+            scaled_x_max = x_max+x_range/7.0
+            
+            dot_size=x_range/150
+
+            graph.change_coordinates((scaled_x_min, scaled_y_min),(scaled_x_max, scaled_y_max))
+
+            #draw axes
+            ax_x_min = x_min if scaled_x_min > 0 else scaled_x_min
+            ax_x_max = x_max if scaled_x_max < 0 else scaled_x_max
+            ax_y_min = y_min if scaled_y_min > 0 else scaled_y_min
+            ax_y_max = y_max if scaled_y_max < 0 else scaled_y_max
+
+            h_tick_len = x_range/60.0
+            v_tick_len = y_range/60.0
+
+            graph.draw_line(
+                (ax_x_min, max(0, scaled_y_min + y_range/ 10.0)), 
+                (ax_x_max, max(0, scaled_y_min + y_range/ 10.0)), color="black", width=dot_size*0.75) #x axis
+                
+            for x in range(int(ax_x_min), int(ax_x_max), int(x_range/10.0)):
+                graph.draw_line((x, max(0, scaled_y_min + y_range/ 10.0)-v_tick_len), (x, max(0, scaled_y_min + y_range/ 10.0)+v_tick_len))  #Draw a scale
+                if x != 0:
+                    graph.draw_text(str(x), (x, max(0, scaled_y_min + y_range/ 10.0)-2.5*v_tick_len),
+                                    color='black')  #Draw the value of the scale
+
+            graph.draw_line(
+                (max(0, scaled_x_min + x_range/ 10.0), ax_y_min), 
+                (max(0, scaled_x_min + x_range/ 10.0), ax_y_max), color="black", width=dot_size*0.75) #y axis
+            
+            for y in range(int(ax_y_min), int(ax_y_max), int(y_range/10.0)):
+                graph.draw_line((max(0, scaled_x_min + x_range/ 10.0)-h_tick_len, y), (max(0, scaled_x_min + x_range/ 10.0)+h_tick_len, y))
+                if y != 0:
+                    graph.draw_text(str(y), (max(0, scaled_x_min + x_range/ 10.0)-2.5*h_tick_len, y), color='black')
             
             color_select = random.sample(colors, len(data))
             for key in range(len(data)):
