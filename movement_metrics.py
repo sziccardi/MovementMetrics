@@ -721,6 +721,73 @@ def PlotVelocitiesOverTime(data, keypoints):
     
     fig.set_size_inches(5, 4.75)
 
+def GetVelocitiesOverTimeData(data, keypoints):
+    processed_data = []
+    axes_labels = []
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        axes_labels.append(["time (s)", "Horizontal velocity (m/s)"])
+        axes_labels.append(["time (s)", "Vertical velocity (m/s)"])
+    else:
+        axes_labels.append(["time (s)", "Horizontal velocity (pixels/s)"])
+        axes_labels.append(["time (s)", "Vertical velocity (pixels/s)"])
+    
+    my_min = 100000000000
+    my_max = -100000000000
+    for point in keypoints:
+        start_iter = (point - 1)
+        
+        np_vals = np.array(data)
+        name = itos_map[point]
+
+        xs = np_vals[:,0, start_iter]
+        xs = np.where(xs>1279, 1279, xs)
+        ys = np_vals[:,1, start_iter]
+        ys = np.where(ys>719, 719, ys)
+        cs = np_vals[:,2,start_iter]
+
+        cp_np_vals = np_vals[:,:, start_iter].copy()
+        shifted_np_vals = cp_np_vals[1:,:]
+        new_np_vals = np_vals[:-1,:, start_iter]
+
+        delta_pos = shifted_np_vals - new_np_vals
+        vels = delta_pos / float(scale) * float(video_fps)
+        list_vels_x = vels[:,0].tolist()
+        list_vels_y = vels[:,1].tolist()
+
+        avged_vels_x = np.convolve(list_vels_x, np.ones(vel_blocks), 'valid') / vel_blocks
+        avged_vels_y = np.convolve(list_vels_y, np.ones(vel_blocks), 'valid') / vel_blocks
+        temp_max = np.amax(avged_vels_y)
+        temp_min = np.amin(avged_vels_y)
+        if (temp_max > my_max):
+            my_max = temp_max
+        if (temp_min < my_min):
+            my_min = temp_min
+
+        my_x_x = np.arange(0, len(list_vels_x)/float(video_fps), 1.0/float(video_fps))[:len(avged_vels_x)]
+        my_x_y = avged_vels_x
+        z_x_x = np.abs(stats.zscore(my_x_x))
+        z_x_y = np.abs(stats.zscore(my_x_y))
+        select_x = [(a < 3) and (b < 3) for a, b in zip(z_x_x, z_x_y)]
+
+        my_y_x = np.arange(0, len(list_vels_y)/float(video_fps), 1.0/float(video_fps))[:len(avged_vels_y)]
+        my_y_y = avged_vels_y
+        z_y_x = np.abs(stats.zscore(my_x_x))
+        z_y_y = np.abs(stats.zscore(my_x_y))
+        select_y = [(a < 3) and (b < 3) for a, b in zip(z_y_x, z_y_y)]
+        
+        temp = []
+        temp.append(np.column_stack((my_x_x[select_x], my_x_y[select_x])))
+        temp.append(np.column_stack((my_y_x[select_y], my_y_y[select_y])))
+        processed_data.append(temp)
+
+    
+    labels = [itos_map[x] for x in keypoints]
+    labels.append("center")
+    
+    return processed_data, labels, axes_labels
+
     
 def PlotAccelerometerTree(data, keypoints):
     
@@ -871,6 +938,8 @@ def run_script_get_data(frame_files, plot_type, keypoints, fps, pix_in_m, cov_wi
         processed_data, data_labels, ax_labels = GetDistFromCenterData(True, data, real_keypoints)
     elif plot_type_dict[plot_type] == PlotType.TOTAL_VEL_OVER_TIME:
         processed_data, data_labels, ax_labels = GetSpeedOverTimeData(data, real_keypoints)
+    elif plot_type_dict[plot_type] == PlotType.VEL_OVER_TIME:
+        processed_data, data_labels, ax_labels = GetVelocitiesOverTimeData(data, real_keypoints)
     
     if processed_data == None or data_labels == None:
         print("WARNING: Could not process data as provided.")
