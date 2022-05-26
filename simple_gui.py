@@ -63,6 +63,7 @@ def get_main_layout():
     ]
 
     plot_column = [
+        [sg.Text("Plotted data will show up here", key="-PLOT TITLE-")],
         [sg.Graph(canvas_size=graph_size, graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS-")],
         [sg.Text("Export plot as:", key="-EXPORT TEXT 1-"), 
         sg.InputText(size=(20,1), key="-PLOT NAME-"), 
@@ -194,6 +195,82 @@ def display_file_select(chosen_file, existing):
     sub_window.close()
     return file_loc, chosen_file
 
+def create_plot(graph, data, data_labels, axes_labels):
+    #because it can be ragged...
+    y_min = x_min = 1000000000
+    y_max = x_max = -1000000000
+    for key in range(len(data)):
+        np_data = np.array(data[key])
+    
+        temp_y_min = np.amin(np_data[:, 1])
+        temp_y_max = np.amax(np_data[:, 1])
+        temp_x_min = np.amin(np_data[:, 0])
+        temp_x_max = np.amax(np_data[:, 0])
+        
+        if temp_y_min < y_min:
+            y_min = temp_y_min
+        if temp_x_min < x_min:
+            x_min = temp_x_min
+        if temp_y_max > y_max:
+            y_max = temp_y_max
+        if temp_x_max > x_max:
+            x_max = temp_x_max
+    
+    x_range = x_max - x_min
+    y_range = y_max - y_min
+
+    scaled_y_min = y_min-y_range/7.0
+    scaled_x_min = x_min-x_range/7.0
+    scaled_y_max = y_max+y_range/7.0
+    scaled_x_max = x_max+x_range/7.0
+    
+    dot_size=x_range/150
+
+    graph.change_coordinates((scaled_x_min, scaled_y_min),(scaled_x_max, scaled_y_max))
+
+    #draw axes
+    ax_x_min = x_min if scaled_x_min > 0 else scaled_x_min
+    ax_x_max = x_max if scaled_x_max < 0 else scaled_x_max
+    ax_y_min = y_min if scaled_y_min > 0 else scaled_y_min
+    ax_y_max = y_max if scaled_y_max < 0 else scaled_y_max
+
+    x_ax_label_pos = x_range/2 + ax_x_min if scaled_x_min > 0 else ax_x_min + x_range/75
+    y_ax_label_pos = y_range/2 + ax_y_min if scaled_y_min > 0 else ax_y_max - y_range/75
+    x_ax_label_anch = "center" if scaled_x_min > 0 else sg.TEXT_LOCATION_TOP_LEFT
+    y_ax_label_anch = "center" if scaled_y_min > 0 else sg.TEXT_LOCATION_TOP_RIGHT
+
+    h_tick_len = x_range/60.0
+    v_tick_len = y_range/60.0
+
+    graph.draw_line(
+        (ax_x_min, max(0, scaled_y_min + y_range/ 10.0)), 
+        (ax_x_max, max(0, scaled_y_min + y_range/ 10.0)), color="black", width=dot_size*0.75) #x axis
+        
+    for x in range(int(ax_x_min), int(ax_x_max), int(x_range/10.0)):
+        graph.draw_line((x, max(0, scaled_y_min + y_range/ 10.0)-v_tick_len), (x, max(0, scaled_y_min + y_range/ 10.0)+v_tick_len))  #Draw a scale
+        if x != 0:
+            graph.draw_text(str(x), (x, max(0, scaled_y_min + y_range/ 10.0)-2.5*v_tick_len), color='black')  #Draw the value of the scale
+    
+    graph.draw_text(axes_labels[0], (x_ax_label_pos, max(0, scaled_y_min + y_range/ 10.0)-4.75*v_tick_len), text_location = x_ax_label_anch, color="black")
+
+    graph.draw_line(
+        (max(0, scaled_x_min + x_range/ 10.0), ax_y_min), 
+        (max(0, scaled_x_min + x_range/ 10.0), ax_y_max), color="black", width=dot_size*0.75) #y axis
+    
+    for y in range(int(ax_y_min), int(ax_y_max), int(y_range/10.0)):
+        graph.draw_line((max(0, scaled_x_min + x_range/ 10.0)-h_tick_len, y), (max(0, scaled_x_min + x_range/ 10.0)+h_tick_len, y))
+        if y != 0:
+            graph.draw_text(str(y), (max(0, scaled_x_min + x_range/ 10.0)-2.5*h_tick_len, y), color='black')
+    
+    graph.draw_text(axes_labels[1], (max(0, scaled_x_min + x_range/ 10.0)-5.5*h_tick_len, y_ax_label_pos), angle=90, text_location = y_ax_label_anch, color="black")
+    
+    color_select = random.sample(colors, len(data))
+    for key in range(len(data)):
+        for point in range(len(data[key])):
+            graph.draw_point((data[key][point][0], data[key][point][1]), dot_size, color=color_select[key])
+
+
+
 def process_video(filename):
     #assuming openpose folder is in the movementmetrics folder
     #cd openpose && ./bin/OpenPoseDemo.exe --video ../test_data/UB_B\ Videos/balls_b.mp4 --write_video ../MovementMetrics/output_vid.avi --display 0 --net_resolution 320x176 --write_json ../MovementMetrics/test && cd ..
@@ -293,7 +370,7 @@ if __name__ == '__main__':
             plot_type = values["-PLOT LIST-"]
             track_points = values["-TRACK POINT LIST-"]
             
-            data, labels = mm.run_script_get_data(real_files, plot_type[0], track_points, 
+            data, labels, ax_labels = mm.run_script_get_data(real_files, plot_type[0], track_points, 
             values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
             
             # if prior_plot:
@@ -301,74 +378,9 @@ if __name__ == '__main__':
             # prior_plot = graph.DrawImage(filename="TEMP.png", location=(0, 500))
             graph.Erase()
 
-            #because it can be ragged...
-            y_min = x_min = 1000000000
-            y_max = x_max = -1000000000
-            for key in range(len(data)):
-                np_data = np.array(data[key])
+            window["-PLOT TITLE-"].update(value=plot_type[0])
+            create_plot(graph, data, labels, ax_labels)
             
-                temp_y_min = np.amin(np_data[:, 1])
-                temp_y_max = np.amax(np_data[:, 1])
-                temp_x_min = np.amin(np_data[:, 0])
-                temp_x_max = np.amax(np_data[:, 0])
-                
-                if temp_y_min < y_min:
-                    y_min = temp_y_min
-                if temp_x_min < x_min:
-                    x_min = temp_x_min
-                if temp_y_max > y_max:
-                    y_max = temp_y_max
-                if temp_x_max > x_max:
-                    x_max = temp_x_max
-            
-            x_range = x_max - x_min
-            y_range = y_max - y_min
-
-            scaled_y_min = y_min-y_range/7.0
-            scaled_x_min = x_min-x_range/7.0
-            scaled_y_max = y_max+y_range/7.0
-            scaled_x_max = x_max+x_range/7.0
-            
-            dot_size=x_range/150
-
-            graph.change_coordinates((scaled_x_min, scaled_y_min),(scaled_x_max, scaled_y_max))
-
-            #draw axes
-            ax_x_min = x_min if scaled_x_min > 0 else scaled_x_min
-            ax_x_max = x_max if scaled_x_max < 0 else scaled_x_max
-            ax_y_min = y_min if scaled_y_min > 0 else scaled_y_min
-            ax_y_max = y_max if scaled_y_max < 0 else scaled_y_max
-
-            h_tick_len = x_range/60.0
-            v_tick_len = y_range/60.0
-
-            graph.draw_line(
-                (ax_x_min, max(0, scaled_y_min + y_range/ 10.0)), 
-                (ax_x_max, max(0, scaled_y_min + y_range/ 10.0)), color="black", width=dot_size*0.75) #x axis
-                
-            for x in range(int(ax_x_min), int(ax_x_max), int(x_range/10.0)):
-                graph.draw_line((x, max(0, scaled_y_min + y_range/ 10.0)-v_tick_len), (x, max(0, scaled_y_min + y_range/ 10.0)+v_tick_len))  #Draw a scale
-                if x != 0:
-                    graph.draw_text(str(x), (x, max(0, scaled_y_min + y_range/ 10.0)-2.5*v_tick_len),
-                                    color='black')  #Draw the value of the scale
-
-            graph.draw_line(
-                (max(0, scaled_x_min + x_range/ 10.0), ax_y_min), 
-                (max(0, scaled_x_min + x_range/ 10.0), ax_y_max), color="black", width=dot_size*0.75) #y axis
-            
-            for y in range(int(ax_y_min), int(ax_y_max), int(y_range/10.0)):
-                graph.draw_line((max(0, scaled_x_min + x_range/ 10.0)-h_tick_len, y), (max(0, scaled_x_min + x_range/ 10.0)+h_tick_len, y))
-                if y != 0:
-                    graph.draw_text(str(y), (max(0, scaled_x_min + x_range/ 10.0)-2.5*h_tick_len, y), color='black')
-            
-            color_select = random.sample(colors, len(data))
-            for key in range(len(data)):
-                for point in range(len(data[key])):
-                    graph.draw_point((data[key][point][0], data[key][point][1]), dot_size, color=color_select[key])
-            
-
-            
-
             window["-SCRUB BAR-"].update(visible=True, range=(0, len(frames)-1))
 
             window['-FRAME IMAGE-'].update(data=get_img_data(frames[current_frame], first=True))

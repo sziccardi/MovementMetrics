@@ -168,9 +168,15 @@ def PlotPointCloud(data, keypoints):
     figure.set_size_inches(5, 3.25)
 
 def GetPointCloudData(data, keypoints):
+    axes_labels = []
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
+        axes_labels.append("x Position (m)")
+        axes_labels.append("y Position (m)")
+    else:
+        axes_labels.append("x Pixel Position")
+        axes_labels.append("y Pixel Position")
     
     processed_data = []
     
@@ -199,7 +205,7 @@ def GetPointCloudData(data, keypoints):
     labels = [itos_map[x] for x in keypoints]
     labels.append("center")
     
-    return processed_data, labels
+    return processed_data, labels, axes_labels
     
     
 
@@ -278,9 +284,15 @@ def GetCentroidData(data, keypoints):
     np_means_avg = np.mean(selected_vals, axis=2)
     #print(np_means_avg.shape)
 
+    axes_labels = []
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
+        axes_labels.append("x Position (m)")
+        axes_labels.append("y Position (m)")
+    else:
+        axes_labels.append("x Pixel Position")
+        axes_labels.append("y Pixel Position")
         
     x = np_means_avg[:,0]
     y = np_means_avg[:,1]
@@ -303,7 +315,7 @@ def GetCentroidData(data, keypoints):
 
     labels = ["centroid", "average centroid"]
 
-    return processed_data, labels
+    return processed_data, labels, axes_labels
 
 def PlotLocSpectrum(data, keypoints):
     x_dict = {}
@@ -406,9 +418,16 @@ def PlotDistFromCenter(normalized, data, keypoints):
 
 def GetDistFromCenterData(normalized, data, keypoints):
     np_vals = np.array(data)
+
+    axes_labels = []
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
+        axes_labels.append("x Distance from Center (m)")
+        axes_labels.append("y Distance from Center (m)")
+    else:
+        axes_labels.append("x Distance from Center (pixel)")
+        axes_labels.append("y Distance from Center (pixel)")
         
     int_arg = stoi_map['spine_top'] - 1
     mid_x = np_vals[:,0,int_arg]
@@ -437,7 +456,7 @@ def GetDistFromCenterData(normalized, data, keypoints):
             
             labels.append(itos_map[point])
     
-    return processed_data, labels
+    return processed_data, labels, axes_labels
 
 
 def PlotVelocityHeatMap(data, keypoints):
@@ -559,9 +578,14 @@ def PlotSpeedOverTime(data, keypoints):
     figure.set_size_inches(5, 3.25)
     
 def GetSpeedOverTimeData(data, keypoints):
+    axes_labels = []
+    axes_labels.append("time (s)")
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
+        axes_labels.append("total speed (m/s)")
+    else:
+        axes_labels.append("total speed (pixels/s)")
     
     processed_data = []
     
@@ -607,7 +631,7 @@ def GetSpeedOverTimeData(data, keypoints):
     labels = [itos_map[x] for x in keypoints]
     labels.append("center")
     
-    return processed_data, labels
+    return processed_data, labels, axes_labels
 
 def PlotVelocitiesOverTime(data, keypoints):
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
@@ -836,22 +860,22 @@ def run_script_get_data(frame_files, plot_type, keypoints, fps, pix_in_m, cov_wi
     real_keypoints = [stoi_map[k] for k in keypoints]
     data = ReadDataFromList(frame_files)
     
-    processed_data = labels = None
+    processed_data = data_labels = ax_labels = None
     if plot_type_dict[plot_type] == PlotType.POINT_CLOUD:
-        processed_data, labels = GetPointCloudData(data, real_keypoints)
+        processed_data, data_labels, ax_labels = GetPointCloudData(data, real_keypoints)
     elif plot_type_dict[plot_type] == PlotType.CENTROID:
-        processed_data, labels = GetCentroidData(data, real_keypoints)
+        processed_data, data_labels, ax_labels = GetCentroidData(data, real_keypoints)
     elif plot_type_dict[plot_type] == PlotType.CENT_DIST:
-        processed_data, labels = GetDistFromCenterData(False, data, real_keypoints)
+        processed_data, data_labels, ax_labels = GetDistFromCenterData(False, data, real_keypoints)
     elif plot_type_dict[plot_type] == PlotType.CENT_DIST_NORM:
-        processed_data, labels = GetDistFromCenterData(True, data, real_keypoints)
+        processed_data, data_labels, ax_labels = GetDistFromCenterData(True, data, real_keypoints)
     elif plot_type_dict[plot_type] == PlotType.TOTAL_VEL_OVER_TIME:
-        processed_data, labels = GetSpeedOverTimeData(data, real_keypoints)
+        processed_data, data_labels, ax_labels = GetSpeedOverTimeData(data, real_keypoints)
     
-    if processed_data == None or labels == None:
+    if processed_data == None or data_labels == None:
         print("WARNING: Could not process data as provided.")
     
-    return processed_data, labels
+    return processed_data, data_labels, ax_labels
 
 if __name__ == '__main__':
     fig_numbers = [x.num for x in plt._pylab_helpers.Gcf.get_all_fig_managers()]
