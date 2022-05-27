@@ -68,7 +68,7 @@ def get_main_layout():
     plot_column = [
         [sg.Text("Plotted data will show up here", key="-PLOT TITLE-")],
         [sg.Graph(canvas_size=graph_size, graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS-")],
-        [sg.Graph(canvas_size=(graph_size[0], graph_size[1]/2-3), graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS 2-", visible=False)],
+        [sg.pin(sg.Graph(canvas_size=(graph_size[0], graph_size[1]/2-3), graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS 2-", visible=False))],
         [sg.Text("Export plot as:", key="-EXPORT TEXT 1-"), 
         sg.InputText(size=(20,1), key="-PLOT NAME-"), 
         sg.Text(".png", key="-EXPORT TEXT 2-"),
@@ -199,7 +199,7 @@ def display_file_select(chosen_file, existing):
     sub_window.close()
     return file_loc, chosen_file
 
-def create_basic_plot(graph, data, data_labels, axes_labels):
+def draw_axes(graph, data, axes_labels):
     #because it can be ragged...
     y_min = x_min = 1000000000
     y_max = x_max = -1000000000
@@ -240,6 +240,8 @@ def create_basic_plot(graph, data, data_labels, axes_labels):
 
     x_ax_label_pos = y_ax_label_pos = 0
     x_ax_label_anch = y_ax_label_anch = "center"
+
+    label_angle = 0
     if scaled_x_min > 0:
         x_ax_label_pos = x_range/2 + ax_x_min
     else:
@@ -252,16 +254,20 @@ def create_basic_plot(graph, data, data_labels, axes_labels):
 
     if scaled_y_min > 0:
         y_ax_label_pos = y_range/2 + ax_y_min
+        label_angle = 90
     else:
         if abs(scaled_y_min) > abs(scaled_y_max):
             y_ax_label_pos = ax_y_min + y_range/75
-            y_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
+            y_ax_label_anch = sg.TEXT_LOCATION_BOTTOM_LEFT
         else:
             y_ax_label_pos = ax_y_max - y_range/75
-            y_ax_label_anch = sg.TEXT_LOCATION_TOP_RIGHT
+            y_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
 
     h_tick_len = x_range/60.0
     v_tick_len = y_range/60.0
+    x_shift = 3.5*h_tick_len
+    if label_angle != 0:
+        x_shift = -4.5*h_tick_len
 
     graph.draw_line(
         (ax_x_min, max(0, scaled_y_min + y_range/ 10.0)), 
@@ -283,7 +289,11 @@ def create_basic_plot(graph, data, data_labels, axes_labels):
         if y != 0:
             graph.draw_text(str(y), (max(0, scaled_x_min + x_range/ 10.0)-2.5*h_tick_len, y), color='black')
     
-    graph.draw_text(axes_labels[1], (max(0, scaled_x_min + x_range/ 10.0)-6.5*h_tick_len, y_ax_label_pos), angle=90, text_location = y_ax_label_anch, color="black")
+    graph.draw_text(axes_labels[1], (max(0, scaled_x_min + x_range/ 10.0)+x_shift, y_ax_label_pos), angle=label_angle, text_location = y_ax_label_anch, color="black")
+    return dot_size
+
+def create_basic_plot(graph, data, data_labels, axes_labels):
+    dot_size = draw_axes(graph, data, axes_labels)
     
     color_select = random.sample(colors, len(data))
     for key in range(len(data)):
@@ -297,93 +307,9 @@ def create_two_plots(graphs, data, data_labels, axes_labels, box_n_whisk):
         color_select = random.sample(colors, len(labels))
         for i in range(len(data)):
             plot_data = data[i]
-            #because it can be ragged...
-            y_min = x_min = 1000000000
-            y_max = x_max = -1000000000
             
-            for key in range(len(plot_data)):
-                np_data = np.array(plot_data[key])
-            
-                temp_y_min = np.amin(np_data[:, 1])
-                temp_y_max = np.amax(np_data[:, 1])
-                temp_x_min = np.amin(np_data[:, 0])
-                temp_x_max = np.amax(np_data[:, 0])
-                
-                if temp_y_min < y_min:
-                    y_min = temp_y_min
-                if temp_x_min < x_min:
-                    x_min = temp_x_min
-                if temp_y_max > y_max:
-                    y_max = temp_y_max
-                if temp_x_max > x_max:
-                    x_max = temp_x_max
-            
-            x_range = x_max - x_min
-            y_range = y_max - y_min
+            dot_size = draw_axes(graphs[i], plot_data, axes_labels)
 
-            scaled_y_min = y_min-y_range/7.0
-            scaled_x_min = x_min-x_range/7.0
-            scaled_y_max = y_max+y_range/7.0
-            scaled_x_max = x_max+x_range/7.0
-            
-            dot_size=x_range/150
-
-            graphs[i].change_coordinates((scaled_x_min, scaled_y_min),(scaled_x_max, scaled_y_max))
-
-            #draw axes
-            ax_x_min = x_min if scaled_x_min > 0 else scaled_x_min
-            ax_x_max = x_max if scaled_x_max < 0 else scaled_x_max
-            ax_y_min = y_min if scaled_y_min > 0 else scaled_y_min
-            ax_y_max = y_max if scaled_y_max < 0 else scaled_y_max
-
-            x_ax_label_pos = y_ax_label_pos = 0
-            x_ax_label_anch = y_ax_label_anch = "center"
-            if scaled_x_min > 0:
-                x_ax_label_pos = x_range/2 + ax_x_min
-            else:
-                if abs(scaled_x_min) > abs(scaled_x_max):
-                    x_ax_label_pos = ax_x_min + x_range/75
-                    x_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
-                else:
-                    x_ax_label_pos = ax_x_max - x_range/75
-                    x_ax_label_anch = sg.TEXT_LOCATION_TOP_RIGHT
-
-            if scaled_y_min > 0:
-                y_ax_label_pos = y_range/2 + ax_y_min
-            else:
-                if abs(scaled_y_min) > abs(scaled_y_max):
-                    y_ax_label_pos = ax_y_min + y_range/75
-                    y_ax_label_anch = sg.TEXT_LOCATION_BOTTOM_LEFT
-                else:
-                    y_ax_label_pos = ax_y_max - y_range/75
-                    y_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
-
-            h_tick_len = x_range/60.0
-            v_tick_len = y_range/60.0
-
-            graphs[i].draw_line(
-                (ax_x_min, max(0, scaled_y_min + y_range/ 10.0)), 
-                (ax_x_max, max(0, scaled_y_min + y_range/ 10.0)), color="black", width=dot_size*0.75) #x axis
-                
-            for x in range(int(ax_x_min), int(ax_x_max), int(x_range/10.0)):
-                graphs[i].draw_line((x, max(0, scaled_y_min + y_range/ 10.0)-v_tick_len), (x, max(0, scaled_y_min + y_range/ 10.0)+v_tick_len))  #Draw a scale
-                if x != 0:
-                    graphs[i].draw_text(str(x), (x, max(0, scaled_y_min + y_range/ 10.0)-2.5*v_tick_len), color='black')  #Draw the value of the scale
-            
-            graphs[i].draw_text(axes_labels[i][0], (x_ax_label_pos, max(0, scaled_y_min + y_range/ 10.0)+5.5*v_tick_len), text_location = x_ax_label_anch, color="black")
-
-            graphs[i].draw_line(
-                (max(0, scaled_x_min + x_range/ 10.0), ax_y_min), 
-                (max(0, scaled_x_min + x_range/ 10.0), ax_y_max), color="black", width=dot_size*0.75) #y axis
-            
-            for y in range(int(ax_y_min), int(ax_y_max), int(y_range/10.0)):
-                graphs[i].draw_line((max(0, scaled_x_min + x_range/ 10.0)-h_tick_len, y), (max(0, scaled_x_min + x_range/ 10.0)+h_tick_len, y))
-                if y != 0:
-                    graphs[i].draw_text(str(y), (max(0, scaled_x_min + x_range/ 10.0)-2.5*h_tick_len, y), color='black')
-            
-            graphs[i].draw_text(axes_labels[i][1], (max(0, scaled_x_min + x_range/ 10.0)+2*h_tick_len, y_ax_label_pos), angle=0, text_location = y_ax_label_anch, color="black")
-            
-            
             for key in range(len(plot_data)):
                 for point in range(len(plot_data[key])):
                     graphs[i].draw_point((plot_data[key][point][0], plot_data[key][point][1]), dot_size, color=color_select[key])
@@ -500,14 +426,14 @@ if __name__ == '__main__':
             graph2.Erase()
 
             window["-PLOT TITLE-"].update(value=plot_type[0])
-            print(plot_type[0])
             if plot_type[0] == "point cloud" or plot_type[0] == "centroid of motion" or plot_type[0] == "distance from center" or plot_type[0] == "normalized distance from center" or plot_type[0] == "speed over time":
-                window["-PLOT CANVAS-"].set_size(graph_size)
+                
                 window["-PLOT CANVAS 2-"].update(visible=False)
+                window["-PLOT CANVAS-"].set_size(graph_size)
                 create_basic_plot(graph, data, labels, ax_labels)
             elif plot_type[0] == "position spectrum" or plot_type[0] == "velocity over time":
-                window["-PLOT CANVAS-"].set_size((graph_size[0], graph_size[1]/2-3))
                 window["-PLOT CANVAS 2-"].update(visible=True)
+                window["-PLOT CANVAS-"].set_size((graph_size[0], graph_size[1]/2-3))
                 create_two_plots([graph, graph2], data, labels, ax_labels, plot_type[0] == "position spectrum")
             
             window["-SCRUB BAR-"].update(visible=True, range=(0, len(frames)-1))
