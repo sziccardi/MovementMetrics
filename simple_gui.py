@@ -67,6 +67,7 @@ def get_main_layout():
 
     plot_column = [
         [sg.Text("Plotted data will show up here", key="-PLOT TITLE-")],
+        [sg.Graph(canvas_size=(graph_size[0], 20), graph_bottom_left=(0, 0), graph_top_right=(graph_size[0], 25), background_color="white", float_values = True, key="-PLOT LEGEND-")],
         [sg.Graph(canvas_size=graph_size, graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS-")],
         [sg.pin(sg.Graph(canvas_size=(graph_size[0], graph_size[1]/2-3), graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS 2-", visible=False))],
         [sg.Text("Export plot as:", key="-EXPORT TEXT 1-"), 
@@ -95,11 +96,11 @@ def get_main_layout():
 
     layout = [
         [
-            sg.Column(left_column, key="-MAIN OPTIONS COL-", size=(200, 600)),
+            sg.Column(left_column, key="-MAIN OPTIONS COL-", size=(200, 625)),
             sg.VSeperator(),
-            sg.Column(main_column, key="-MAIN PLOT DISPLAY-", size=(1000, 600)),
+            sg.Column(main_column, key="-MAIN PLOT DISPLAY-", size=(1000, 625)),
             sg.VSeperator(),
-            sg.Column(right_column, key="-MAIN SCRIPT SETTINGS-", size=(150,600))
+            sg.Column(right_column, key="-MAIN SCRIPT SETTINGS-", size=(150,625))
         ]
     ]
     return layout
@@ -292,7 +293,13 @@ def draw_axes(graph, data, axes_labels):
     graph.draw_text(axes_labels[1], (max(0, scaled_x_min + x_range/ 10.0)+x_shift, y_ax_label_pos), angle=label_angle, text_location = y_ax_label_anch, color="black")
     return dot_size
 
-def create_basic_plot(graph, data, data_labels, axes_labels):
+def draw_legend(graph, labels, colors):
+    for i, dot_color in enumerate(colors):
+        graph.draw_point((15 + i*55, 12.5), 10, color=dot_color)
+        name = labels[i].replace("_", "\n")
+        graph.draw_text(name, (25 + i*55, 0.5), font=("Arial", 6), text_location = sg.TEXT_LOCATION_BOTTOM_LEFT, color="black")
+
+def create_basic_plot(graph, data, data_labels, legend, axes_labels):
     dot_size = draw_axes(graph, data, axes_labels)
     
     color_select = random.sample(colors, len(data))
@@ -300,7 +307,9 @@ def create_basic_plot(graph, data, data_labels, axes_labels):
         for point in range(len(data[key])):
             graph.draw_point((data[key][point][0], data[key][point][1]), dot_size, color=color_select[key])
 
-def create_two_plots(graphs, data, data_labels, axes_labels, box_n_whisk):
+    draw_legend(legend, data_labels, color_select)
+
+def create_two_plots(graphs, data, data_labels, legend, axes_labels, box_n_whisk):
     if box_n_whisk:
         print("WARNING: This graph is not yet supported")
     else:
@@ -314,7 +323,8 @@ def create_two_plots(graphs, data, data_labels, axes_labels, box_n_whisk):
                 for point in range(len(plot_data[key])):
                     graphs[i].draw_point((plot_data[key][point][0], plot_data[key][point][1]), dot_size, color=color_select[key])
 
-
+    
+        draw_legend(legend, data_labels, color_select)
 
 def process_video(filename):
     #assuming openpose folder is in the movementmetrics folder
@@ -403,6 +413,8 @@ if __name__ == '__main__':
             chosen_files = read_pose_files(file_loc)
             loc_name = file_loc[file_loc.rfind('/')+1:]
             frames = read_frame_files(file_loc)
+            if len(frames) == 0:
+                print("WARNING: No video frames found for the selected folder.")
 
             window["-SELECTED FILE-"].update(value=loc_name, visible=True)
             window.TKroot.attributes('-topmost', 1)
@@ -419,28 +431,32 @@ if __name__ == '__main__':
             data, labels, ax_labels = mm.run_script_get_data(real_files, plot_type[0], track_points, 
             values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
             
-            # if prior_plot:
-            #     graph.delete_figure(prior_plot)
-            # prior_plot = graph.DrawImage(filename="TEMP.png", location=(0, 500))
             graph.Erase()
             graph2.Erase()
+            window["-PLOT LEGEND-"].Erase()
 
             window["-PLOT TITLE-"].update(value=plot_type[0])
             if plot_type[0] == "point cloud" or plot_type[0] == "centroid of motion" or plot_type[0] == "distance from center" or plot_type[0] == "normalized distance from center" or plot_type[0] == "speed over time":
                 
                 window["-PLOT CANVAS 2-"].update(visible=False)
                 window["-PLOT CANVAS-"].set_size(graph_size)
-                create_basic_plot(graph, data, labels, ax_labels)
+                create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels)
+                
             elif plot_type[0] == "position spectrum" or plot_type[0] == "velocity over time":
                 window["-PLOT CANVAS 2-"].update(visible=True)
                 window["-PLOT CANVAS-"].set_size((graph_size[0], graph_size[1]/2-3))
-                create_two_plots([graph, graph2], data, labels, ax_labels, plot_type[0] == "position spectrum")
+                create_two_plots([graph, graph2], data, labels, window["-PLOT LEGEND-"], ax_labels, plot_type[0] == "position spectrum")
             
-            window["-SCRUB BAR-"].update(visible=True, range=(0, len(frames)-1))
+            if len(frames) > 0:
+                window["-SCRUB BAR-"].update(visible=True, range=(0, len(frames)-1))
 
-            window['-FRAME IMAGE-'].update(data=get_img_data(frames[current_frame], first=True))
-            img_name = frames[current_frame][file_loc.rfind('/')+1:]
-            window['-IMAGE TITLE-'].update(value=img_name)
+                window['-FRAME IMAGE-'].update(data=get_img_data(frames[current_frame], first=True))
+                img_name = frames[current_frame][file_loc.rfind('/')+1:]
+                window['-IMAGE TITLE-'].update(value=img_name)
+            else:
+                window['-FRAME IMAGE-'].update(filename="placeholder.png", size=image_size)
+                window['-IMAGE TITLE-'].update(value="No video frames found")
+
 
         elif event == "-EXPORT PLOT-":
             try:

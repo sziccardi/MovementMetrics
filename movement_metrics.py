@@ -313,7 +313,7 @@ def GetCentroidData(data, keypoints):
     total_mean_y = np.mean(cleaned_shifted_y)
     processed_data.append(np.column_stack(([total_mean_x], [total_mean_y])))
 
-    labels = ["centroid", "average centroid"]
+    labels = ["centroid", "average_centroid"]
 
     return processed_data, labels, axes_labels
 
