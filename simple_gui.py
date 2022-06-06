@@ -68,8 +68,8 @@ def get_main_layout():
     plot_column = [
         [sg.Text("Plotted data will show up here", key="-PLOT TITLE-")],
         [sg.Graph(canvas_size=(graph_size[0], 20), graph_bottom_left=(0, 0), graph_top_right=(graph_size[0], 25), background_color="white", float_values = True, key="-PLOT LEGEND-")],
-        [sg.Graph(canvas_size=graph_size, graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS-")],
-        [sg.pin(sg.Graph(canvas_size=(graph_size[0], graph_size[1]/2-3), graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS 2-", visible=False))],
+        [sg.Graph(canvas_size=graph_size, graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS-", change_submits=True, drag_submits=True)],
+        [sg.pin(sg.Graph(canvas_size=(graph_size[0], graph_size[1]/2-3), graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS 2-", visible=False, change_submits=True, drag_submits=True))],
         [sg.Text("Export plot as:", key="-EXPORT TEXT 1-"), 
         sg.InputText(size=(20,1), key="-PLOT NAME-"), 
         sg.Text(".png", key="-EXPORT TEXT 2-"),
@@ -362,6 +362,10 @@ def get_img_data(f, maxsize=image_size, first=False):
         return bio.getvalue()
     return ImageTk.PhotoImage(img)
 
+def display_frame(i):
+    img_name = frames[i][file_loc.rfind('/')+1:]
+    window['-IMAGE TITLE-'].update(value=img_name)
+
 if __name__ == '__main__':
     #matplotlib.use('TkAgg')
     current_layout = get_main_layout()
@@ -374,12 +378,14 @@ if __name__ == '__main__':
     #mocap video frames
     current_frame = 0
     frames = []
+    highlight_frames_iter = []
     
     #plotting variables
     graph = window.Element("-PLOT CANVAS-")
     graph2 = window.Element("-PLOT CANVAS 2-")
     dragging = False
-    start_point = end_point = prior_rect = prior_plot = None
+    start_point = end_point = prior_plot = None
+    prior_rect = (None, None)
 
     #event loop
     file_loc = ""
@@ -457,7 +463,6 @@ if __name__ == '__main__':
                 window['-FRAME IMAGE-'].update(filename="placeholder.png", size=image_size)
                 window['-IMAGE TITLE-'].update(value="No video frames found")
 
-
         elif event == "-EXPORT PLOT-":
             try:
                 matplotlib.pyplot.savefig(values["-PLOT NAME-"] + ".png", bbox_inches='tight')
@@ -470,27 +475,53 @@ if __name__ == '__main__':
         else:
             window["-RUN SCRIPT-"].update(visible=False)
 
-        if event == "-SCRUB BAR-":
-            window['-FRAME IMAGE-'].update(data=get_img_data(frames[int(values['-SCRUB BAR-'])], first=False))
-            current_frame = int(values['-SCRUB BAR-'])
-            img_name = frames[current_frame][file_loc.rfind('/')+1:]
-            window['-IMAGE TITLE-'].update(value=img_name)
-
-        if event == "-PLOT CANVAS-":
-            x, y = values["-PLOT CANVAS-"]
+        if event == "-PLOT CANVAS-" or event == "-PLOT CANVAS 2-":
+            x, y = values[event]
             if not dragging:
                 start_point = (x, y)
                 dragging = True
             else:
                 end_point = (x, y)
-            if prior_rect:
-                window["-PLOT CANVAS-"].delete_figure(prior_rect)
+            if prior_rect[1]:
+                window[prior_rect[0]].delete_figure(prior_rect[1])
+                prior_rect = (None, None)
             if None not in (start_point, end_point):
-                prior_rect = window["-PLOT CANVAS-"].draw_rectangle(start_point, end_point, line_color='red')
+                prior_rect = (event, window[event].draw_rectangle(start_point, end_point, line_color='red'))
+                
+
         elif event.endswith('+UP'):  # The drawing has ended because mouse up
+            highlight_frames_iter.clear()
+            highlight_frames_iter = []
+            
+            highlight = [0 for i in range(len(data[0]))]
+            for point in range(len(data[0])):
+                min_x = min(start_point[0], end_point[0])
+                max_x = max(start_point[0], end_point[0])
+                min_y = min(start_point[1], end_point[1])
+                max_y = max(start_point[1], end_point[1])
+                for key in range(len(data)):
+                    if data[key][point][0] > min_x and data[key][point][0] < max_x and data[key][point][1] > min_y and data[key][point][1] < max_y:
+                        highlight[point] = 1
+                        break
+            
+            highlight_frames_iter = [i for i in range(len(data[0])) if highlight[i]]
+            
+            if len(highlight_frames_iter) > 0:
+                current_frame = highlight_frames_iter[0]
+                display_frame(current_frame)
+            
             print(f"grabbed rectangle from {start_point} to {end_point}")
             start_point, end_point = None, None  # enable grabbing a new rect
-            dragging = False    
+            dragging = False
+            
+
+        #video events
+        if event == "-SCRUB BAR-":
+            window['-FRAME IMAGE-'].update(data=get_img_data(frames[int(values['-SCRUB BAR-'])], first=False))
+            current_frame = int(values['-SCRUB BAR-'])
+            display_frame(current_frame)
+
+        
 
 
         if current_process is not None and current_process.poll() is None:
