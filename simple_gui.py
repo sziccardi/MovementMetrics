@@ -50,7 +50,7 @@ def get_main_layout():
         [ 
             sg.Listbox(
                 values=["point cloud", "centroid of motion", "position spectrum", "distance from center", 
-                "normalized distance from center", "velocity heat map", "speed over time", "velocity over time"], 
+                "normalized distance from center", "speed over time", "velocity over time"], 
                 enable_events=True, size=(25,5), key="-PLOT LIST-"
             )
         ],

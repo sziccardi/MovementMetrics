@@ -3,7 +3,7 @@ from cProfile import label
 from fileinput import filename
 import os
 import sys
-import json
+import json, csv
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
@@ -789,7 +789,10 @@ def GetVelocitiesOverTimeData(data, keypoints):
     return processed_data, labels, axes_labels
 
     
-def PlotAccelerometerTree(data, keypoints):
+def PlotAccelerometerTree(data, keypoints):    
+    headings = [(str(itos_map[point]) + " x", str(itos_map[point]) + " y") for point in keypoints]
+    headings = list(sum(headings,()))
+    headings.insert(0,"TimeStamp (Seconds)")
     
     np_vals = np.array(data)
     
@@ -798,7 +801,10 @@ def PlotAccelerometerTree(data, keypoints):
     if video_pix_per_m > 0:
         scale = video_pix_per_m
     title = ""
-    max_accels = []
+    
+    
+    max_accels = np.zeros((int((np_vals.shape[0]-1) / video_fps) - 1, len(keypoints) * 2 + 1))
+    max_accels[:,0] = np.array([i for i in range(max_accels.shape[0])])
     for i, point in enumerate(keypoints):
         start_iter = (point - 1)
         
@@ -820,13 +826,16 @@ def PlotAccelerometerTree(data, keypoints):
         delta_vel = shifted_np_vels - new_np_vels
         accels = delta_vel * float(video_fps)
         
-        total_accels = [np.sqrt(accels[i,0] * accels[i, 0] + accels[i, 1] * accels[i,1]) for i in range(accels.shape[0])]
-
-        max_accels.append([])
-        for j in range(int(len(total_accels) / vel_blocks) - 1):
-            max_val = max(np.abs(total_accels[j * vel_blocks:(j+1)*vel_blocks]))
-            max_accels[i].append(max_val)
-
+        #total_accels = [np.sqrt(accels[i,0] * accels[i, 0] + accels[i, 1] * accels[i,1]) for i in range(accels.shape[0])]
+        
+        temp_accels = []
+        for j in range(int(len(accels) / video_fps) - 1): #num of seconds
+            max_val = np.max(np.abs(accels[j * video_fps:(j+1)*video_fps]), axis=0)
+            temp_accels.append(max_val[:2].tolist())
+        
+        max_accels[:, 1+i*2:3+i*2] = np.array(temp_accels)
+ 
+        # print(max_accels)
         # heat_map[y_ints.astype(int), x_ints.astype(int)] += total_vels
         title += (str(itos_map[point]))
         if i < len(keypoints) - 1:
@@ -834,11 +843,18 @@ def PlotAccelerometerTree(data, keypoints):
     
     
     # natural log of non-dominant/dominant
-    x_val = np.array([ np.log(max_accels[0][i] / max_accels[1][i]) for i in range(len(max_accels[0]))])
-    y_val = np.array([ max_accels[0][i] + max_accels[1][i] for i in range(len(max_accels[0]))])
+    #x_val = np.array([ np.log(max_accels[0][i] / max_accels[1][i]) for i in range(len(max_accels[0]))])
+    #y_val = np.array([ max_accels[0][i] + max_accels[1][i] for i in range(len(max_accels[0]))])
     #y_val = y_val / np.min(y_val)
 
-    plt.hist2d(x_val, y_val, vel_blocks)
+    #plt.hist2d(x_val, y_val, vel_blocks)
+    np_accels= np.vstack([headings, max_accels])
+
+    csv_rows = ["{},{},{},{},{}".format(i, j, k, l, m) for i, j, k, l, m in np_accels]
+    csv_text = "\n".join(csv_rows)
+
+    with open('acceleration.csv', 'w') as f:
+        f.write(csv_text)
 
 
 
