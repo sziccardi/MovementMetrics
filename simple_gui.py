@@ -62,7 +62,7 @@ def get_main_layout():
         [sg.Text("Processed video will show up here", key="-IMAGE TITLE-")],
         [sg.Image(filename="placeholder.png", size=image_size, key='-FRAME IMAGE-')],
         [sg.Slider(range=(0, 100), default_value=0, disable_number_display=True, orientation='horizontal', size=(53,7), key="-SCRUB BAR-", visible=False, enable_events=True)],
-        [sg.Button(button_text='Prev Key Frame', enable_events=True,key="-LEFT FRAME-"), sg.Button(button_text='Next Key Frame', enable_events=True,key="-RIGHT FRAME-")],
+        [sg.Button(button_text='Prev Key Frame', enable_events=True, key="-LEFT FRAME-"), sg.Button(button_text='Next Key Frame', enable_events=True, key="-RIGHT FRAME-")],
     ]
 
     plot_column = [
@@ -363,6 +363,7 @@ def get_img_data(f, maxsize=image_size, first=False):
     return ImageTk.PhotoImage(img)
 
 def display_frame(i):
+    window['-FRAME IMAGE-'].update(data=get_img_data(frames[i], first=False))
     img_name = frames[i][file_loc.rfind('/')+1:]
     window['-IMAGE TITLE-'].update(value=img_name)
 
@@ -505,19 +506,41 @@ if __name__ == '__main__':
                         break
             
             highlight_frames_iter = [i for i in range(len(data[0])) if highlight[i]]
-            
-            if len(highlight_frames_iter) > 0:
-                current_frame = highlight_frames_iter[0]
-                display_frame(current_frame)
-            
+
             print(f"grabbed rectangle from {start_point} to {end_point}")
             start_point, end_point = None, None  # enable grabbing a new rect
             dragging = False
             
+            if len(highlight_frames_iter) > 0:
+                current_frame = highlight_frames_iter[0]
+                display_frame(current_frame)
+                window["-SCRUB BAR-"].update(value=current_frame)
+            
+            
+        if event == "-LEFT FRAME-":
+            index = highlight_frames_iter.index(current_frame)
+            index = index - 1
+            if index < 0:
+                index = len(highlight_frames_iter) - 1
+            
+            current_frame = highlight_frames_iter[index]
+            display_frame(current_frame)
+            window["-SCRUB BAR-"].update(value=current_frame)
+
+        if event == "-RIGHT FRAME-":
+            index = highlight_frames_iter.index(current_frame)
+            index = index + 1
+            if index > len(highlight_frames_iter) - 1:
+                index = 0
+            
+            current_frame = highlight_frames_iter[index]
+            display_frame(current_frame)
+            window["-SCRUB BAR-"].update(value=current_frame)
+
 
         #video events
         if event == "-SCRUB BAR-":
-            window['-FRAME IMAGE-'].update(data=get_img_data(frames[int(values['-SCRUB BAR-'])], first=False))
+            
             current_frame = int(values['-SCRUB BAR-'])
             display_frame(current_frame)
 
