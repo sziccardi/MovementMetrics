@@ -132,7 +132,7 @@ def get_video_select_layout():
 
 def get_frame_select_layout():
     file_list_column = [
-        [sg.Text("Which folder are the processed files in?")],
+        [sg.Text("Which folder contains the pose and frame files?")],
         [ 
             sg.In(size=(55, 1), enable_events=True, key="-FOLDER-"), 
             sg.FolderBrowse()
@@ -150,7 +150,8 @@ def get_frame_select_layout():
 
 def display_file_select(chosen_file, existing):
     my_layout = get_frame_select_layout() if existing else get_video_select_layout()
-    sub_window = sg.Window("Video Selection", my_layout, modal=True)
+    window_name = "Processed Folder Selection" if existing else "Video to Process Selection"
+    sub_window = sg.Window(window_name, my_layout, modal=True)
     file_loc = ""
     file_options = []
     while True:
