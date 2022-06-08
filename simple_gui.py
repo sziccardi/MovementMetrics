@@ -63,6 +63,7 @@ def get_main_layout():
         [sg.Image(filename="placeholder.png", size=image_size, key='-FRAME IMAGE-')],
         [sg.Slider(range=(0, 100), default_value=0, disable_number_display=True, orientation='horizontal', size=(53,7), key="-SCRUB BAR-", visible=False, enable_events=True)],
         [sg.Button(button_text='Prev Key Frame', enable_events=True, key="-LEFT FRAME-"), sg.Button(button_text='Next Key Frame', enable_events=True, key="-RIGHT FRAME-")],
+        [sg.Text("", key="-SELECTED FRAMES-")],
     ]
 
     plot_column = [
@@ -515,27 +516,38 @@ if __name__ == '__main__':
                 current_frame = highlight_frames_iter[0]
                 display_frame(current_frame)
                 window["-SCRUB BAR-"].update(value=current_frame)
+                window["-SELECTED FRAMES-"].update(value="Selected keyframe 0 / "+str(len(highlight_frames_iter)))
             
             
         if event == "-LEFT FRAME-":
-            index = highlight_frames_iter.index(current_frame)
-            index = index - 1
+            try:
+                index = highlight_frames_iter.index(current_frame)
+                index = index - 1
+            except:
+                index = 0
+
             if index < 0:
                 index = len(highlight_frames_iter) - 1
             
             current_frame = highlight_frames_iter[index]
             display_frame(current_frame)
             window["-SCRUB BAR-"].update(value=current_frame)
+            window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index)+" / "+str(len(highlight_frames_iter)))
 
         if event == "-RIGHT FRAME-":
-            index = highlight_frames_iter.index(current_frame)
-            index = index + 1
+            try:
+                index = highlight_frames_iter.index(current_frame)
+                index = index + 1
+            except:
+                index = 0
+
             if index > len(highlight_frames_iter) - 1:
                 index = 0
             
             current_frame = highlight_frames_iter[index]
             display_frame(current_frame)
             window["-SCRUB BAR-"].update(value=current_frame)
+            window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index)+" / "+str(len(highlight_frames_iter)))
 
 
         #video events
@@ -543,6 +555,7 @@ if __name__ == '__main__':
             
             current_frame = int(values['-SCRUB BAR-'])
             display_frame(current_frame)
+            window["-SELECTED FRAMES-"].update(value="Not one of the "+str(len(highlight_frames_iter)) + " selected keyframes")
 
         
 
