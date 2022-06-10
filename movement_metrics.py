@@ -703,8 +703,8 @@ def PlotVelocitiesOverTime(data, keypoints):
 
         my_y_x = np.arange(0, len(list_vels_y)/float(video_fps), 1.0/float(video_fps))[:len(avged_vels_y)]
         my_y_y = avged_vels_y
-        z_y_x = np.abs(stats.zscore(my_x_x))
-        z_y_y = np.abs(stats.zscore(my_x_y))
+        z_y_x = np.abs(stats.zscore(my_y_x))
+        z_y_y = np.abs(stats.zscore(my_y_y))
         select_y = [(a < 3) and (b < 3) for a, b in zip(z_y_x, z_y_y)]
         
         ax1.plot(my_x_x[select_x], my_x_y[select_x])
@@ -773,8 +773,8 @@ def GetVelocitiesOverTimeData(data, keypoints):
 
         my_y_x = np.arange(0, len(list_vels_y)/float(video_fps), 1.0/float(video_fps))[:len(avged_vels_y)]
         my_y_y = avged_vels_y
-        z_y_x = np.abs(stats.zscore(my_x_x))
-        z_y_y = np.abs(stats.zscore(my_x_y))
+        z_y_x = np.abs(stats.zscore(my_y_x))
+        z_y_y = np.abs(stats.zscore(my_y_y))
         select_y = [(a < 3) and (b < 3) for a, b in zip(z_y_x, z_y_y)]
         
         temp = []

@@ -312,18 +312,19 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels):
     draw_legend(legend, data_labels, color_select)
 
 def create_two_plots(graphs, data, data_labels, legend, axes_labels, box_n_whisk):
+    print(np.array(data).shape)
     if box_n_whisk:
         print("WARNING: This graph is not yet supported")
     else:
         color_select = random.sample(colors, len(labels))
-        for i in range(len(data)):
-            plot_data = data[i]
+        for key in range(len(data)):
+            plot_data = data[key]
+            for i in range(len(data[key])):
             
-            dot_size = draw_axes(graphs[i], plot_data, axes_labels)
+                dot_size = draw_axes(graphs[i], plot_data, axes_labels[i])
 
-            for key in range(len(plot_data)):
-                for point in range(len(plot_data[key])):
-                    graphs[i].draw_point((plot_data[key][point][0], plot_data[key][point][1]), dot_size, color=color_select[key])
+                for point in range(len(plot_data[i])):
+                    graphs[i].draw_point((plot_data[i][point][0], plot_data[i][point][1]), dot_size, color=color_select[key])
 
     
         draw_legend(legend, data_labels, color_select)
@@ -389,6 +390,7 @@ if __name__ == '__main__':
     dragging = False
     start_point = end_point = prior_plot = None
     prior_rect = (None, None)
+    current_plot_type = ""
 
     #event loop
     file_loc = ""
@@ -445,6 +447,7 @@ if __name__ == '__main__':
             window["-PLOT LEGEND-"].Erase()
 
             window["-PLOT TITLE-"].update(value=plot_type[0])
+            current_plot_type = plot_type[0]
             if plot_type[0] == "point cloud" or plot_type[0] == "centroid of motion" or plot_type[0] == "distance from center" or plot_type[0] == "normalized distance from center" or plot_type[0] == "speed over time":
                 
                 window["-PLOT CANVAS 2-"].update(visible=False)
@@ -495,19 +498,32 @@ if __name__ == '__main__':
         elif event.endswith('+UP'):  # The drawing has ended because mouse up
             highlight_frames_iter.clear()
             highlight_frames_iter = []
+
+            min_x = min(start_point[0], end_point[0])
+            max_x = max(start_point[0], end_point[0])
+            min_y = min(start_point[1], end_point[1])
+            max_y = max(start_point[1], end_point[1])
+
+            plot_specfic_data = data
+            if current_plot_type == "position spectrum" or current_plot_type == "velocity over time":
+                if prior_rect[0] == "-PLOT CANVAS-":
+                    plot_specfic_data = data[0]
+                elif prior_rect[0] == "-PLOT CANVAS 2-":
+                    plot_specfic_data = data[1]
+
+            max_points = 0
+            for key in range(len(plot_specfic_data)):
+                if len(plot_specfic_data[key]) > max_points:
+                    max_points = len(plot_specfic_data[key])
+
+            highlight = [0 for i in range(max_points)]
             
-            highlight = [0 for i in range(len(data[0]))]
-            for point in range(len(data[0])):
-                min_x = min(start_point[0], end_point[0])
-                max_x = max(start_point[0], end_point[0])
-                min_y = min(start_point[1], end_point[1])
-                max_y = max(start_point[1], end_point[1])
-                for key in range(len(data)):
-                    if data[key][point][0] > min_x and data[key][point][0] < max_x and data[key][point][1] > min_y and data[key][point][1] < max_y:
+            for key in range(len(plot_specfic_data)):
+                for point in range(len(plot_specfic_data[key])):
+                    if highlight[point] == 0 and plot_specfic_data[key][point][0] > min_x and plot_specfic_data[key][point][0] < max_x and plot_specfic_data[key][point][1] > min_y and plot_specfic_data[key][point][1] < max_y:
                         highlight[point] = 1
-                        break
             
-            highlight_frames_iter = [i for i in range(len(data[0])) if highlight[i]]
+            highlight_frames_iter = [i for i in range(max_points) if highlight[i]]
 
             print(f"grabbed rectangle from {start_point} to {end_point}")
             start_point, end_point = None, None  # enable grabbing a new rect
@@ -517,7 +533,7 @@ if __name__ == '__main__':
                 current_frame = highlight_frames_iter[0]
                 display_frame(current_frame)
                 window["-SCRUB BAR-"].update(value=current_frame)
-                window["-SELECTED FRAMES-"].update(value="Selected keyframe 0 / "+str(len(highlight_frames_iter)))
+                window["-SELECTED FRAMES-"].update(value="Selected keyframe 1 / "+str(len(highlight_frames_iter)))
             
             
         if event == "-LEFT FRAME-":
@@ -533,7 +549,7 @@ if __name__ == '__main__':
             current_frame = highlight_frames_iter[index]
             display_frame(current_frame)
             window["-SCRUB BAR-"].update(value=current_frame)
-            window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index)+" / "+str(len(highlight_frames_iter)))
+            window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight_frames_iter)))
 
         if event == "-RIGHT FRAME-":
             try:
@@ -548,7 +564,7 @@ if __name__ == '__main__':
             current_frame = highlight_frames_iter[index]
             display_frame(current_frame)
             window["-SCRUB BAR-"].update(value=current_frame)
-            window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index)+" / "+str(len(highlight_frames_iter)))
+            window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight_frames_iter)))
 
 
         #video events
