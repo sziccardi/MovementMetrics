@@ -510,7 +510,7 @@ def display_metrics(data, labels, plot_type):
             irc_txt = "IQR: " + str(round(quart3_y, 2)) + " - " + str(round(quart1_y, 2)) + " = " + str(round(quart3_y-quart1_y,2))
             
             total_track_point_text = name + "- \n" + total_track_point_text + avg_txt + "\n" + irc_txt + "\n"
-            
+
             if "left" in name:
                 left_avg.append(avg)
             elif "right" in name:
@@ -520,6 +520,60 @@ def display_metrics(data, labels, plot_type):
         tot_right_avg = mm.getMean(right_avg)
 
         avg_proportions_txt = "Left proportion of \nmovement:\n" + str(round(tot_left_avg / (tot_left_avg+tot_right_avg),2)) +"\nRight proportion of \nmovement:\n"+str(round(tot_right_avg / (tot_left_avg+tot_right_avg),2))
+        window['-COMPUTED METRICS-'].update(value=total_track_point_text+"\n"+avg_proportions_txt)
+
+    elif plot_type == "velocity over time":
+        left_horiz_avg = []
+        left_vert_avg = []
+        right_horiz_avg = []
+        right_vert_avg = []
+        total_track_point_text = ""
+        for i, name in enumerate(labels):
+            np_data_horiz = np.array(data[i][0])
+            np_data_vert = np.array(data[i][1])
+
+            avg_horiz = mm.getMean(np_data_horiz[:,1])
+            avg_horiz_txt = "Horizontal mean: \n" + str(round(avg_horiz,2))
+
+            quart1_horiz = mm.getQuartile(np_data_horiz[:,1], 1)
+            quart3_horiz = mm.getQuartile(np_data_horiz[:,1], 3)
+            irc_horiz_txt = "Horizontal IQR: \n" + str(round(quart3_horiz, 2)) + " - " + str(round(quart1_horiz, 2)) + " = " + str(round(quart3_horiz-quart1_horiz,2))
+            
+            
+            avg_vert = mm.getMean(np_data_vert[:,1])
+            avg_vert_txt = "Vertical mean: \n" + str(round(avg_vert,2))
+
+            quart1_vert = mm.getQuartile(np_data_vert[:,1], 1)
+            quart3_vert = mm.getQuartile(np_data_vert[:,1], 3)
+            irc_vert_txt = "Vertical IQR: \n" + str(round(quart3_vert, 2)) + " - " + str(round(quart1_vert, 2)) + " = " + str(round(quart3_vert-quart1_vert,2))
+            
+            total_track_point_text = total_track_point_text + "\n" +name + "- \n" + avg_horiz_txt + "\n" + irc_horiz_txt + "\n" + avg_vert_txt + "\n" + irc_vert_txt + "\n"
+            
+            if "left" in name:
+                left_horiz_avg.append(avg_horiz)
+                left_vert_avg.append(avg_vert)
+            elif "right" in name:
+                right_horiz_avg.append(avg_horiz)
+                right_vert_avg.append(avg_vert)
+        
+        all_left = left_horiz_avg.copy()
+        all_right = right_horiz_avg.copy()
+        all_horiz = left_horiz_avg.copy()
+        all_vert = left_vert_avg.copy()
+        all_left.extend(left_vert_avg)
+        all_right.extend(right_vert_avg)
+        all_vert.extend(right_vert_avg)
+        all_horiz.extend(right_horiz_avg)
+
+        tot_left_avg = mm.getMean([abs(e) for e in all_left])
+        tot_right_avg = mm.getMean([abs(e) for e in all_right])
+        tot_horiz_avg = mm.getMean([abs(e) for e in all_horiz])
+        tot_vert_avg = mm.getMean([abs(e) for e in all_vert])
+
+        avg_proportions_txt = "Left proportion of \nmovement:\n" + str(round(tot_left_avg / (tot_left_avg+tot_right_avg),2)) 
+        avg_proportions_txt = avg_proportions_txt + "\nRight proportion of \nmovement:\n"+str(round(tot_right_avg / (tot_left_avg+tot_right_avg),2))
+        avg_proportions_txt = avg_proportions_txt + "\nHorizontal proportion of \nmovement:\n"+str(round(tot_horiz_avg / (tot_horiz_avg+tot_vert_avg),2))
+        avg_proportions_txt = avg_proportions_txt + "\nVertical proportion of \nmovement:\n"+str(round(tot_vert_avg / (tot_horiz_avg+tot_vert_avg),2))
         window['-COMPUTED METRICS-'].update(value=total_track_point_text+"\n"+avg_proportions_txt)
 
 if __name__ == '__main__':

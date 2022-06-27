@@ -736,7 +736,7 @@ def PlotVelocitiesOverTime(data, keypoints, video_fps, video_pix_per_m, vel_bloc
     ax1.set_ylim([my_min, my_max])
     ax2.set_ylim([my_min, my_max])
     labels = [itos_map[x] for x in keypoints]
-    labels.append("center")
+   
     plt.legend(labels, markerscale=6)
     ax1.set_title("X velocity over time")
     ax2.set_title("Y velocity over time")
@@ -800,7 +800,6 @@ def GetVelocitiesOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_b
 
     
     labels = [itos_map[x] for x in keypoints]
-    labels.append("center")
     
     return processed_data, labels, axes_labels
 
