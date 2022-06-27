@@ -9,10 +9,6 @@ import numpy as np
 import scipy.stats as stats
 from enum import Enum
 
-video_fps = 30
-video_pix_per_m = -1
-vel_blocks = 15
-
 class PlotType(Enum):
     NONE = 0
     POINT_CLOUD = 1
@@ -128,7 +124,7 @@ def ReadDataInFolder(file_path):
     return vals
 
 # [frame, x/y/c, keypoint]
-def PlotPointCloud(data, keypoints):
+def PlotPointCloud(data, keypoints, fps, video_pix_per_m, cov_width):
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
@@ -167,9 +163,10 @@ def PlotPointCloud(data, keypoints):
     figure = plt.gcf()
     figure.set_size_inches(5, 3.25)
 
-def GetPointCloudData(data, keypoints):
+def GetPointCloudData(data, keypoints, fps, video_pix_per_m, cov_width):
     axes_labels = []
     scale = 1.0
+    print(video_pix_per_m)
     if video_pix_per_m > 0:
         scale = video_pix_per_m
         axes_labels.append("x Position (m)")
@@ -209,7 +206,7 @@ def GetPointCloudData(data, keypoints):
     
     
 
-def PlotCentroid(data, keypoints):
+def PlotCentroid(data, keypoints, fps, video_pix_per_m, cov_width):
     np_vals = np.array(data)
     selected_vals = []
     
@@ -264,7 +261,7 @@ def PlotCentroid(data, keypoints):
     figure = plt.gcf()
     figure.set_size_inches(5, 3.25)
 
-def GetCentroidData(data, keypoints):
+def GetCentroidData(data, keypoints, fps, video_pix_per_m, cov_width):
     np_vals = np.array(data)
     selected_vals = []
     
@@ -317,7 +314,7 @@ def GetCentroidData(data, keypoints):
 
     return processed_data, labels, axes_labels
 
-def PlotLocSpectrum(data, keypoints):
+def PlotLocSpectrum(data, keypoints, fps, video_pix_per_m, cov_width):
     x_dict = {}
     y_dict = {}
     fig, ax = plt.subplots(2)
@@ -368,7 +365,7 @@ def PlotLocSpectrum(data, keypoints):
     ax[1].tick_params(labelsize=8)
     fig.set_size_inches(5, 4.75)
 
-def PlotDistFromCenter(normalized, data, keypoints):
+def PlotDistFromCenter(normalized, data, keypoints, fps, video_pix_per_m, cov_width):
     np_vals = np.array(data)
     scale = 1.0
     if video_pix_per_m > 0:
@@ -416,7 +413,7 @@ def PlotDistFromCenter(normalized, data, keypoints):
     figure = plt.gcf()
     figure.set_size_inches(5, 3.25)
 
-def GetDistFromCenterData(normalized, data, keypoints):
+def GetDistFromCenterData(normalized, data, keypoints, fps, video_pix_per_m, cov_width):
     np_vals = np.array(data)
 
     axes_labels = []
@@ -459,7 +456,7 @@ def GetDistFromCenterData(normalized, data, keypoints):
     return processed_data, labels, axes_labels
 
 
-def PlotVelocityHeatMap(data, keypoints):
+def PlotVelocityHeatMap(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
     np_vals = np.array(data)
     heat_map = np.zeros((720, 1280))
     scale = 1.0
@@ -513,7 +510,7 @@ def PlotVelocityHeatMap(data, keypoints):
     plt.ylim([0, 720 / vel_blocks])
     plt.colorbar(im)
 
-def PlotSpeedOverTime(data, keypoints):
+def PlotSpeedOverTime(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
@@ -577,7 +574,7 @@ def PlotSpeedOverTime(data, keypoints):
     figure = plt.gcf()
     figure.set_size_inches(5, 3.25)
     
-def GetSpeedOverTimeData(data, keypoints):
+def GetSpeedOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
     axes_labels = []
     axes_labels.append("time (s)")
     scale = 1.0
@@ -633,7 +630,7 @@ def GetSpeedOverTimeData(data, keypoints):
     
     return processed_data, labels, axes_labels
 
-def PlotVelocitiesOverTime(data, keypoints):
+def PlotVelocitiesOverTime(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
     scale = 1.0
     if video_pix_per_m > 0:
@@ -721,7 +718,7 @@ def PlotVelocitiesOverTime(data, keypoints):
     
     fig.set_size_inches(5, 4.75)
 
-def GetVelocitiesOverTimeData(data, keypoints):
+def GetVelocitiesOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
     processed_data = []
     axes_labels = []
     scale = 1.0
@@ -733,8 +730,7 @@ def GetVelocitiesOverTimeData(data, keypoints):
         axes_labels.append(["time (s)", "Horizontal velocity (pixels/s)"])
         axes_labels.append(["time (s)", "Vertical velocity (pixels/s)"])
     
-    my_min = 100000000000
-    my_max = -100000000000
+    
     for point in keypoints:
         start_iter = (point - 1)
         
@@ -758,12 +754,6 @@ def GetVelocitiesOverTimeData(data, keypoints):
 
         avged_vels_x = np.convolve(list_vels_x, np.ones(vel_blocks), 'valid') / vel_blocks
         avged_vels_y = np.convolve(list_vels_y, np.ones(vel_blocks), 'valid') / vel_blocks
-        temp_max = np.amax(avged_vels_y)
-        temp_min = np.amin(avged_vels_y)
-        if (temp_max > my_max):
-            my_max = temp_max
-        if (temp_min < my_min):
-            my_min = temp_min
 
         my_x_x = np.arange(0, len(list_vels_x)/float(video_fps), 1.0/float(video_fps))[:len(avged_vels_x)]
         my_x_y = avged_vels_x
@@ -789,7 +779,7 @@ def GetVelocitiesOverTimeData(data, keypoints):
     return processed_data, labels, axes_labels
 
     
-def PlotAccelerometerTree(data, keypoints):    
+def PlotAccelerometerTree(data, keypoints, video_fps, video_pix_per_m, vel_blocks):    
     headings = [(str(itos_map[point]) + " x", str(itos_map[point]) + " y") for point in keypoints]
     headings = list(sum(headings,()))
     headings.insert(0,"TimeStamp (Seconds)")
@@ -858,7 +848,7 @@ def PlotAccelerometerTree(data, keypoints):
 
 
 
-def PlotAperatureOverTime(data, keypoints):
+def PlotAperatureOverTime(data, keypoints, video_fps, vel_blocks):
     if len(keypoints) < 3:
         print("WARNING: you need at least 3 points to compute an aperature.")
         return
@@ -890,28 +880,28 @@ def PlotAperatureOverTime(data, keypoints):
     
 
 
-def Plot(data, keypoints, type, filename = ""):
+def Plot(data, keypoints, fps, pix_in_m, cov_w, type, filename = ""):
     
     if type == PlotType.POINT_CLOUD:
-        PlotPointCloud(data, keypoints)
+        PlotPointCloud(data, keypoints, fps, pix_in_m, cov_w)
     elif type == PlotType.CENTROID:
-        PlotCentroid(data, keypoints)
+        PlotCentroid(data, keypoints, fps, pix_in_m, cov_w)
     elif type == PlotType.POS_SPEC:
-        PlotLocSpectrum(data, keypoints)
+        PlotLocSpectrum(data, keypoints, fps, pix_in_m, cov_w)
     elif type == PlotType.CENT_DIST:
-        PlotDistFromCenter(False, data, keypoints)
+        PlotDistFromCenter(False, data, keypoints, fps, pix_in_m, cov_w)
     elif type == PlotType.CENT_DIST_NORM:
-        PlotDistFromCenter(True, data, keypoints)
+        PlotDistFromCenter(True, data, keypoints, fps, pix_in_m, cov_w)
     elif type == PlotType.VEL_HEAT_MAP:
-        PlotVelocityHeatMap(data, keypoints)
+        PlotVelocityHeatMap(data, keypoints, fps, pix_in_m, cov_w)
     elif type == PlotType.TOTAL_VEL_OVER_TIME:
-        PlotSpeedOverTime(data, keypoints)
+        PlotSpeedOverTime(data, keypoints, fps, pix_in_m, cov_w)
     elif type == PlotType.VEL_OVER_TIME:
-        PlotVelocitiesOverTime(data, keypoints)
+        PlotVelocitiesOverTime(data, keypoints, fps, pix_in_m, cov_w)
     elif type == PlotType.APERATURE:
-        PlotAperatureOverTime(data, keypoints)
+        PlotAperatureOverTime(data, keypoints, fps, pix_in_m, cov_w)
     elif type == PlotType.ACCEL_TREE:
-        PlotAccelerometerTree(data, keypoints)
+        PlotAccelerometerTree(data, keypoints, fps, pix_in_m, cov_w)
     
 
     if filename:
@@ -927,14 +917,11 @@ def run_script(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
         plt.close('all')
         plt.cla()
         plt.clf()
-    video_fps = fps
-    video_pix_per_m = pix_in_m
-    vel_blocks = cov_width
 
     real_keypoints = [stoi_map[k] for k in keypoints]
 
     data = ReadDataFromList(frame_files)
-    flag, fig = Plot(data, real_keypoints, plot_type_dict[plot_type], "TEMP.png")
+    flag, fig = Plot(data, real_keypoints, fps, pix_in_m, cov_width, plot_type_dict[plot_type], "TEMP.png")
     if not flag:
         print("ERROR: Couldn't find that plot")
     return fig
@@ -942,20 +929,20 @@ def run_script(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
 def run_script_get_data(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
     real_keypoints = [stoi_map[k] for k in keypoints]
     data = ReadDataFromList(frame_files)
-    
+
     processed_data = data_labels = ax_labels = None
     if plot_type_dict[plot_type] == PlotType.POINT_CLOUD:
-        processed_data, data_labels, ax_labels = GetPointCloudData(data, real_keypoints)
+        processed_data, data_labels, ax_labels = GetPointCloudData(data, real_keypoints, fps, pix_in_m, cov_width)
     elif plot_type_dict[plot_type] == PlotType.CENTROID:
-        processed_data, data_labels, ax_labels = GetCentroidData(data, real_keypoints)
+        processed_data, data_labels, ax_labels = GetCentroidData(data, real_keypoints, fps, pix_in_m, cov_width)
     elif plot_type_dict[plot_type] == PlotType.CENT_DIST:
-        processed_data, data_labels, ax_labels = GetDistFromCenterData(False, data, real_keypoints)
+        processed_data, data_labels, ax_labels = GetDistFromCenterData(False, data, real_keypoints, fps, pix_in_m, cov_width)
     elif plot_type_dict[plot_type] == PlotType.CENT_DIST_NORM:
-        processed_data, data_labels, ax_labels = GetDistFromCenterData(True, data, real_keypoints)
+        processed_data, data_labels, ax_labels = GetDistFromCenterData(True, data, real_keypoints, fps, pix_in_m, cov_width)
     elif plot_type_dict[plot_type] == PlotType.TOTAL_VEL_OVER_TIME:
-        processed_data, data_labels, ax_labels = GetSpeedOverTimeData(data, real_keypoints)
+        processed_data, data_labels, ax_labels = GetSpeedOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width)
     elif plot_type_dict[plot_type] == PlotType.VEL_OVER_TIME:
-        processed_data, data_labels, ax_labels = GetVelocitiesOverTimeData(data, real_keypoints)
+        processed_data, data_labels, ax_labels = GetVelocitiesOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width)
     
     if processed_data == None or data_labels == None:
         print("WARNING: Could not process data as provided.")

@@ -9,7 +9,7 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 import subprocess
-from PIL import Image, ImageTk, ImageColor, ImageDraw
+from PIL import Image, ImageTk, ImageColor, ImageDraw, ImageGrab
 import io
 import random
 
@@ -90,7 +90,7 @@ def get_main_layout():
     [sg.HSep()],
     [sg.Text("Number of Pixels that \nmake up 1 meter")],
     [sg.Text("NOTE: If left blank, units \nwill be displayed in \npixels")],
-    [sg.InputText(size=(5,1), key="-PIX SCALE-"), sg.Text("Pixels")],
+    [sg.InputText(size=(8,1), key="-PIX SCALE-"), sg.Text("Pixels")],
     [sg.HSep()],
     [sg.Text("Smoothing amount \nor \nConvolution size")],
     [sg.InputText("15", size=(5,1), key="-CONV WIDTH-"), sg.Text("Frames")]]
@@ -202,34 +202,29 @@ def display_file_select(chosen_file, existing):
     sub_window.close()
     return file_loc, chosen_file
 
-def draw_axes(graph, data, axes_labels):
-    #because it can be ragged...
-    y_min = x_min = 1000000000
-    y_max = x_max = -1000000000
-    for key in range(len(data)):
-        np_data = np.array(data[key])
-    
-        temp_y_min = np.amin(np_data[:, 1])
-        temp_y_max = np.amax(np_data[:, 1])
-        temp_x_min = np.amin(np_data[:, 0])
-        temp_x_max = np.amax(np_data[:, 0])
-        
-        if temp_y_min < y_min:
-            y_min = temp_y_min
-        if temp_x_min < x_min:
-            x_min = temp_x_min
-        if temp_y_max > y_max:
-            y_max = temp_y_max
-        if temp_x_max > x_max:
-            x_max = temp_x_max
-    
+def draw_axes(graph, ax_lims, axes_labels):
+    #                    0        1        2        3        4        5        6        7
+    #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
+    x_min = min(ax_lims[4], ax_lims[5])
+    x_max = max(ax_lims[0], ax_lims[1])
+    y_min = min(ax_lims[6], ax_lims[7])
+    y_max = max(ax_lims[2], ax_lims[3])
+
     x_range = x_max - x_min
     y_range = y_max - y_min
 
-    scaled_y_min = y_min-y_range/7.0
-    scaled_x_min = x_min-x_range/7.0
-    scaled_y_max = y_max+y_range/7.0
-    scaled_x_max = x_max+x_range/7.0
+    y_tick_count = y_range/7.0
+    if y_range < 7:
+        y_tick_count = 1
+    
+    x_tick_count = x_range/7.0
+    if x_range < 7:
+        x_tick_count = 1
+
+    scaled_y_min = y_min-y_tick_count
+    scaled_x_min = x_min-x_tick_count
+    scaled_y_max = y_max+y_tick_count
+    scaled_x_max = x_max+x_tick_count
     
     dot_size=x_range/150
 
@@ -273,26 +268,27 @@ def draw_axes(graph, data, axes_labels):
         x_shift = -4.5*h_tick_len
 
     graph.draw_line(
-        (ax_x_min, max(0, scaled_y_min + y_range/ 10.0)), 
-        (ax_x_max, max(0, scaled_y_min + y_range/ 10.0)), color="black", width=dot_size*0.75) #x axis
+        (ax_x_min, max(0, scaled_y_min + y_tick_count)), 
+        (ax_x_max, max(0, scaled_y_min + y_tick_count)), color="black", width=dot_size*0.75) #x axis
         
-    for x in range(int(ax_x_min), int(ax_x_max), int(x_range/10.0)):
-        graph.draw_line((x, max(0, scaled_y_min + y_range/ 10.0)-v_tick_len), (x, max(0, scaled_y_min + y_range/ 10.0)+v_tick_len))  #Draw a scale
+    for x in range(int(ax_x_min), int(ax_x_max), int(x_tick_count)):
+        graph.draw_line((x, max(0, scaled_y_min + y_tick_count)-v_tick_len), (x, max(0, scaled_y_min + y_tick_count)+v_tick_len))  #Draw a scale
         if x != 0:
-            graph.draw_text(str(x), (x, max(0, scaled_y_min + y_range/ 10.0)-2.5*v_tick_len), color='black')  #Draw the value of the scale
+            graph.draw_text(str(x), (x, max(0, scaled_y_min + y_tick_count)-2.5*v_tick_len), color='black')  #Draw the value of the scale
     
-    graph.draw_text(axes_labels[0], (x_ax_label_pos, max(0, scaled_y_min + y_range/ 10.0)-4.75*v_tick_len), text_location = x_ax_label_anch, color="black")
+    graph.draw_text(axes_labels[0], (x_ax_label_pos, max(0, scaled_y_min + y_tick_count)-4.75*v_tick_len), text_location = x_ax_label_anch, color="black")
 
     graph.draw_line(
-        (max(0, scaled_x_min + x_range/ 10.0), ax_y_min), 
-        (max(0, scaled_x_min + x_range/ 10.0), ax_y_max), color="black", width=dot_size*0.75) #y axis
+        (max(0, scaled_x_min + x_tick_count), ax_y_min), 
+        (max(0, scaled_x_min + x_tick_count), ax_y_max), color="black", width=dot_size*0.75) #y axis
+
     
-    for y in range(int(ax_y_min), int(ax_y_max), int(y_range/10.0)):
-        graph.draw_line((max(0, scaled_x_min + x_range/ 10.0)-h_tick_len, y), (max(0, scaled_x_min + x_range/ 10.0)+h_tick_len, y))
+    for y in range(int(ax_y_min), int(ax_y_max), int(y_tick_count)):
+        graph.draw_line((max(0, scaled_x_min + x_tick_count)-h_tick_len, y), (max(0, scaled_x_min + x_tick_count)+h_tick_len, y))
         if y != 0:
-            graph.draw_text(str(y), (max(0, scaled_x_min + x_range/ 10.0)-2.5*h_tick_len, y), color='black')
+            graph.draw_text(str(y), (max(0, scaled_x_min + x_tick_count)-2.5*h_tick_len, y), color='black')
     
-    graph.draw_text(axes_labels[1], (max(0, scaled_x_min + x_range/ 10.0)+x_shift, y_ax_label_pos), angle=label_angle, text_location = y_ax_label_anch, color="black")
+    graph.draw_text(axes_labels[1], (max(0, scaled_x_min + x_tick_count)+x_shift, y_ax_label_pos), angle=label_angle, text_location = y_ax_label_anch, color="black")
     return dot_size
 
 def draw_legend(graph, labels, colors):
@@ -302,8 +298,28 @@ def draw_legend(graph, labels, colors):
         graph.draw_text(name, (25 + i*55, 0.5), font=("Arial", 6), text_location = sg.TEXT_LOCATION_BOTTOM_LEFT, color="black")
 
 def create_basic_plot(graph, data, data_labels, legend, axes_labels):
-    dot_size = draw_axes(graph, data, axes_labels)
+    #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
+    ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
+    for key in range(len(data)):
+        vals_plot_0 = data[key]
+
+        max_x = max([point[0] for point in vals_plot_0])
+        max_y = max([point[1] for point in vals_plot_0])
+        min_x = min([point[0] for point in vals_plot_0])
+        min_y = min([point[1] for point in vals_plot_0])
+        
+        if ax_lims[0] < max_x:
+            ax_lims[0] = max_x
+        if ax_lims[2] < max_y:
+            ax_lims[2] = max_y
+        if ax_lims[4] > min_x:
+            ax_lims[4] = min_x
+        if ax_lims[6] > min_y:
+            ax_lims[6] = min_y
+
     
+    print(ax_lims)
+    dot_size = draw_axes(graph, ax_lims, axes_labels)
     color_select = random.sample(colors, len(data))
     for key in range(len(data)):
         for point in range(len(data[key])):
@@ -317,14 +333,45 @@ def create_two_plots(graphs, data, data_labels, legend, axes_labels, box_n_whisk
         print("WARNING: This graph is not yet supported")
     else:
         color_select = random.sample(colors, len(labels))
+        
+        ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
+        for key in range(len(data)):
+            vals_plot_0 = data[key][0]
+            vals_plot_1 = data[key][1]
+            max_x_0 = max([point[0] for point in vals_plot_0])
+            max_y_0 = max([point[1] for point in vals_plot_0])
+            min_x_0 = min([point[0] for point in vals_plot_0])
+            min_y_0 = min([point[1] for point in vals_plot_0])
+            max_x_1 = max([point[0] for point in vals_plot_1])
+            max_y_1 = max([point[1] for point in vals_plot_1])
+            min_x_1 = min([point[0] for point in vals_plot_1])
+            min_y_1 = min([point[1] for point in vals_plot_1])
+            
+            if ax_lims[0] < max_x_0:
+                ax_lims[0] = max_x_0
+            if ax_lims[2] < max_y_0:
+                ax_lims[2] = max_y_0
+            if ax_lims[4] > min_x_0:
+                ax_lims[4] = min_x_0
+            if ax_lims[6] > min_y_0:
+                ax_lims[6] = min_y_0
+            if ax_lims[1] < max_x_1:
+                ax_lims[1] = max_x_1
+            if ax_lims[3] < max_y_1:
+                ax_lims[3] = max_y_1
+            if ax_lims[5] > min_x_1:
+                ax_lims[5] = min_x_1
+            if ax_lims[7] > min_y_1:
+                ax_lims[7] = min_y_1
+        
+        dot_size = draw_axes(graphs[0], ax_lims, axes_labels[0])
+        dot_size = draw_axes(graphs[1], ax_lims, axes_labels[1])
+
         for key in range(len(data)):
             plot_data = data[key]
-            for i in range(len(data[key])):
-            
-                dot_size = draw_axes(graphs[i], plot_data, axes_labels[i])
-
-                for point in range(len(plot_data[i])):
-                    graphs[i].draw_point((plot_data[i][point][0], plot_data[i][point][1]), dot_size, color=color_select[key])
+            for plot in range(len(plot_data)):
+                for point in range(len(plot_data[plot])-1):
+                    graphs[plot].draw_line((plot_data[plot][point][0], plot_data[plot][point][1]), (plot_data[plot][point+1][0], plot_data[plot][point+1][1]), color=color_select[key], width=dot_size)
 
     
         draw_legend(legend, data_labels, color_select)
@@ -439,8 +486,14 @@ if __name__ == '__main__':
             plot_type = values["-PLOT LIST-"]
             track_points = values["-TRACK POINT LIST-"]
             
-            data, labels, ax_labels = mm.run_script_get_data(real_files, plot_type[0], track_points, 
-            values["-FPS-"], values["-PIX SCALE-"], values["-CONV WIDTH-"])
+            fps = (int)(values["-FPS-"])
+            pix_scale = ''
+            if values["-PIX SCALE-"] != '':
+                pix_scale = (float)(values["-PIX SCALE-"])
+            else:
+                pix_scale = -1
+            cov_w = (int)(values["-CONV WIDTH-"])
+            data, labels, ax_labels = mm.run_script_get_data(real_files, plot_type[0], track_points, fps, pix_scale, cov_w)
             
             graph.Erase()
             graph2.Erase()
@@ -471,7 +524,24 @@ if __name__ == '__main__':
 
         elif event == "-EXPORT PLOT-":
             try:
-                matplotlib.pyplot.savefig(values["-PLOT NAME-"] + ".png", bbox_inches='tight')
+                if plot_type[0] == "position spectrum" or plot_type[0] == "velocity over time":
+                    widget = window["-PLOT CANVAS-"].Widget
+                    # NOTE: these are magic numbers, no idea why only these work
+                    box = (widget.winfo_rootx() + widget.winfo_width() / 2.2, widget.winfo_rooty() + 30, widget.winfo_rootx() + 1.67 * widget.winfo_width(), widget.winfo_rooty() + 1.66 * widget.winfo_height() - 30)
+                    grab = ImageGrab.grab(bbox=box)
+                    grab.save(values["-PLOT NAME-"] + ".png")
+
+                    widget = window["-PLOT CANVAS 2-"].Widget
+                    box = (widget.winfo_rootx() + widget.winfo_width() / 2.2, widget.winfo_rooty() + 0.52 * widget.winfo_height(), widget.winfo_rootx() + 1.67 * widget.winfo_width(), widget.winfo_rooty() + 1.78 * widget.winfo_height())
+                    grab = ImageGrab.grab(bbox=box)
+                    grab.save(values["-PLOT NAME-"] + "_1.png")
+                else:
+                    widget = window["-PLOT CANVAS-"].Widget
+                    # NOTE: these are magic numbers, no idea why only these work
+                    box = (widget.winfo_rootx() + widget.winfo_width() / 2.2, widget.winfo_rooty() + 30, widget.winfo_rootx() + 1.67 * widget.winfo_width(), widget.winfo_rooty() + 1.36 * widget.winfo_height())
+                    grab = ImageGrab.grab(bbox=box)
+                    grab.save(values["-PLOT NAME-"] + ".png")
+
                 window["-PLOT NAME-"].update("")
             except:
                 print("ERROR: Couldn't save plot")
