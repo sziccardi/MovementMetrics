@@ -1,5 +1,6 @@
 from cgitb import enable
 from fileinput import filename
+from turtle import right
 import PySimpleGUI as sg
 import os.path
 
@@ -24,10 +25,10 @@ def get_main_layout():
         [sg.Text("Plot Settings")],
         [sg.HSep()],
         [sg.HSep()],
-        [sg.Text('Currently selected:')],
-        [sg.Text(key="-SELECTED FILE-", size=(25,1), enable_events=False, visible=False)], 
-        [sg.Button(button_text='Browse New', size=(23,1),enable_events=True,key="-NEW VIDEO BUTTON-"), sg.Image(data=processing_gif, size=(2,2), key="-PROCESSING GIF-", visible=False)], 
-        [sg.Button(button_text='Browse Existing', size=(23,1),enable_events=True,key="-EXISTING VIDEO BUTTON-")],
+        [sg.Text('Currently selected:', key="-SELECTED FILE-")],
+        #[sg.Text(key="-SELECTED FILE-", size=(30,1), enable_events=False, visible=False)], 
+        #[sg.Button(button_text='Browse New', size=(23,1),enable_events=True,key="-NEW VIDEO BUTTON-"), sg.Image(data=processing_gif, size=(2,2), key="-PROCESSING GIF-", visible=False)], 
+        [sg.Button(button_text='Browse Existing', size=(30,1),enable_events=True,key="-EXISTING VIDEO BUTTON-")],
         [sg.HSep()],
         [sg.Text('Track Points')],
         [sg.Listbox(
@@ -43,7 +44,7 @@ def get_main_layout():
         'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right',
         'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right',
         'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right'], enable_events=True, 
-            size=(25,5), key="-TRACK POINT LIST-", select_mode='multiple'
+            size=(30,5), key="-TRACK POINT LIST-", select_mode='multiple'
         )], 
         [sg.HSep()],
         [sg.Text('Available Plot Types')],
@@ -51,12 +52,25 @@ def get_main_layout():
             sg.Listbox(
                 values=["point cloud", "centroid of motion", "position spectrum", "distance from center", 
                 "normalized distance from center", "speed over time", "velocity over time"], 
-                enable_events=True, size=(25,5), key="-PLOT LIST-"
+                enable_events=True, size=(30,5), key="-PLOT LIST-"
             )
         ],
         [sg.HSep()],
-        [sg.Button(button_text='PLOT', size=(25,1),enable_events=True,key="-RUN SCRIPT-", visible=False)]
-    ]
+        [sg.Text('Script settings')],
+        [sg.HSep()],
+        [sg.HSep()],
+        [sg.Text("Camera frame rate")],
+        [sg.InputText("30", size=(5,1), key="-FPS-"), sg.Text("FPS")],
+        [sg.HSep()],
+        [sg.Text("Number of Pixels that make up 1 meter")],
+        [sg.Text("*If blank, plot units are pixels*")],
+        [sg.InputText(size=(8,1), key="-PIX SCALE-"), sg.Text("Pixels")],
+        [sg.HSep()],
+        [sg.Text("Smoothing amount or Convolution size")],
+        [sg.InputText("15", size=(5,1), key="-CONV WIDTH-"), sg.Text("Frames")],
+        [sg.HSep()],
+        [sg.Button(button_text='PLOT', size=(30,1),enable_events=True,key="-RUN SCRIPT-", visible=False)],
+        ]
 
     image_column = [
         [sg.Text("Processed video will show up here", key="-IMAGE TITLE-")],
@@ -82,26 +96,20 @@ def get_main_layout():
     [sg.HSep()],
     [sg.Column(image_column, key="-FRAME COLUMN-", element_justification='c'), sg.Column(plot_column, key="-PLOT COLUMN-", element_justification='c')]   
     ]
-    right_column = [[sg.Text('Script settings')],
+    right_column = [[sg.Text('Computed metrics:')],
     [sg.HSep()],
     [sg.HSep()],
-    [sg.Text("Camera frame rate")],
-    [sg.InputText("30", size=(5,1), key="-FPS-"), sg.Text("FPS")],
-    [sg.HSep()],
-    [sg.Text("Number of Pixels that \nmake up 1 meter")],
-    [sg.Text("NOTE: If left blank, units \nwill be displayed in \npixels")],
-    [sg.InputText(size=(8,1), key="-PIX SCALE-"), sg.Text("Pixels")],
-    [sg.HSep()],
-    [sg.Text("Smoothing amount \nor \nConvolution size")],
-    [sg.InputText("15", size=(5,1), key="-CONV WIDTH-"), sg.Text("Frames")]]
+    [sg.Text("", key="-COMPUTED METRICS-")]
+    
+    ]
 
     layout = [
         [
-            sg.Column(left_column, key="-MAIN OPTIONS COL-", size=(200, 625)),
+            sg.Column(left_column, key="-MAIN OPTIONS COL-", size=(250, 650)),
             sg.VSeperator(),
-            sg.Column(main_column, key="-MAIN PLOT DISPLAY-", size=(1000, 625)),
+            sg.Column(main_column, key="-MAIN PLOT DISPLAY-", size=(1000, 650)),
             sg.VSeperator(),
-            sg.Column(right_column, key="-MAIN SCRIPT SETTINGS-", size=(150,625))
+            sg.Column(right_column, key="-MAIN SCRIPT SETTINGS-", size=(150,650))
         ]
     ]
     return layout
@@ -318,7 +326,6 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels):
             ax_lims[6] = min_y
 
     
-    print(ax_lims)
     dot_size = draw_axes(graph, ax_lims, axes_labels)
     color_select = random.sample(colors, len(data))
     for key in range(len(data)):
@@ -417,6 +424,104 @@ def display_frame(i):
     img_name = frames[i][file_loc.rfind('/')+1:]
     window['-IMAGE TITLE-'].update(value=img_name)
 
+def display_metrics(data, labels, plot_type):
+    if plot_type == "centroid of motion":
+        np_data = np.array(data[0])
+        spread = mm.getSpread(np_data[:,0], np_data[:,1])
+        spread_txt = "Data spread: " + str(round(spread,2))
+        avg_txt = "Average centroid value: ( "+str(round(data[1][0][0],2))+", "+str(round(data[1][0][1],2))+" )"
+        window['-COMPUTED METRICS-'].update(value=spread_txt + "\n" + avg_txt)
+    
+    elif plot_type == "point cloud" or plot_type == "distance from center" or plot_type == "normalized distance from center":
+        left_spread = []
+        right_spread = []
+        left_med = []
+        right_med = []
+        total_track_point_text = ""
+        for i, name in enumerate(labels):
+            np_data = np.array(data[i])
+            spread = mm.getSpread(np_data[:,0], np_data[:,1])
+            spread_txt = "Data spread:\n" + str(round(spread,2))
+
+            # min_x = mm.getMin(np_data[:,0])
+            # min_y = mm.getMin(np_data[:,1])
+            # max_x = mm.getMax(np_data[:,0])
+            # max_y = mm.getMax(np_data[:,1])
+            # range_x_txt = "X range: " + str(round(max_x,2)) + " - " + str(round(min_x,2)) + " = " + str(round(max_x - min_x, 2))
+            # range_y_txt = "Y range: " + str(round(max_y,2)) + " - " + str(round(min_y,2)) + " = " + str(round(max_y - min_y, 2))
+            x_med = mm.getMedian(np_data[:,0])
+            y_med = mm.getMedian(np_data[:,1])
+            med_txt = "Median values: \n(" + str(round(x_med,2)) + ", " + str(round(y_med,2)) + " )"
+
+            # avg_x_txt = "X mean: " + str(round(mm.getMean(np_data[:,0]),2))
+            # avg_y_txt = "Y mean: " + str(round(mm.getMean(np_data[:,1]),2))
+
+            # quart1_x = mm.getMin(np_data[:,0], 1)
+            # quart3_x = mm.getMin(np_data[:,0], 3)
+            # quart1_y = mm.getMin(np_data[:,1], 1)
+            # quart3_y = mm.getMin(np_data[:,1], 3)
+            # irc_x_txt = "X IQR: " + str(round(quart3_x, 2)) + " - " + str(round(quart1_x, 2)) + " = " + str(round(quart3_x-quart1_x,2))
+            # irc_y_txt = "Y IQR: " + str(round(quart3_y, 2)) + " - " + str(round(quart1_y, 2)) + " = " + str(round(quart3_y-quart1_y,2))
+            
+            if "left" in name:
+                left_spread.append(spread)
+                left_med.append([x_med,y_med])
+            elif "right" in name:
+                right_spread.append(spread)
+                right_med.append([x_med,y_med])
+
+            total_track_point_text = total_track_point_text + name + " - \n" + spread_txt + "\n" + med_txt + "\n\n"
+
+        total_left_spread = float(sum(left_spread))
+        total_right_spread = float(sum(right_spread))
+        total_spread = total_left_spread + total_right_spread
+        spread_proportions_txt = "Left proportion of \nmovement:\n" + str(round(total_left_spread / total_spread,2)) +"\nRight proportion of \nmovement:\n"+str(round(total_right_spread / total_spread,2))
+        
+        x = 0.0
+        y = 0.0
+        for val in left_med:
+            x = x + val[0]
+            y = y + val[1]
+        avg_left_med = [float(x / len(left_med)), float(y / len(left_med)) ]
+        x = 0.0
+        y = 0.0
+        for val in right_med:
+            x = x + val[0]
+            y = y + val[1]
+        avg_right_med = [float(x / len(right_med)), float(y / len(right_med)) ]
+        
+        med_diffs = [abs(avg_right_med[i]-avg_left_med[i]) for i in range(len(avg_right_med))]
+        med_diff_txt = "Difference between left \nand right medians:\n (" + str(round(med_diffs[0])) + ", " + str(round(med_diffs[1])) + ")"
+
+        window['-COMPUTED METRICS-'].update(value=total_track_point_text + "\n" + spread_proportions_txt + "\n" + med_diff_txt)
+
+    elif plot_type == "speed over time":
+        left_avg = []
+        right_avg = []
+        total_track_point_text = ""
+        for i, name in enumerate(labels):
+            np_data = np.array(data[i])
+
+            avg = mm.getMean(np_data[:,1])
+            avg_txt = "Mean: " + str(round(avg,2))
+
+            quart1_y = mm.getQuartile(np_data[:,1], 1)
+            quart3_y = mm.getQuartile(np_data[:,1], 3)
+            irc_txt = "IQR: " + str(round(quart3_y, 2)) + " - " + str(round(quart1_y, 2)) + " = " + str(round(quart3_y-quart1_y,2))
+            
+            total_track_point_text = name + "- \n" + total_track_point_text + avg_txt + "\n" + irc_txt + "\n"
+            
+            if "left" in name:
+                left_avg.append(avg)
+            elif "right" in name:
+                right_avg.append(avg)
+        
+        tot_left_avg = mm.getMean(left_avg)
+        tot_right_avg = mm.getMean(right_avg)
+
+        avg_proportions_txt = "Left proportion of \nmovement:\n" + str(round(tot_left_avg / (tot_left_avg+tot_right_avg),2)) +"\nRight proportion of \nmovement:\n"+str(round(tot_right_avg / (tot_left_avg+tot_right_avg),2))
+        window['-COMPUTED METRICS-'].update(value=total_track_point_text+"\n"+avg_proportions_txt)
+
 if __name__ == '__main__':
     #matplotlib.use('TkAgg')
     current_layout = get_main_layout()
@@ -459,7 +564,7 @@ if __name__ == '__main__':
                 file_loc, chosen_file = display_file_select(chosen_file, False)
                 loc_name = file_loc[file_loc.rfind('/')+1:]
                 if len(chosen_file) > 0:
-                    window["-SELECTED FILE-"].update(value=loc_name, visible=True)
+                    window["-SELECTED FILE-"].update(value="Currently selected: " + loc_name, visible=True)
                     window["-NEW VIDEO BUTTON-"].update("Process Current")
                     window["-PROCESSING GIF-"].update(visible=True)
                 window.TKroot.attributes('-topmost', 1)
@@ -474,7 +579,7 @@ if __name__ == '__main__':
             if len(frames) == 0:
                 print("WARNING: No video frames found for the selected folder.")
 
-            window["-SELECTED FILE-"].update(value=loc_name, visible=True)
+            window["-SELECTED FILE-"].update(value="Currently selected: " + loc_name, visible=True)
             window.TKroot.attributes('-topmost', 1)
             window.TKroot.attributes('-topmost', 0)
 
@@ -495,6 +600,8 @@ if __name__ == '__main__':
             cov_w = (int)(values["-CONV WIDTH-"])
             data, labels, ax_labels = mm.run_script_get_data(real_files, plot_type[0], track_points, fps, pix_scale, cov_w)
             
+            display_metrics(data, labels, plot_type[0])
+
             graph.Erase()
             graph2.Erase()
             window["-PLOT LEGEND-"].Erase()

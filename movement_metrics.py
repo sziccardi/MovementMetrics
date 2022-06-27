@@ -2,6 +2,7 @@ from asyncio import gather
 from cProfile import label
 from fileinput import filename
 import os
+from statistics import mean, median
 import sys
 import json, csv
 import matplotlib.pyplot as plt
@@ -123,6 +124,32 @@ def ReadDataInFolder(file_path):
 
     return vals
 
+#Metric helpers
+def getMin(data):
+    return min(data)
+
+def getMax(data):
+    return max(data)
+
+def getMean(data):
+    return mean(data)
+
+def getMedian(data):
+    return median(data)
+
+def getQuartile(data, q):
+    return np.percentile(data, q*25)
+
+def getSpread(data1, data2):
+    c = np.cov(np.vstack((data1, data2)))
+    w = np.linalg.eigvals(c)
+    s = 5.991
+    major_ax = np.sqrt(s * w[0])
+    minor_ax = np.sqrt(s * w[1])
+
+    return np.pi * major_ax * minor_ax
+
+#Plotting
 # [frame, x/y/c, keypoint]
 def PlotPointCloud(data, keypoints, fps, video_pix_per_m, cov_width):
     scale = 1.0
@@ -166,7 +193,7 @@ def PlotPointCloud(data, keypoints, fps, video_pix_per_m, cov_width):
 def GetPointCloudData(data, keypoints, fps, video_pix_per_m, cov_width):
     axes_labels = []
     scale = 1.0
-    print(video_pix_per_m)
+    
     if video_pix_per_m > 0:
         scale = video_pix_per_m
         axes_labels.append("x Position (m)")
@@ -626,7 +653,6 @@ def GetSpeedOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks
 
     
     labels = [itos_map[x] for x in keypoints]
-    labels.append("center")
     
     return processed_data, labels, axes_labels
 
