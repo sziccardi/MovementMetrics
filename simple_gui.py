@@ -685,7 +685,7 @@ if __name__ == '__main__':
                 window["-PLOT CANVAS 2-"].update(visible=False)
                 window["-PLOT CANVAS-"].set_size(graph_size)
                 create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, line_plot=True)
-            elif plot_type[0] == "position spectrum" or plot_type[0] == "velocity over time":
+            elif plot_type[0] == "relative position over time" or plot_type[0] == "position spectrum" or plot_type[0] == "velocity over time":
                 window["-PLOT CANVAS 2-"].update(visible=True)
                 window["-PLOT CANVAS-"].set_size((graph_size[0], graph_size[1]/2-3))
                 create_two_plots([graph, graph2], data, labels, window["-PLOT LEGEND-"], ax_labels, plot_type[0] == "position spectrum", line_plot=True)

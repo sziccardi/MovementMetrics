@@ -910,7 +910,7 @@ def PlotAperatureOverTime(data, keypoints, video_fps, vel_blocks):
     figure = plt.gcf()
     figure.set_size_inches(5, 3.25)
 
-def GetRelativePosititionData(data, keypoints, fps, video_pix_per_m, vel_blocks):
+def GetRelativePositionData(data, keypoints, fps, video_pix_per_m, vel_blocks):
     np_vals = np.array(data)
 
     axes_labels = []
@@ -945,6 +945,52 @@ def GetRelativePosititionData(data, keypoints, fps, video_pix_per_m, vel_blocks)
         labels.append(itos_map[point])
     
     return processed_data, labels, axes_labels
+
+def GetRelativePositionOverTimeData(data, keypoints, fps, video_pix_per_m, vel_blocks):
+    np_vals = np.array(data)
+
+    axes_labels = []
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        axes_labels.append(["time (s)", "Horizontal position (m)"])
+        axes_labels.append(["time (s)", "Vertical position (m)"])
+    else:
+        axes_labels.append(["time (s)", "Horizontal position (pixels)"])
+        axes_labels.append(["time (s)", "Vertical position (pixels)"])
+        
+    int_arg = stoi_map['spine_top'] - 1
+    mid_x = np_vals[:,0,int_arg]
+    mid_y = np_vals[:,1,int_arg]
+    labels = []
+    processed_data = []
+    for point in keypoints:
+        start_iter = (point - 1)
+            
+        selected = np_vals[:,:,start_iter]
+        selected[:,0] = (selected[:,0] - mid_x) / scale
+        selected[:,1] = (selected[:,1] - mid_y) / scale
+        
+        z_x = np.abs(stats.zscore(selected[:,0]))
+        z_y = np.abs(stats.zscore(selected[:,1]))
+        select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
+        vals_cleaned = selected[select,:]
+
+        rel_pos = vals_cleaned[:,:2]
+        ts = np.arange(0, len(rel_pos) / float(fps), 1.0 / float(fps))
+        temp = []
+        temp.append(np.column_stack((ts, vals_cleaned[:,0])))
+        temp.append(np.column_stack((ts, vals_cleaned[:,1])))
+        processed_data.append(temp)
+
+        #processed_data.append(np.column_stack((np.arange(0, len(rel_pos) / float(video_fps), 1.0 / float(video_fps))[:len(rel_pos)], rel_pos)))
+        #processed_data.append(rel_pos)
+        
+        labels.append(itos_map[point])
+    
+    return processed_data, labels, axes_labels
+
+
 
 def Plot(data, keypoints, fps, pix_in_m, cov_w, type, filename = ""):
     
@@ -1012,7 +1058,9 @@ def run_script_get_data(frame_files, plot_type, keypoints, fps, pix_in_m, cov_wi
     elif plot_type_dict[plot_type] == PlotType.VEL_OVER_TIME:
         processed_data, data_labels, ax_labels = GetVelocitiesOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width)
     elif plot_type_dict[plot_type] == PlotType.REL_POS:
-        processed_data, data_labels, ax_labels = GetRelativePosititionData(data, real_keypoints, fps, pix_in_m, cov_width)
+        processed_data, data_labels, ax_labels = GetRelativePositionData(data, real_keypoints, fps, pix_in_m, cov_width)
+    elif plot_type_dict[plot_type] == PlotType.REL_POS_OVER_TIME:
+        processed_data, data_labels, ax_labels = GetRelativePositionOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width)
 
     if processed_data == None or data_labels == None:
         print("WARNING: Could not process data as provided.")
