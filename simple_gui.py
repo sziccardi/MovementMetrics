@@ -31,27 +31,28 @@ def get_main_layout():
         [sg.Button(button_text='Browse Existing', size=(30,1),enable_events=True,key="-EXISTING VIDEO BUTTON-")],
         [sg.HSep()],
         [sg.Text('Track Points')],
-        [sg.Listbox(
-        values=['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left',
-        'elbow_left','wrist_left','spine_base','hip_right','knee_right','ankle_right','hip_left',
-        'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left',
-        'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right','palm_left',
-        'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left',
-        'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left',
-        'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left',
-        'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right',
-        'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right',
-        'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right',
-        'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right',
-        'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right'], enable_events=True, 
+        [sg.Listbox( #'spine_top','spine_base','hip_right','knee_right','ankle_right','hip_left',
+        #'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left',
+        #'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right',,'palm_left',
+        #'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left',
+        #'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left',
+        #'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left',
+        #'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right',
+        #'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right',
+        #'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right',
+        #'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right',
+        #'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right'
+        values=['head','shoulder_right','elbow_right','wrist_right','shoulder_left',
+        'elbow_left','wrist_left'], enable_events=True, 
             size=(30,5), key="-TRACK POINT LIST-", select_mode='multiple'
         )], 
         [sg.HSep()],
         [sg.Text('Available Plot Types')],
         [ 
             sg.Listbox(
-                values=["point cloud", "centroid of motion", "position spectrum", "distance from center", 
-                "normalized distance from center", "speed over time", "velocity over time"], 
+                #"point cloud", "centroid of motion", "position spectrum", "distance from center", 
+                #"normalized distance from center", "speed over time", "velocity over time"
+                values=["relative position", "relative position over time", "movement heatmap", "angles over time"], 
                 enable_events=True, size=(30,5), key="-PLOT LIST-"
             )
         ],
@@ -676,7 +677,7 @@ if __name__ == '__main__':
 
             window["-PLOT TITLE-"].update(value=plot_type[0])
             current_plot_type = plot_type[0]
-            if plot_type[0] == "point cloud" or plot_type[0] == "centroid of motion" or plot_type[0] == "distance from center" or plot_type[0] == "normalized distance from center":
+            if plot_type[0] == "relative position" or plot_type[0] == "point cloud" or plot_type[0] == "centroid of motion" or plot_type[0] == "distance from center" or plot_type[0] == "normalized distance from center":
                 window["-PLOT CANVAS 2-"].update(visible=False)
                 window["-PLOT CANVAS-"].set_size(graph_size)
                 create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, line_plot=False)

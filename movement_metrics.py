@@ -26,12 +26,20 @@ class PlotType(Enum):
 
     ACCEL_TREE = 10
 
+    REL_POS = 11
+    REL_POS_OVER_TIME = 12
+    MOV_HEAT_MAP = 13
+    ANGLE_OVER_TIME = 14
+
 plot_type_dict = dict({"point cloud":PlotType.POINT_CLOUD, "centroid of motion":PlotType.CENTROID, 
     "position spectrum":PlotType.POS_SPEC, "distance from center":PlotType.CENT_DIST, 
     "normalized distance from center":PlotType.CENT_DIST_NORM, "velocity heat map":PlotType.VEL_HEAT_MAP, 
     "speed over time":PlotType.TOTAL_VEL_OVER_TIME, "velocity over time":PlotType.VEL_OVER_TIME, 
-    "aperature over time":PlotType.APERATURE, "accelerometer tree":PlotType.ACCEL_TREE})
-keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left', 'elbow_left','wrist_left','spine_base','hip_right','knee_right','ankle_right','hip_left', 'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left', 'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right','palm_left', 'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left', 'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left', 'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left', 'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right', 'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right', 'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right', 'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right', 'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right']
+    "aperature over time":PlotType.APERATURE, "accelerometer tree":PlotType.ACCEL_TREE,
+    "relative position":PlotType.REL_POS, "relative position over time":PlotType.REL_POS_OVER_TIME, 
+    "movement heatmap":PlotType.MOV_HEAT_MAP, "angles over time":PlotType.ANGLE_OVER_TIME})
+keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left', 'elbow_left','wrist_left']
+#'spine_base','hip_right','knee_right','ankle_right','hip_left', 'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left', 'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right','palm_left', 'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left', 'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left', 'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left', 'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right', 'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right', 'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right', 'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right', 'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right'
 keypoint_nums = list(np.arange(1,len(keypoint_names)+1))
 stoi_map = dict(zip(keypoint_names, keypoint_nums))
 itos_map = dict(zip(keypoint_nums, keypoint_names))
@@ -901,9 +909,42 @@ def PlotAperatureOverTime(data, keypoints, video_fps, vel_blocks):
     plt.ylabel("aperature (pixels)")
     figure = plt.gcf()
     figure.set_size_inches(5, 3.25)
-    
-    
 
+def GetRelativePosititionData(data, keypoints, fps, video_pix_per_m, vel_blocks):
+    np_vals = np.array(data)
+
+    axes_labels = []
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        axes_labels.append("x Position (m)")
+        axes_labels.append("y Position (m)")
+    else:
+        axes_labels.append("x Position (pixel)")
+        axes_labels.append("y Position (pixel)")
+        
+    int_arg = stoi_map['spine_top'] - 1
+    mid_x = np_vals[:,0,int_arg]
+    mid_y = np_vals[:,1,int_arg]
+    labels = []
+    processed_data = []
+    for point in keypoints:
+        start_iter = (point - 1)
+            
+        selected = np_vals[:,:,start_iter]
+        selected[:,0] = (selected[:,0] - mid_x) / scale
+        selected[:,1] = (selected[:,1] - mid_y) / scale
+        
+        z_x = np.abs(stats.zscore(selected[:,0]))
+        z_y = np.abs(stats.zscore(selected[:,1]))
+        select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
+        vals_cleaned = selected[select,:]
+
+        processed_data.append(vals_cleaned[:,:2])
+        
+        labels.append(itos_map[point])
+    
+    return processed_data, labels, axes_labels
 
 def Plot(data, keypoints, fps, pix_in_m, cov_w, type, filename = ""):
     
@@ -927,7 +968,9 @@ def Plot(data, keypoints, fps, pix_in_m, cov_w, type, filename = ""):
         PlotAperatureOverTime(data, keypoints, fps, pix_in_m, cov_w)
     elif type == PlotType.ACCEL_TREE:
         PlotAccelerometerTree(data, keypoints, fps, pix_in_m, cov_w)
-    
+    #elif type == PlotType.REL_POS:
+        
+
 
     if filename:
         plt.savefig(filename, bbox_inches='tight')
@@ -968,7 +1011,9 @@ def run_script_get_data(frame_files, plot_type, keypoints, fps, pix_in_m, cov_wi
         processed_data, data_labels, ax_labels = GetSpeedOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width)
     elif plot_type_dict[plot_type] == PlotType.VEL_OVER_TIME:
         processed_data, data_labels, ax_labels = GetVelocitiesOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width)
-    
+    elif plot_type_dict[plot_type] == PlotType.REL_POS:
+        processed_data, data_labels, ax_labels = GetRelativePosititionData(data, real_keypoints, fps, pix_in_m, cov_width)
+
     if processed_data == None or data_labels == None:
         print("WARNING: Could not process data as provided.")
     
