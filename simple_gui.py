@@ -321,6 +321,8 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         #draw_rectangle(top_left, bottom_right, fill_color = None, line_color = None, line_width = None)
         red = Color("red")
         color_samples = list(red.range_to(Color("blue"), 50))
+        for i in range(50):
+            legend.draw_rectangle((i*25, 25), ((i+1)*25, 0), color_samples[i])
         color_range = labels[1]-labels[0]
         x_box = graph_size[0] / len(data)
         y_box = graph_size[1] / len(data[0])
