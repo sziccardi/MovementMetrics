@@ -966,7 +966,7 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, video_pix_per_m, vel_b
     processed_data = []
     for point in keypoints:
         start_iter = (point - 1)
-            
+        
         selected = np_vals[:,:,start_iter]
         selected[:,0] = (selected[:,0] - mid_x) / scale
         selected[:,1] = (selected[:,1] - mid_y) / scale
@@ -978,9 +978,10 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, video_pix_per_m, vel_b
 
         rel_pos = vals_cleaned[:,:2]
         ts = np.arange(0, len(rel_pos) / float(fps), 1.0 / float(fps))
+        my_scale = min(len(ts), len(rel_pos))
         temp = []
-        temp.append(np.column_stack((ts, vals_cleaned[:,0])))
-        temp.append(np.column_stack((ts, vals_cleaned[:,1])))
+        temp.append(np.column_stack((ts[:my_scale], vals_cleaned[:my_scale,0])))
+        temp.append(np.column_stack((ts[:my_scale], vals_cleaned[:my_scale,1])))
         processed_data.append(temp)
 
         #processed_data.append(np.column_stack((np.arange(0, len(rel_pos) / float(video_fps), 1.0 / float(video_fps))[:len(rel_pos)], rel_pos)))
@@ -990,7 +991,7 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, video_pix_per_m, vel_b
     
     return processed_data, labels, axes_labels
 
-def GetMovementHeatMapData(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
+def GetMovementHeatMapData(data, keypoints, video_fps, video_pix_per_m, vel_blocks, img_size):
 # return processed_data, data_labels, ax_labels
     axes_labels = []
     scale = 1.0
@@ -1002,11 +1003,13 @@ def GetMovementHeatMapData(data, keypoints, video_fps, video_pix_per_m, vel_bloc
         axes_labels.append("x location (pixels)")
         axes_labels.append("y location (pixels)")
     
-    num_boxes = 6
+    box_w = 75
+    x_box = img_size[0] /box_w
+    y_box = img_size[1] /box_w
     processed_data = []
-    for i in range(num_boxes):
+    for i in range(int(x_box)):
         zeros = []
-        for j in range(num_boxes):
+        for j in range(int(y_box)):
             zeros.append(0)
         processed_data.append(zeros)
     
@@ -1030,9 +1033,9 @@ def GetMovementHeatMapData(data, keypoints, video_fps, video_pix_per_m, vel_bloc
         vals_cleaned = selected[select,:]
 
         xs = vals_cleaned[:,0]
-        xs = np.where(xs>1279, 1279, xs)
+        xs = np.where(xs>img_size[0]-1, img_size[0]-1, xs)
         ys = vals_cleaned[:,1]
-        ys = np.where(ys>719, 719, ys)
+        ys = np.where(ys>img_size[1]-1, img_size[1]-1, ys)
 
         confs = vals_cleaned[:,2]
         x_ints = np.full_like(xs, 0) # x positions that have velocity
@@ -1054,23 +1057,24 @@ def GetMovementHeatMapData(data, keypoints, video_fps, video_pix_per_m, vel_bloc
 
         avged_vels = np.convolve(total_vels, np.ones(vel_blocks), 'valid') / vel_blocks
 
-        x_box = 1280.0 / num_boxes
-        y_box = 720.0 / num_boxes
+        x_locs = [int(i / box_w) for i in x_ints]
+        y_locs = [int(i / box_w) for i in y_ints]
 
-        x_locs = [int(2 * i / x_box) for i in x_ints]
-        y_locs = [int(2 * i / y_box) for i in y_ints]
-
-        for i in range(num_boxes):
-            for j in range(num_boxes):
-                x = i-num_boxes/2
-                y = j-num_boxes/2
+        x_temp = []
+        y_temp = []
+        for i in range(int(x_box)):
+            for j in range(int(y_box)):
+                x = i-int(x_box/2)
+                y = j-int(y_box/2)
+                x_temp.append(x)
+                y_temp.append(y)
                 count = [1 for n in range(len(x_locs)) if y_locs[n] == y and x_locs[n] == x]
                 processed_data[i][j] = processed_data[i][j] + sum(count)
 
     return processed_data, [0, np_vals.shape[0]], axes_labels
 
 
-def Plot(data, keypoints, fps, pix_in_m, cov_w, type, filename = ""):
+def Plot(data, keypoints, fps, pix_in_m, cov_w, type, img_size, filename = ""):
     
     if type == PlotType.POINT_CLOUD:
         PlotPointCloud(data, keypoints, fps, pix_in_m, cov_w)
@@ -1102,7 +1106,7 @@ def Plot(data, keypoints, fps, pix_in_m, cov_w, type, filename = ""):
         plt.show()
     return True, plt.gcf()
 
-def run_script(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
+def run_script(frame_files, img_size, plot_type, keypoints, fps, pix_in_m, cov_width):
     fig_numbers = [x.num for x in plt._pylab_helpers.Gcf.get_all_fig_managers()]
     if len(fig_numbers) > 0:
         plt.figure().clear()
@@ -1118,7 +1122,7 @@ def run_script(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
         print("ERROR: Couldn't find that plot")
     return fig
 
-def run_script_get_data(frame_files, plot_type, keypoints, fps, pix_in_m, cov_width):
+def run_script_get_data(frame_files, img_size, plot_type, keypoints, fps, pix_in_m, cov_width):
     real_keypoints = [stoi_map[k] for k in keypoints]
     data = ReadDataFromList(frame_files)
 
@@ -1140,7 +1144,7 @@ def run_script_get_data(frame_files, plot_type, keypoints, fps, pix_in_m, cov_wi
     elif plot_type_dict[plot_type] == PlotType.REL_POS_OVER_TIME:
         processed_data, data_labels, ax_labels = GetRelativePositionOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width)
     elif plot_type_dict[plot_type] == PlotType.MOV_HEAT_MAP:
-        processed_data, data_labels, ax_labels = GetMovementHeatMapData(data, real_keypoints, fps, pix_in_m, cov_width)
+        processed_data, data_labels, ax_labels = GetMovementHeatMapData(data, real_keypoints, fps, pix_in_m, cov_width, img_size)
 
     if processed_data == None or data_labels == None:
         print("WARNING: Could not process data as provided.")
