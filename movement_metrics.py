@@ -148,6 +148,9 @@ def getMedian(data):
 def getQuartile(data, q):
     return np.percentile(data, q*25)
 
+def getVariance(data):
+    return np.var(data)
+
 def getSpread(data1, data2):
     c = np.cov(np.vstack((data1, data2)))
     w = np.linalg.eigvals(c)
@@ -156,6 +159,19 @@ def getSpread(data1, data2):
     minor_ax = np.sqrt(s * w[1])
 
     return np.pi * major_ax * minor_ax
+
+def getAxesCrossedCounts(data, start_less):
+    cross_indicies = np.where(np.diff(np.sign(data)))[0]
+    temp_total_count = 0
+    temp_num_count = 0
+    for ind in cross_indicies:
+        if (start_less and data[ind] < data[ind+1]) or (not start_less and data[ind] > data[ind+1]):
+            k = ind+1
+            while np.sign(data[k]) == np.sign(data[ind+1]):
+                temp_total_count = temp_total_count+1
+                k=k+1
+            temp_num_count = temp_num_count+1
+    return temp_total_count, temp_num_count
 
 #Plotting
 # [frame, x/y/c, keypoint]

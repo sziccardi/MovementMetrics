@@ -112,7 +112,7 @@ def get_main_layout():
     right_column = [[sg.Text('Computed metrics:')],
     [sg.HSep()],
     [sg.HSep()],
-    [sg.Text("", key="-COMPUTED METRICS-")]
+    [sg.Multiline("", expand_x=True, expand_y=True, disabled=True, size=(20,25), key="-COMPUTED METRICS-")]
     
     ]
 
@@ -471,6 +471,8 @@ def display_frame(i):
         window['-FRAME IMAGE-'].update(data=get_img_data(frames[i], first=False))
         img_name = frames[i][file_loc.rfind('/')+1:]
         window['-IMAGE TITLE-'].update(value=img_name)
+    
+
 
 def display_metrics(data, labels, plot_type):
     if plot_type == "centroid of motion":
@@ -632,30 +634,39 @@ def display_metrics(data, labels, plot_type):
             np_data_horiz = np.array(data[i][0])
             np_data_vert = np.array(data[i][1])
             
-            cross_indicies = np.where(np.diff(np.sign(np_data_horiz[:,1])))[0]
-            temp_total_count = 0
-            temp_num_count = 0
-            for j, ind in enumerate(cross_indicies):
-                if ("right" in name and np_data_horiz[ind,1] < np_data_horiz[ind+1,1]) or ("left" in name and np_data_horiz[ind,1] > np_data_horiz[ind+1,1]):
-                    k = ind+1
-                    while np.sign(np_data_horiz[k,1]) == np.sign(np_data_horiz[ind+1,1]):
-                        temp_total_count = temp_total_count+1
-                        k=k+1
-                    temp_num_count = temp_num_count+1
-            total_track_point_text = total_track_point_text + "\n" + name + " - \n* crossed body midline\n" + str(temp_num_count) + " times\n* " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
+            temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data_horiz[:,1], ("right" in name))
+            total_track_point_text = total_track_point_text + "\n" + name + " : \n - crossed body midline " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
             
-            cross_indicies = np.where(np.diff(np.sign(np_data_vert[:,1])))[0]
-            temp_total_count = 0
-            temp_num_count = 0
-            for j, ind in enumerate(cross_indicies):
-                if np_data_vert[ind,1] < np_data_vert[ind+1,1]:
-                    k = ind+1
-                    while np.sign(np_data_vert[k,1]) == np.sign(np_data_vert[ind+1,1]):
-                        temp_total_count = temp_total_count+1
-                        k=k+1
-                    temp_num_count = temp_num_count+1
-            total_track_point_text = total_track_point_text + "* raised above shoulders\n" + str(temp_num_count) + " times* \n" + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
+            temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data_vert[:,1], True)
+            total_track_point_text = total_track_point_text + " - raised above shoulders " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
             
+            data_x_mean = mm.getMean(np_data_horiz[:,1])
+            data_y_mean = mm.getMean(np_data_vert[:,1])
+            data_x_var = mm.getVariance(np_data_horiz[:,1])
+            data_y_var = mm.getVariance(np_data_vert[:,1])
+            total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
+            total_track_point_text = total_track_point_text + " - with variance of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
+        window['-COMPUTED METRICS-'].update(value=total_track_point_text)
+
+    elif plot_type == "relative position":
+        total_track_point_text = ""
+        fps = (float)(values["-FPS-"])
+
+        for i, name in enumerate(labels):
+            np_data = np.array(data[i])
+            
+            temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[:,0], ("right" in name))
+            total_track_point_text = total_track_point_text + "\n" + name + " : \n - crossed body midline " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
+            
+            temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[:,1], True)
+            total_track_point_text = total_track_point_text + " - raised above shoulders " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
+            
+            data_x_mean = mm.getMean(np_data[:,0])
+            data_y_mean = mm.getMean(np_data[:,1])
+            data_x_var = mm.getVariance(np_data[:,0])
+            data_y_var = mm.getVariance(np_data[:,1])
+            total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
+            total_track_point_text = total_track_point_text + " - with variance of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
         
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
 
@@ -722,7 +733,7 @@ if __name__ == '__main__':
 
         #lets run plotting!
         elif event == "-RUN SCRIPT-":
-            
+            window['-COMPUTED METRICS-'].Widget.config(wrap='word')
             real_files = [os.path.join(file_loc+'/pose_info', f) for f in chosen_files]
             
             plot_type = values["-PLOT LIST-"]
