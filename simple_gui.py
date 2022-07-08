@@ -624,6 +624,41 @@ def display_metrics(data, labels, plot_type):
         avg_proportions_txt = avg_proportions_txt + "\nVertical proportion of \nmovement:\n"+str(round(tot_vert_avg / (tot_horiz_avg+tot_vert_avg),2))
         window['-COMPUTED METRICS-'].update(value=total_track_point_text+"\n"+avg_proportions_txt)
 
+    elif plot_type == "relative position over time":
+        total_track_point_text = ""
+        fps = (float)(values["-FPS-"])
+
+        for i, name in enumerate(labels):
+            np_data_horiz = np.array(data[i][0])
+            np_data_vert = np.array(data[i][1])
+            
+            cross_indicies = np.where(np.diff(np.sign(np_data_horiz[:,1])))[0]
+            temp_total_count = 0
+            temp_num_count = 0
+            for j, ind in enumerate(cross_indicies):
+                if ("right" in name and np_data_horiz[ind,1] < np_data_horiz[ind+1,1]) or ("left" in name and np_data_horiz[ind,1] > np_data_horiz[ind+1,1]):
+                    k = ind+1
+                    while np.sign(np_data_horiz[k,1]) == np.sign(np_data_horiz[ind+1,1]):
+                        temp_total_count = temp_total_count+1
+                        k=k+1
+                    temp_num_count = temp_num_count+1
+            total_track_point_text = total_track_point_text + "\n" + name + " - \n* crossed body midline\n" + str(temp_num_count) + " times\n* " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
+            
+            cross_indicies = np.where(np.diff(np.sign(np_data_vert[:,1])))[0]
+            temp_total_count = 0
+            temp_num_count = 0
+            for j, ind in enumerate(cross_indicies):
+                if np_data_vert[ind,1] < np_data_vert[ind+1,1]:
+                    k = ind+1
+                    while np.sign(np_data_vert[k,1]) == np.sign(np_data_vert[ind+1,1]):
+                        temp_total_count = temp_total_count+1
+                        k=k+1
+                    temp_num_count = temp_num_count+1
+            total_track_point_text = total_track_point_text + "* raised above shoulders\n" + str(temp_num_count) + " times* \n" + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
+            
+        
+        window['-COMPUTED METRICS-'].update(value=total_track_point_text)
+
 if __name__ == '__main__':
     #matplotlib.use('TkAgg')
     current_layout = get_main_layout()
