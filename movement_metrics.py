@@ -44,6 +44,9 @@ keypoint_nums = list(np.arange(1,len(keypoint_names)+1))
 stoi_map = dict(zip(keypoint_names, keypoint_nums))
 itos_map = dict(zip(keypoint_nums, keypoint_names))
 
+# HEATMAP globals
+box_w = 75
+
 def ReadDataFromList(files):
     vals =[]
     for filename in files:
@@ -1019,7 +1022,6 @@ def GetMovementHeatMapData(data, keypoints, video_fps, video_pix_per_m, vel_bloc
         axes_labels.append("x location (pixels)")
         axes_labels.append("y location (pixels)")
     
-    box_w = 75
     x_box = img_size[0] /box_w
     y_box = img_size[1] /box_w
     processed_data = []
@@ -1135,6 +1137,10 @@ def GetAngleOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks
             labels.append(itos_map[point])
 
     return processed_data, labels, axes_labels
+
+def GetPlotSpecificInfo(plot_type):
+    if plot_type_dict[plot_type] == PlotType.MOV_HEAT_MAP:
+        return box_w
 
 def Plot(data, keypoints, fps, pix_in_m, cov_w, type, img_size, filename = ""):
     

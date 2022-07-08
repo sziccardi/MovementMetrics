@@ -327,8 +327,10 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         for i in range(50):
             legend.draw_rectangle((i*leg_w, 25), ((i+1)*leg_w, 0), color_samples[i])
         color_range = frame_size[0] * 0.5
-        x_box = graph_size[0] / len(data)
-        y_box = graph_size[1] / len(data[0])
+        box_w = mm.GetPlotSpecificInfo("movement heatmap")
+        x_box = graph_size[0] / (len(data))
+        y_box = graph_size[1] / (len(data[0]))
+        box_w = min(x_box, y_box)
         axes_size = [graph_size[0]/2.0 - graph_size[0]/75, -1000, graph_size[1]/2.0 - graph_size[1]/75, -1000, -1.0*graph_size[0]/2.0 + graph_size[0]/75, 1000, -1.0*graph_size[1]/2.0 + graph_size[1]/75, 1000]
         draw_axes(graph, axes_size, axes_labels)
         for i in range(len(data)):
@@ -338,8 +340,8 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                 color_select = data[i][j]/color_range
                 color_select = int(color_select*50.0)
                 color_select = 49 if color_select >= 50 else color_select
-                graph.draw_rectangle((x*x_box, (y+1)*y_box), ((x+1)*x_box, y*y_box), color_samples[color_select])
-
+                graph.draw_rectangle((x*box_w, (y+1)*box_w), ((x+1)*box_w, y*box_w), color_samples[color_select])
+        draw_axes(graph, axes_size, axes_labels)
     else:
         #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
         ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
