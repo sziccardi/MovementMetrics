@@ -378,61 +378,55 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         draw_legend(legend, data_labels, colors[:len(data)])
 
 def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type):
+    ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
+    for key in range(len(data)):
+        vals_plot_0 = data[key][0]
+        vals_plot_1 = data[key][1]
+        max_x_0 = max([point[0] for point in vals_plot_0])
+        max_y_0 = max([point[1] for point in vals_plot_0])
+        min_x_0 = min([point[0] for point in vals_plot_0])
+        min_y_0 = min([point[1] for point in vals_plot_0])
+        max_x_1 = max([point[0] for point in vals_plot_1])
+        max_y_1 = max([point[1] for point in vals_plot_1])
+        min_x_1 = min([point[0] for point in vals_plot_1])
+        min_y_1 = min([point[1] for point in vals_plot_1])
+        
+        if ax_lims[0] < max_x_0:
+            ax_lims[0] = max_x_0
+        if ax_lims[2] < max_y_0:
+            ax_lims[2] = max_y_0
+        if ax_lims[4] > min_x_0:
+            ax_lims[4] = min_x_0
+        if ax_lims[6] > min_y_0:
+            ax_lims[6] = min_y_0
+        if ax_lims[1] < max_x_1:
+            ax_lims[1] = max_x_1
+        if ax_lims[3] < max_y_1:
+            ax_lims[3] = max_y_1
+        if ax_lims[5] > min_x_1:
+            ax_lims[5] = min_x_1
+        if ax_lims[7] > min_y_1:
+            ax_lims[7] = min_y_1
     
-    if graph_type == GraphType.BOX_N_WHISK:
-        print("WARNING: This graph is not yet supported")
-    else:
-        #color_select = random.sample(colors, len(labels))
-        
-        ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
-        for key in range(len(data)):
-            vals_plot_0 = data[key][0]
-            vals_plot_1 = data[key][1]
-            max_x_0 = max([point[0] for point in vals_plot_0])
-            max_y_0 = max([point[1] for point in vals_plot_0])
-            min_x_0 = min([point[0] for point in vals_plot_0])
-            min_y_0 = min([point[1] for point in vals_plot_0])
-            max_x_1 = max([point[0] for point in vals_plot_1])
-            max_y_1 = max([point[1] for point in vals_plot_1])
-            min_x_1 = min([point[0] for point in vals_plot_1])
-            min_y_1 = min([point[1] for point in vals_plot_1])
-            
-            if ax_lims[0] < max_x_0:
-                ax_lims[0] = max_x_0
-            if ax_lims[2] < max_y_0:
-                ax_lims[2] = max_y_0
-            if ax_lims[4] > min_x_0:
-                ax_lims[4] = min_x_0
-            if ax_lims[6] > min_y_0:
-                ax_lims[6] = min_y_0
-            if ax_lims[1] < max_x_1:
-                ax_lims[1] = max_x_1
-            if ax_lims[3] < max_y_1:
-                ax_lims[3] = max_y_1
-            if ax_lims[5] > min_x_1:
-                ax_lims[5] = min_x_1
-            if ax_lims[7] > min_y_1:
-                ax_lims[7] = min_y_1
-        
-        dot_size = draw_axes(graphs[0], ax_lims, axes_labels[0])
-        dot_size = draw_axes(graphs[1], ax_lims, axes_labels[1])
+    dot_size = draw_axes(graphs[0], ax_lims, axes_labels[0])
+    dot_size = draw_axes(graphs[1], ax_lims, axes_labels[1])
 
-        if graph_type == GraphType.LINE_GRAPH:
-            for key in range(len(data)):
-                plot_data = data[key]
-                line_color = colors[key]
-                for plot in range(len(plot_data)):
-                    for point in range(len(plot_data[plot])-1):
-                        graphs[plot].draw_line((plot_data[plot][point][0], plot_data[plot][point][1]), (plot_data[plot][point+1][0], plot_data[plot][point+1][1]), color=line_color, width=dot_size)
-        elif graph_type == GraphType.POINT_GRAPH:
-            for key in range(len(data)):
-                plot_data = data[key]
-                line_color = colors[key]
-                for plot in range(len(plot_data)):
-                    for point in range(len(plot_data[plot])):
-                        graphs[plot].draw_point((plot_data[plot][point][0], plot_data[plot][point][1]), dot_size, color=line_color)
-    
-        draw_legend(legend, data_labels, colors[:len(data)])
+    if graph_type == GraphType.LINE_GRAPH:
+        for key in range(len(data)):
+            plot_data = data[key]
+            line_color = colors[key]
+            for plot in range(len(plot_data)):
+                for point in range(len(plot_data[plot])-1):
+                    graphs[plot].draw_line((plot_data[plot][point][0], plot_data[plot][point][1]), (plot_data[plot][point+1][0], plot_data[plot][point+1][1]), color=line_color, width=dot_size)
+    elif graph_type == GraphType.POINT_GRAPH:
+        for key in range(len(data)):
+            plot_data = data[key]
+            line_color = colors[key]
+            for plot in range(len(plot_data)):
+                for point in range(len(plot_data[plot])):
+                    graphs[plot].draw_point((plot_data[plot][point][0], plot_data[plot][point][1]), dot_size, color=line_color)
+
+    draw_legend(legend, data_labels, colors[:len(data)])
 
 def process_video(filename):
     #assuming openpose folder is in the movementmetrics folder
@@ -730,7 +724,7 @@ if __name__ == '__main__':
                 window["-PLOT CANVAS 2-"].update(visible=False)
                 window["-PLOT CANVAS-"].set_size(graph_size)
                 create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.POINT_GRAPH)
-            elif plot_type[0] == "speed over time":
+            elif plot_type[0] == "speed over time" or plot_type[0] == "angles over time" :
                 window["-PLOT CANVAS 2-"].update(visible=False)
                 window["-PLOT CANVAS-"].set_size(graph_size)
                 create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.LINE_GRAPH)
@@ -840,7 +834,6 @@ if __name__ == '__main__':
         if event == "-LEFT FRAME-":
             try:
                 index = highlight_frames_iter.index(current_frame)
-                print("index was ", index)
                 index = index - 1
             except:
                 index = 0
@@ -848,7 +841,6 @@ if __name__ == '__main__':
             if index < 0:
                 index = len(highlight_frames_iter) - 1
             
-            print("index is now ", index)
             if len(highlight_frames_iter) == 0:
                 current_frame = None
             else:

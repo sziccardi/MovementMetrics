@@ -1073,6 +1073,52 @@ def GetMovementHeatMapData(data, keypoints, video_fps, video_pix_per_m, vel_bloc
 
     return processed_data, [0, np_vals.shape[0]], axes_labels
 
+def GetAngleOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks, img_size):
+    axes_labels = []
+    axes_labels.append("time (s)")
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+    axes_labels.append("angle (rad)")
+    
+    processed_data = []
+    labels = []
+    
+    for point in keypoints:
+        start_iter = (point - 1)
+        
+        np_vals = np.array(data)
+        
+        p1_i = None 
+        p3_i = None
+        p2_i = start_iter
+        if start_iter == (stoi_map['elbow_left'] - 1):
+            p1_i = stoi_map['shoulder_left'] - 1
+            p3_i = stoi_map['wrist_left'] - 1
+        elif start_iter == (stoi_map['elbow_right'] - 1):
+            p1_i = stoi_map['shoulder_right'] - 1
+            p3_i = stoi_map['wrist_right'] - 1
+        elif start_iter == (stoi_map['shoulder_right'] - 1):
+            p1_i = stoi_map['spine_top'] - 1
+            p3_i = stoi_map['elbow_right'] - 1
+        elif start_iter == (stoi_map['shoulder_left'] - 1):
+            p1_i = stoi_map['spine_top'] - 1
+            p3_i = stoi_map['elbow_left'] - 1
+
+        if p1_i and p2_i and p3_i:
+            a_vec = np_vals[:,:,p1_i] - np_vals[:,:,p2_i]
+            b_vec = np_vals[:,:,p3_i] - np_vals[:,:,p2_i]
+            c_vec = np_vals[:,:,p3_i] - np_vals[:,:,p1_i]
+
+            a = np.sqrt(np.multiply(a_vec[:,0],a_vec[:,0]) + np.multiply(a_vec[:,1],a_vec[:,1]))
+            b = np.sqrt(np.multiply(b_vec[:,0],b_vec[:,0]) + np.multiply(b_vec[:,1],b_vec[:,1]))
+            c = np.sqrt(np.multiply(c_vec[:,0],c_vec[:,0]) + np.multiply(c_vec[:,1],c_vec[:,1]))
+
+            angle = np.arccos((np.multiply(a,a) + np.multiply(b,b) - np.multiply(c,c)) / (2*np.multiply(a,b)))
+            processed_data.append(np.column_stack((np.arange(0, len(angle) / float(video_fps), 1.0 / float(video_fps))[:len(angle)], angle)))
+            labels.append(itos_map[point])
+
+    return processed_data, labels, axes_labels
 
 def Plot(data, keypoints, fps, pix_in_m, cov_w, type, img_size, filename = ""):
     
@@ -1145,6 +1191,8 @@ def run_script_get_data(frame_files, img_size, plot_type, keypoints, fps, pix_in
         processed_data, data_labels, ax_labels = GetRelativePositionOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width)
     elif plot_type_dict[plot_type] == PlotType.MOV_HEAT_MAP:
         processed_data, data_labels, ax_labels = GetMovementHeatMapData(data, real_keypoints, fps, pix_in_m, cov_width, img_size)
+    elif plot_type_dict[plot_type] == PlotType.ANGLE_OVER_TIME:
+        processed_data, data_labels, ax_labels = GetAngleOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width, img_size)
 
     if processed_data == None or data_labels == None:
         print("WARNING: Could not process data as provided.")
