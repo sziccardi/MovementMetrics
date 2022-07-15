@@ -176,6 +176,23 @@ def getAxesCrossedCounts(data, start_less):
             temp_num_count = temp_num_count+1
     return temp_total_count, temp_num_count
 
+def getValueCrossedCounts(data, less_than, lim):
+    start_less = not less_than
+    cross_indicies = np.where(data > lim)[0]
+    if less_than:
+        cross_indicies = np.where(data < lim)[0]
+    temp_total_count = 0
+    temp_num_count = 0
+    for ind in cross_indicies:
+        if (start_less and data[ind] < data[ind+1]) or (not start_less and data[ind] > data[ind+1]):
+            k = ind+1
+            while np.sign(data[k]-lim) == np.sign(data[ind+1]-lim):
+                temp_total_count = temp_total_count+1
+                k=k+1
+            temp_num_count = temp_num_count+1
+    return temp_total_count, temp_num_count
+
+
 #Plotting
 # [frame, x/y/c, keypoint]
 def PlotPointCloud(data, keypoints, fps, video_pix_per_m, cov_width):
