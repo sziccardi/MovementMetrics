@@ -670,6 +670,29 @@ def display_metrics(data, labels, plot_type):
         
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
 
+    elif plot_type == "angles over time":
+        total_track_point_text = ""
+        fps = (float)(values["-FPS-"])
+
+        for i, name in enumerate(labels):
+            np_data = np.array(data[i])
+            #etValueCrossedCounts(data, less_than, lim)
+            print(min(np_data[:,1]))
+            temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], False, 3.05)
+            total_track_point_text = total_track_point_text + "\n" + name + " : \n - fully extended " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent fully extended\n"
+            
+            temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], True, 0.5)
+            total_track_point_text = total_track_point_text + " - fully tucked  " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent tucked\n"
+            
+            data_mean = mm.getMean(np_data[:,1])
+            data_var = mm.getVariance(np_data[:,1])
+            total_track_point_text = total_track_point_text + " - average angle is " + str(round(data_mean,2)) + "\n"
+            total_track_point_text = total_track_point_text + " - with variance of "+ str(round(data_var,2)) + "\n"
+        
+        print(total_track_point_text)
+        window['-COMPUTED METRICS-'].update(value=total_track_point_text)
+    
+
 if __name__ == '__main__':
     #matplotlib.use('TkAgg')
     current_layout = get_main_layout()
