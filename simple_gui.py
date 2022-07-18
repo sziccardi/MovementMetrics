@@ -80,7 +80,7 @@ def get_main_layout():
         [sg.InputText(size=(8,1), key="-PIX SCALE-"), sg.Text("Pixels")],
         [sg.HSep()],
         [sg.Text("Smoothing amount or Convolution size")],
-        [sg.InputText("15", size=(5,1), key="-CONV WIDTH-"), sg.Text("Frames")],
+        [sg.InputText("1", size=(5,1), key="-CONV WIDTH-"), sg.Text("Frames")],
         [sg.HSep()],
         [sg.Button(button_text='PLOT', size=(30,1),enable_events=True,key="-RUN SCRIPT-", visible=False)],
         ]
@@ -469,6 +469,7 @@ def get_img_data(f, maxsize=image_size, first=False):
     return ImageTk.PhotoImage(img)
 
 def display_frame(i):
+    print("trying to display frame #", i, " when I have ", len(frames), " frames")
     if i is not None:
         window['-FRAME IMAGE-'].update(data=get_img_data(frames[i], first=False))
         img_name = frames[i][file_loc.rfind('/')+1:]
@@ -644,13 +645,13 @@ def display_metrics(data, labels, plot_type):
             
             data_x_mean = mm.getMean(np_data_horiz[:,1])
             data_y_mean = mm.getMean(np_data_vert[:,1])
-            data_x_var = mm.getVariance(np_data_horiz[:,1])
-            data_y_var = mm.getVariance(np_data_vert[:,1])
+            data_x_var = mm.getSTD(np_data_horiz[:,1])
+            data_y_var = mm.getSTD(np_data_vert[:,1])
             total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
-            total_track_point_text = total_track_point_text + " - with variance of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
+            total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
 
-    elif plot_type == "relative position":
+    elif plot_type == "relative position" or plot_type == "movement heatmap":
         total_track_point_text = ""
         fps = (float)(values["-FPS-"])
 
@@ -665,10 +666,10 @@ def display_metrics(data, labels, plot_type):
             
             data_x_mean = mm.getMean(np_data[:,0])
             data_y_mean = mm.getMean(np_data[:,1])
-            data_x_var = mm.getVariance(np_data[:,0])
-            data_y_var = mm.getVariance(np_data[:,1])
+            data_x_var = mm.getSTD(np_data[:,0])
+            data_y_var = mm.getSTD(np_data[:,1])
             total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
-            total_track_point_text = total_track_point_text + " - with variance of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
+            total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
         
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
 
@@ -678,18 +679,16 @@ def display_metrics(data, labels, plot_type):
 
         for i, name in enumerate(labels):
             np_data = np.array(data[i])
-            #etValueCrossedCounts(data, less_than, lim)
-            print(min(np_data[:,1]))
-            temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], False, 3.05)
+            temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], False, 165)
             total_track_point_text = total_track_point_text + "\n" + name + " : \n - fully extended " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent fully extended\n"
             
-            temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], True, 0.5)
+            temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], True, 30)
             total_track_point_text = total_track_point_text + " - fully tucked  " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent tucked\n"
             
             data_mean = mm.getMean(np_data[:,1])
-            data_var = mm.getVariance(np_data[:,1])
+            data_var = mm.getSTD(np_data[:,1])
             total_track_point_text = total_track_point_text + " - average angle is " + str(round(data_mean,2)) + "\n"
-            total_track_point_text = total_track_point_text + " - with variance of "+ str(round(data_var,2)) + "\n"
+            total_track_point_text = total_track_point_text + " - with std of "+ str(round(data_var,2)) + "\n"
         
         print(total_track_point_text)
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
@@ -868,12 +867,10 @@ if __name__ == '__main__':
             plot_specfic_data = data
             if current_plot_type == "relative position over time" or current_plot_type == "velocity over time":
                 if prior_rect[0] == "-PLOT CANVAS-":
-                    print("first graph")
                     plot_specfic_data = data[0]
                 elif prior_rect[0] == "-PLOT CANVAS 2-":
-                    print("second graph")
                     plot_specfic_data = data[1]
-
+            
             max_points = 0
             for key in range(len(plot_specfic_data)):
                 if len(plot_specfic_data[key]) > max_points:
@@ -893,7 +890,6 @@ if __name__ == '__main__':
             dragging = False
             
             if len(highlight_frames_iter) > 0:
-                print("found ", len(highlight_frames_iter), " frames")
                 current_frame = highlight_frames_iter[0]
                 display_frame(current_frame)
                 window["-SCRUB BAR-"].update(value=current_frame)

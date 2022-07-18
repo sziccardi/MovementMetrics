@@ -154,6 +154,9 @@ def getQuartile(data, q):
 def getVariance(data):
     return np.var(data)
 
+def getSTD(data):
+    return np.std(data)
+
 def getSpread(data1, data2):
     c = np.cov(np.vstack((data1, data2)))
     w = np.linalg.eigvals(c)
@@ -184,9 +187,9 @@ def getValueCrossedCounts(data, less_than, lim):
     temp_total_count = 0
     temp_num_count = 0
     for ind in cross_indicies:
-        if (start_less and data[ind] < data[ind+1]) or (not start_less and data[ind] > data[ind+1]):
+        if ind < len(data) - 1 and (start_less and data[ind] < data[ind+1]) or (not start_less and data[ind] > data[ind+1]):
             k = ind+1
-            while np.sign(data[k]-lim) == np.sign(data[ind+1]-lim):
+            while k < len(data)-1 and np.sign(data[k]-lim) == np.sign(data[k+1]-lim):
                 temp_total_count = temp_total_count+1
                 k=k+1
             temp_num_count = temp_num_count+1
@@ -1114,7 +1117,7 @@ def GetAngleOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
-    axes_labels.append("angle (rad)")
+    axes_labels.append("angle (deg)")
     
     processed_data = []
     labels = []
@@ -1150,6 +1153,7 @@ def GetAngleOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks
             c = np.sqrt(np.multiply(c_vec[:,0],c_vec[:,0]) + np.multiply(c_vec[:,1],c_vec[:,1]))
 
             angle = np.arccos((np.multiply(a,a) + np.multiply(b,b) - np.multiply(c,c)) / (2*np.multiply(a,b)))
+            angle = np.degrees(angle)
             processed_data.append(np.column_stack((np.arange(0, len(angle) / float(video_fps), 1.0 / float(video_fps))[:len(angle)], angle)))
             labels.append(itos_map[point])
 
