@@ -1019,8 +1019,10 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, video_pix_per_m, vel_b
         ts = np.arange(0, len(rel_pos) / float(fps), 1.0 / float(fps))
         my_scale = min(len(ts), len(rel_pos))
         temp = []
-        temp.append(np.column_stack((ts[:my_scale], vals_cleaned[:my_scale,0])))
-        temp.append(np.column_stack((ts[:my_scale], vals_cleaned[:my_scale,1])))
+        avged_pos_x = np.convolve(vals_cleaned[:my_scale,0], np.ones(vel_blocks), 'valid') / vel_blocks
+        avged_pos_y = np.convolve(vals_cleaned[:my_scale,1], np.ones(vel_blocks), 'valid') / vel_blocks
+        temp.append(np.column_stack((ts[:len(avged_pos_x)], avged_pos_x)))
+        temp.append(np.column_stack((ts[:len(avged_pos_y)], avged_pos_y)))
         processed_data.append(temp)
 
         #processed_data.append(np.column_stack((np.arange(0, len(rel_pos) / float(video_fps), 1.0 / float(video_fps))[:len(rel_pos)], rel_pos)))
@@ -1154,7 +1156,8 @@ def GetAngleOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks
 
             angle = np.arccos((np.multiply(a,a) + np.multiply(b,b) - np.multiply(c,c)) / (2*np.multiply(a,b)))
             angle = np.degrees(angle)
-            processed_data.append(np.column_stack((np.arange(0, len(angle) / float(video_fps), 1.0 / float(video_fps))[:len(angle)], angle)))
+            avged_ang = np.convolve(angle, np.ones(vel_blocks), 'valid') / vel_blocks
+            processed_data.append(np.column_stack((np.arange(0, len(avged_ang) / float(video_fps), 1.0 / float(video_fps))[:len(avged_ang)], avged_ang)))
             labels.append(itos_map[point])
 
     return processed_data, labels, axes_labels
