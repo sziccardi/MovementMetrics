@@ -45,7 +45,7 @@ stoi_map = dict(zip(keypoint_names, keypoint_nums))
 itos_map = dict(zip(keypoint_nums, keypoint_names))
 
 # HEATMAP globals
-box_w = 75
+box_w = 25
 
 def ReadDataFromList(files):
     vals =[]
@@ -1108,7 +1108,7 @@ def GetMovementHeatMapData(data, keypoints, video_fps, video_pix_per_m, vel_bloc
                 y = j-int(y_box/2)
                 x_temp.append(x)
                 y_temp.append(y)
-                count = [1 for n in range(len(x_locs)) if y_locs[n] == y and x_locs[n] == x]
+                count = [avged_vels[n] for n in range(len(x_locs)) if y_locs[n] == y and x_locs[n] == x]
                 processed_data[i][j] = processed_data[i][j] + sum(count)
 
     return processed_data, [0, np_vals.shape[0]], axes_labels

@@ -223,7 +223,7 @@ def display_file_select(chosen_file, existing):
     sub_window.close()
     return file_loc, chosen_file
 
-def draw_axes(graph, ax_lims, axes_labels):
+def draw_axes(graph, ax_lims, axes_labels, scale_axes):
     #                    0        1        2        3        4        5        6        7
     #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
     x_min = min(ax_lims[4], ax_lims[5])
@@ -242,15 +242,20 @@ def draw_axes(graph, ax_lims, axes_labels):
     if x_range < 7:
         x_tick_count = 1
 
-    scaled_y_min = y_min-y_tick_count
-    scaled_x_min = x_min-x_tick_count
-    scaled_y_max = y_max+y_tick_count
-    scaled_x_max = x_max+x_tick_count
+    scaled_y_min = y_min 
+    scaled_x_min = x_min
+    scaled_y_max = y_max
+    scaled_x_max = x_max
+    if scale_axes:
+        scaled_y_min = y_min-y_tick_count
+        scaled_x_min = x_min-x_tick_count
+        scaled_y_max = y_max+y_tick_count
+        scaled_x_max = x_max+x_tick_count
     
     dot_size=x_range/150
 
     graph.change_coordinates((scaled_x_min, scaled_y_min),(scaled_x_max, scaled_y_max))
-
+    
     #draw axes
     ax_x_min = x_min if scaled_x_min > 0 else scaled_x_min
     ax_x_max = x_max if scaled_x_max < 0 else scaled_x_max
@@ -321,18 +326,18 @@ def draw_legend(graph, labels, colors):
 def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type):
     if graph_type == GraphType.HEAT_MAP:
         #draw_rectangle(top_left, bottom_right, fill_color = None, line_color = None, line_width = None)
-        white = Color("white")
+        white = Color("blue")
         color_samples = list(white.range_to(Color("red"), 50))
         leg_w = graph_size[0]/50.0
         for i in range(50):
             legend.draw_rectangle((i*leg_w, 25), ((i+1)*leg_w, 0), color_samples[i])
-        color_range = frame_size[0] * 0.5
+        color_range = frame_size[0]*4.0
         box_w = mm.GetPlotSpecificInfo("movement heatmap")
         x_box = graph_size[0] / (len(data))
         y_box = graph_size[1] / (len(data[0]))
         box_w = min(x_box, y_box)
         axes_size = [graph_size[0]/2.0 - graph_size[0]/75, -1000, graph_size[1]/2.0 - graph_size[1]/75, -1000, -1.0*graph_size[0]/2.0 + graph_size[0]/75, 1000, -1.0*graph_size[1]/2.0 + graph_size[1]/75, 1000]
-        draw_axes(graph, axes_size, axes_labels)
+        draw_axes(graph, axes_size, axes_labels, False)
         for i in range(len(data)):
             x = i - len(data)/2
             for j in range(len(data[i])):
@@ -340,8 +345,9 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                 color_select = data[i][j]/color_range
                 color_select = int(color_select*50.0)
                 color_select = 49 if color_select >= 50 else color_select
-                graph.draw_rectangle((x*box_w, (y+1)*box_w), ((x+1)*box_w, y*box_w), color_samples[color_select])
-        draw_axes(graph, axes_size, axes_labels)
+                #if color_select != 0:
+                graph.draw_rectangle((x*box_w, (y+1)*box_w), ((x+1)*box_w, y*box_w), color_samples[color_select], line_color = color_samples[color_select])
+        draw_axes(graph, axes_size, axes_labels, False)
     else:
         #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
         ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
@@ -363,7 +369,7 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                 ax_lims[6] = min_y
 
         
-        dot_size = draw_axes(graph, ax_lims, axes_labels)
+        dot_size = draw_axes(graph, ax_lims, axes_labels, True)
         #color_select = random.sample(colors, len(data))
         if graph_type == GraphType.LINE_GRAPH:
             for key in range(len(data)):
@@ -410,8 +416,8 @@ def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type)
         if ax_lims[7] > min_y_1:
             ax_lims[7] = min_y_1
     
-    dot_size = draw_axes(graphs[0], ax_lims, axes_labels[0])
-    dot_size = draw_axes(graphs[1], ax_lims, axes_labels[1])
+    dot_size = draw_axes(graphs[0], ax_lims, axes_labels[0], True)
+    dot_size = draw_axes(graphs[1], ax_lims, axes_labels[1], True)
 
     if graph_type == GraphType.LINE_GRAPH:
         for key in range(len(data)):
@@ -651,13 +657,12 @@ def display_metrics(data, labels, plot_type):
             total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
 
-    elif plot_type == "relative position" or plot_type == "movement heatmap":
+    elif plot_type == "relative position":
         total_track_point_text = ""
         fps = (float)(values["-FPS-"])
 
         for i, name in enumerate(labels):
             np_data = np.array(data[i])
-            
             temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[:,0], ("right" in name))
             total_track_point_text = total_track_point_text + "\n" + name + " : \n - crossed body midline " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
             
