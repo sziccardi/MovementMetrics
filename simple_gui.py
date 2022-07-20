@@ -343,7 +343,7 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
             for j in range(len(data[i])):
                 y = j - len(data[i])/2
                 color_select = data[i][j]/color_range
-                color_select = int(color_select*50.0)
+                color_select = int(color_select*35.0)
                 color_select = 49 if color_select >= 50 else color_select
                 #if color_select != 0:
                 graph.draw_rectangle((x*box_w, (y+1)*box_w), ((x+1)*box_w, y*box_w), color_samples[color_select], line_color = color_samples[color_select])
@@ -374,6 +374,10 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         if graph_type == GraphType.LINE_GRAPH:
             for key in range(len(data)):
                 line_color = colors[key]
+                print("For ", key, ":")
+                print("I'm plotting a line graph with ", len(data[key]), " points")
+                print("The maximum value I should reach is ", max(data[key]))
+                print("The minimum value I should reach is ", min(data[key]), "/n")
                 for point in range(len(data[key])-1):
                     graph.draw_line((data[key][point][0], data[key][point][1]), (data[key][point+1][0], data[key][point+1][1]), width=dot_size, color=line_color)
         elif graph_type == GraphType.POINT_GRAPH:
@@ -475,7 +479,6 @@ def get_img_data(f, maxsize=image_size, first=False):
     return ImageTk.PhotoImage(img)
 
 def display_frame(i):
-    print("trying to display frame #", i, " when I have ", len(frames), " frames")
     if i is not None:
         window['-FRAME IMAGE-'].update(data=get_img_data(frames[i], first=False))
         img_name = frames[i][file_loc.rfind('/')+1:]
@@ -681,7 +684,7 @@ def display_metrics(data, labels, plot_type):
     elif plot_type == "angles over time":
         total_track_point_text = ""
         fps = (float)(values["-FPS-"])
-
+        stds = []
         for i, name in enumerate(labels):
             np_data = np.array(data[i])
             temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], False, 165)
@@ -692,10 +695,17 @@ def display_metrics(data, labels, plot_type):
             
             data_mean = mm.getMean(np_data[:,1])
             data_var = mm.getSTD(np_data[:,1])
+            stds.append(data_var)
             total_track_point_text = total_track_point_text + " - average angle is " + str(round(data_mean,2)) + "\n"
             total_track_point_text = total_track_point_text + " - with std of "+ str(round(data_var,2)) + "\n"
         
-        print(total_track_point_text)
+        # data1 = np.array(data[0][1])
+        # data2 = np.array(data[1][1])
+        # p = mm.getCoVariance(data1, data2) 
+        # print("COVARIANCE = ", p)
+        # p = p / (mm.getSTD(data1)*mm.getSTD(data2))
+        #print(total_track_point_text)
+        # print("P - Correlation = ", p)
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
     
 
@@ -924,7 +934,6 @@ if __name__ == '__main__':
         if event == "-RIGHT FRAME-":
             try:
                 index = highlight_frames_iter.index(current_frame)
-                print("index was ", index)
                 index = index + 1
             except:
                 index = 0
@@ -932,7 +941,6 @@ if __name__ == '__main__':
             if index > len(highlight_frames_iter) - 1:
                 index = 0
             
-            print("index is now ", index)
             if len(highlight_frames_iter) == 0:
                 current_frame = None
             else:

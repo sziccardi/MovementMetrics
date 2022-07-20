@@ -154,6 +154,9 @@ def getQuartile(data, q):
 def getVariance(data):
     return np.var(data)
 
+def getCoVariance(data1, data2):
+    return np.cov(data1, data2)
+
 def getSTD(data):
     return np.std(data)
 
