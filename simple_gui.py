@@ -225,7 +225,7 @@ def display_file_select(chosen_file, existing):
     sub_window.close()
     return file_loc, chosen_file
 
-def draw_axes(graph, ax_lims, axes_labels, scale_axes):
+def draw_axes(graph, ax_lims, axes_labels, scale_axes, custom_tick_count_x = None, custom_tick_count_y = None):
     #                    0        1        2        3        4        5        6        7
     #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
     x_min = min(ax_lims[4], ax_lims[5])
@@ -236,13 +236,21 @@ def draw_axes(graph, ax_lims, axes_labels, scale_axes):
     x_range = x_max - x_min
     y_range = y_max - y_min
 
-    y_tick_count = y_range/7.0
-    if y_range < 7:
-        y_tick_count = 1
+    if custom_tick_count_x:
+        x_tick_count = custom_tick_count_x
+    else:
+        x_tick_count = x_range/7.0
+        if x_range < 7:
+            x_tick_count = 1
+
+    if custom_tick_count_y:
+        y_tick_count = custom_tick_count_y
+    else:
+        y_tick_count = y_range/7.0
+        if y_range < 7:
+            y_tick_count = 1
     
-    x_tick_count = x_range/7.0
-    if x_range < 7:
-        x_tick_count = 1
+   
 
     scaled_y_min = y_min 
     scaled_x_min = x_min
@@ -353,10 +361,17 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         draw_axes(graph, axes_size, axes_labels, False)
     elif graph_type == GraphType.HISTOGRAM:
         bin_w = mm.GetPlotSpecificInfo("angle histogram")
-        ax_lims = [180, -10000, max(data), -10000, 0, 10000, 0, 10000]
-        dot_size = draw_axes(graph, ax_lims, axes_labels, True)
-        for i, amt in enumerate(data):
-            graph.draw_rectangle((i*bin_w, amt), ((i+1)*bin_w, 0), colors[0])
+        ax_lims = [180, -10000, -10000, -10000, 0, 10000, 0, 10000]
+        for boxes in data:
+           if max(boxes) > ax_lims[2]:
+            ax_lims[2] = max(boxes)
+        dot_size = draw_axes(graph, ax_lims, axes_labels, True, bin_w)
+        sub_bin_w = bin_w / len(data)
+        for key in range(len(data)):
+            for i, amt in enumerate(data[key]):
+                start_point = i*bin_w
+                graph.draw_rectangle((start_point + sub_bin_w*key, amt), (start_point + sub_bin_w*(key+1), 0), colors[key])
+        draw_legend(legend, data_labels, colors[:len(data)])
     else:
         #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
         ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]

@@ -1175,13 +1175,13 @@ def GetAngleOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks
 
 def GetAngleHistData(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
     axes_labels = []
-    axes_labels.append("time (s)")
+    axes_labels.append("angle (deg)")
     scale = 1.0
     if video_pix_per_m > 0:
         scale = video_pix_per_m
-    axes_labels.append("angle (deg)")
+    axes_labels.append("frame count")
     
-    processed_data = [0 for i in range(int(180.0 / bin_w))]
+    processed_data = []
 
     labels = []
     
@@ -1221,12 +1221,13 @@ def GetAngleHistData(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
             
             indicies = (avged_ang / 10.0)
             indicies = np.floor(indicies)
-            for i in range(len(processed_data)):
-                processed_data[i] = processed_data[i] + np.sum(indicies == i)
-            
+            temp = [0 for i in range(int(180.0 / bin_w))]
+            for i in range(int(180.0 / bin_w)):
+                temp[i] = np.sum(indicies == i)
+            processed_data.append(temp)
             #processed_data.append(np.column_stack((np.arange(0, len(avged_ang) / float(video_fps), 1.0 / float(video_fps))[:len(avged_ang)], avged_ang)))
             labels.append(itos_map[point])
-    print(processed_data)
+    
     return processed_data, labels, axes_labels
 
 def GetPlotSpecificInfo(plot_type):
