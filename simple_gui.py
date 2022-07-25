@@ -346,7 +346,8 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                 color_select = int(color_select*35.0)
                 color_select = 49 if color_select >= 50 else color_select
                 #if color_select != 0:
-                graph.draw_rectangle((x*box_w, (y+1)*box_w), ((x+1)*box_w, y*box_w), color_samples[color_select], line_color = color_samples[color_select])
+                if color_select > 0:
+                    graph.draw_rectangle((x*box_w, (y+1)*box_w), ((x+1)*box_w, y*box_w), color_samples[color_select], line_color = color_samples[color_select])
         draw_axes(graph, axes_size, axes_labels, False)
     else:
         #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
@@ -376,8 +377,8 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                 line_color = colors[key]
                 print("For ", key, ":")
                 print("I'm plotting a line graph with ", len(data[key]), " points")
-                print("The maximum value I should reach is ", max(data[key]))
-                print("The minimum value I should reach is ", min(data[key]), "/n")
+                print("The maximum value I should reach is ", max(data[key][:][1]))
+                print("The minimum value I should reach is ", min(data[key][:][1]), "\n")
                 for point in range(len(data[key])-1):
                     graph.draw_line((data[key][point][0], data[key][point][1]), (data[key][point+1][0], data[key][point+1][1]), width=dot_size, color=line_color)
         elif graph_type == GraphType.POINT_GRAPH:
@@ -699,13 +700,17 @@ def display_metrics(data, labels, plot_type):
             total_track_point_text = total_track_point_text + " - average angle is " + str(round(data_mean,2)) + "\n"
             total_track_point_text = total_track_point_text + " - with std of "+ str(round(data_var,2)) + "\n"
         
-        # data1 = np.array(data[0][1])
-        # data2 = np.array(data[1][1])
-        # p = mm.getCoVariance(data1, data2) 
-        # print("COVARIANCE = ", p)
-        # p = p / (mm.getSTD(data1)*mm.getSTD(data2))
-        #print(total_track_point_text)
-        # print("P - Correlation = ", p)
+        if len(data) > 0:
+            data1 = np.array(data[0])[:,1]
+            data2 = np.array(data[1])[:,1]
+            data1_new = np.delete(data1, np.where(np.isnan(data1)))
+            data2_new = np.delete(data2, np.where(np.isnan(data1)))
+            data1 = np.delete(data1_new, np.where(np.isnan(data2_new)))
+            data2 = np.delete(data2_new, np.where(np.isnan(data2_new)))
+            p = mm.getCorrelation(data1, data2)
+            total_track_point_text = total_track_point_text + "\nPearson's correlation r = " + str(round(p[0],2))
+            total_track_point_text = total_track_point_text + "\nTwo tailed p = " + str(p[1]) + "\n"
+            
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
     
 

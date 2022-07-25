@@ -169,6 +169,9 @@ def getSpread(data1, data2):
 
     return np.pi * major_ax * minor_ax
 
+def getCorrelation(data1, data2):
+    return stats.pearsonr(data1, data2)
+
 def getAxesCrossedCounts(data, start_less):
     cross_indicies = np.where(np.diff(np.sign(data)))[0]
     temp_total_count = 0
