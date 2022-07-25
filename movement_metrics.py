@@ -30,6 +30,7 @@ class PlotType(Enum):
     REL_POS_OVER_TIME = 12
     MOV_HEAT_MAP = 13
     ANGLE_OVER_TIME = 14
+    ANGLE_HIST = 15
 
 plot_type_dict = dict({"point cloud":PlotType.POINT_CLOUD, "centroid of motion":PlotType.CENTROID, 
     "position spectrum":PlotType.POS_SPEC, "distance from center":PlotType.CENT_DIST, 
@@ -37,7 +38,8 @@ plot_type_dict = dict({"point cloud":PlotType.POINT_CLOUD, "centroid of motion":
     "speed over time":PlotType.TOTAL_VEL_OVER_TIME, "velocity over time":PlotType.VEL_OVER_TIME, 
     "aperature over time":PlotType.APERATURE, "accelerometer tree":PlotType.ACCEL_TREE,
     "relative position":PlotType.REL_POS, "relative position over time":PlotType.REL_POS_OVER_TIME, 
-    "movement heatmap":PlotType.MOV_HEAT_MAP, "angles over time":PlotType.ANGLE_OVER_TIME})
+    "movement heatmap":PlotType.MOV_HEAT_MAP, "angles over time":PlotType.ANGLE_OVER_TIME, 
+    "angle histogram":PlotType.ANGLE_HIST})
 keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left', 'elbow_left','wrist_left']
 #'spine_base','hip_right','knee_right','ankle_right','hip_left', 'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left', 'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right','palm_left', 'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left', 'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left', 'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left', 'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right', 'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right', 'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right', 'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right', 'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right'
 keypoint_nums = list(np.arange(1,len(keypoint_names)+1))
@@ -46,6 +48,9 @@ itos_map = dict(zip(keypoint_nums, keypoint_names))
 
 # HEATMAP globals
 box_w = 25
+
+# ANGLE HIST globals
+bin_w = 10.0
 
 def ReadDataFromList(files):
     vals =[]
@@ -1168,9 +1173,67 @@ def GetAngleOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks
 
     return processed_data, labels, axes_labels
 
+def GetAngleHistData(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
+    axes_labels = []
+    axes_labels.append("time (s)")
+    scale = 1.0
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+    axes_labels.append("angle (deg)")
+    
+    processed_data = [0 for i in range(int(180.0 / bin_w))]
+
+    labels = []
+    
+    for point in keypoints:
+        start_iter = (point - 1)
+        
+        np_vals = np.array(data)
+        
+        p1_i = None 
+        p3_i = None
+        p2_i = start_iter
+        if start_iter == (stoi_map['elbow_left'] - 1):
+            p1_i = stoi_map['shoulder_left'] - 1
+            p3_i = stoi_map['wrist_left'] - 1
+        elif start_iter == (stoi_map['elbow_right'] - 1):
+            p1_i = stoi_map['shoulder_right'] - 1
+            p3_i = stoi_map['wrist_right'] - 1
+        elif start_iter == (stoi_map['shoulder_right'] - 1):
+            p1_i = stoi_map['spine_top'] - 1
+            p3_i = stoi_map['elbow_right'] - 1
+        elif start_iter == (stoi_map['shoulder_left'] - 1):
+            p1_i = stoi_map['spine_top'] - 1
+            p3_i = stoi_map['elbow_left'] - 1
+
+        if p1_i and p2_i and p3_i:
+            a_vec = np_vals[:,:,p1_i] - np_vals[:,:,p2_i]
+            b_vec = np_vals[:,:,p3_i] - np_vals[:,:,p2_i]
+            c_vec = np_vals[:,:,p3_i] - np_vals[:,:,p1_i]
+
+            a = np.sqrt(np.multiply(a_vec[:,0],a_vec[:,0]) + np.multiply(a_vec[:,1],a_vec[:,1]))
+            b = np.sqrt(np.multiply(b_vec[:,0],b_vec[:,0]) + np.multiply(b_vec[:,1],b_vec[:,1]))
+            c = np.sqrt(np.multiply(c_vec[:,0],c_vec[:,0]) + np.multiply(c_vec[:,1],c_vec[:,1]))
+
+            angle = np.arccos((np.multiply(a,a) + np.multiply(b,b) - np.multiply(c,c)) / (2*np.multiply(a,b)))
+            angle = np.degrees(angle)
+            avged_ang = np.convolve(angle, np.ones(vel_blocks), 'valid') / vel_blocks
+            
+            indicies = (avged_ang / 10.0)
+            indicies = np.floor(indicies)
+            for i in range(len(processed_data)):
+                processed_data[i] = processed_data[i] + np.sum(indicies == i)
+            
+            #processed_data.append(np.column_stack((np.arange(0, len(avged_ang) / float(video_fps), 1.0 / float(video_fps))[:len(avged_ang)], avged_ang)))
+            labels.append(itos_map[point])
+    print(processed_data)
+    return processed_data, labels, axes_labels
+
 def GetPlotSpecificInfo(plot_type):
     if plot_type_dict[plot_type] == PlotType.MOV_HEAT_MAP:
         return box_w
+    if plot_type_dict[plot_type] == PlotType.ANGLE_HIST:
+        return bin_w
 
 def Plot(data, keypoints, fps, pix_in_m, cov_w, type, img_size, filename = ""):
     
@@ -1223,7 +1286,7 @@ def run_script(frame_files, img_size, plot_type, keypoints, fps, pix_in_m, cov_w
 def run_script_get_data(frame_files, img_size, plot_type, keypoints, fps, pix_in_m, cov_width):
     real_keypoints = [stoi_map[k] for k in keypoints]
     data = ReadDataFromList(frame_files)
-
+    print("running ", plot_type)
     processed_data = data_labels = ax_labels = None
     if plot_type_dict[plot_type] == PlotType.POINT_CLOUD:
         processed_data, data_labels, ax_labels = GetPointCloudData(data, real_keypoints, fps, pix_in_m, cov_width)
@@ -1244,7 +1307,9 @@ def run_script_get_data(frame_files, img_size, plot_type, keypoints, fps, pix_in
     elif plot_type_dict[plot_type] == PlotType.MOV_HEAT_MAP:
         processed_data, data_labels, ax_labels = GetMovementHeatMapData(data, real_keypoints, fps, pix_in_m, cov_width, img_size)
     elif plot_type_dict[plot_type] == PlotType.ANGLE_OVER_TIME:
-        processed_data, data_labels, ax_labels = GetAngleOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width, img_size)
+        processed_data, data_labels, ax_labels = GetAngleOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width)
+    elif plot_type_dict[plot_type] == PlotType.ANGLE_HIST:
+        processed_data, data_labels, ax_labels = GetAngleHistData(data, real_keypoints, fps, pix_in_m, cov_width)
 
     if processed_data == None or data_labels == None:
         print("WARNING: Could not process data as provided.")

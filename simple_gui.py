@@ -30,6 +30,7 @@ class GraphType(Enum):
     POINT_GRAPH = 1
     HEAT_MAP = 2
     BOX_N_WHISK = 3
+    HISTOGRAM = 4
 
 
 def get_main_layout():
@@ -64,7 +65,8 @@ def get_main_layout():
             sg.Listbox(
                 #"point cloud", "centroid of motion", "position spectrum", "distance from center", 
                 #"normalized distance from center", "speed over time", "velocity over time"
-                values=["relative position", "relative position over time", "movement heatmap", "angles over time"], 
+                values=["relative position", "relative position over time", "movement heatmap", "angles over time", 
+                "angle histogram"], 
                 enable_events=True, size=(30,5), key="-PLOT LIST-"
             )
         ],
@@ -349,6 +351,12 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                 if color_select > 0:
                     graph.draw_rectangle((x*box_w, (y+1)*box_w), ((x+1)*box_w, y*box_w), color_samples[color_select], line_color = color_samples[color_select])
         draw_axes(graph, axes_size, axes_labels, False)
+    elif graph_type == GraphType.HISTOGRAM:
+        bin_w = mm.GetPlotSpecificInfo("angle histogram")
+        ax_lims = [180, -10000, max(data), -10000, 0, 10000, 0, 10000]
+        dot_size = draw_axes(graph, ax_lims, axes_labels, True)
+        for i, amt in enumerate(data):
+            graph.draw_rectangle((i*bin_w, amt), ((i+1)*bin_w, 0), colors[0])
     else:
         #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
         ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
@@ -826,6 +834,10 @@ if __name__ == '__main__':
                 window["-PLOT CANVAS 2-"].update(visible=False)
                 window["-PLOT CANVAS-"].set_size(graph_size)
                 create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.HEAT_MAP)
+            elif plot_type[0] == 'angle histogram':
+                window["-PLOT CANVAS 2-"].update(visible=False)
+                window["-PLOT CANVAS-"].set_size(graph_size)
+                create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.HISTOGRAM)
 
             
 
