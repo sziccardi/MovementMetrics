@@ -839,10 +839,17 @@ if __name__ == '__main__':
             
                 display_metrics(data1, labels1, plot_type[0])
             if plot_type[0] == "relative angles":
-                data1, labels1, ax_labels1 = mm.run_script_get_data(real_files, frame_size, "angle histogram", track_points, fps, pix_scale, cov_w)
-                data2, labels2, ax_labels2 = mm.run_script_get_data(real_files, frame_size, "angles over time", track_points, fps, pix_scale, cov_w)
-                
-                display_metrics(data2, labels2, plot_type[0])
+                if "head" in track_points:
+                    track_points.remove("head")
+                if "wrist_left" in track_points:
+                    track_points.remove("wrist_left")
+                if "wrist_right" in track_points:
+                    track_points.remove("wrist_right")
+                if len(track_points) > 0:
+                    data1, labels1, ax_labels1 = mm.run_script_get_data(real_files, frame_size, "angle histogram", track_points, fps, pix_scale, cov_w)
+                    data2, labels2, ax_labels2 = mm.run_script_get_data(real_files, frame_size, "angles over time", track_points, fps, pix_scale, cov_w)
+                    
+                    display_metrics(data2, labels2, plot_type[0])
 
             graph.Erase()
             #graph2.Erase()
@@ -872,7 +879,8 @@ if __name__ == '__main__':
                 window["-PLOT CANVAS 2-"].update(visible=False)
                 window["-PLOT CANVAS-"].set_size(graph_size)
                 create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.HISTOGRAM)
-            elif plot_type[0] == 'relative angles':
+            
+            elif data1 is not None and data2 is not None and plot_type[0] == 'relative angles':
                 window["-PLOT CANVAS-"].set_size(graph_size)
                 create_basic_plot(graph, data1, labels1, window["-PLOT LEGEND-"], ax_labels1, GraphType.HISTOGRAM)
 
@@ -960,21 +968,25 @@ if __name__ == '__main__':
                     plot_specfic_data2 = data2[1]
             
             max_points = 0
-            for key in range(len(plot_specfic_data1)):
-                if len(plot_specfic_data1[key]) > max_points:
-                    max_points = len(plot_specfic_data1[key])
-            for key in range(len(plot_specfic_data2)):
-                if len(plot_specfic_data2[key]) > max_points:
-                    max_points = len(plot_specfic_data2[key])
+            
+            if plot_specfic_data1 is not None:
+                for key in range(len(plot_specfic_data1)):
+                    if len(plot_specfic_data1[key]) > max_points:
+                        max_points = len(plot_specfic_data1[key])
+
+            if plot_specfic_data2 is not None:
+                for key in range(len(plot_specfic_data2)):
+                    if len(plot_specfic_data2[key]) > max_points:
+                        max_points = len(plot_specfic_data2[key])
 
             highlight = [0 for i in range(max_points)]
             
-            if prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
+            if plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
                 for key in range(len(plot_specfic_data2)):
                     for point in range(len(plot_specfic_data2[key])):
                         if highlight[point] == 0 and plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x and plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y:
                             highlight[point] = 1
-            else:
+            elif plot_specfic_data1 is not None:
                 for key in range(len(plot_specfic_data1)):
                     for point in range(len(plot_specfic_data1[key])):
                         if highlight[point] == 0 and plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x and plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y:
