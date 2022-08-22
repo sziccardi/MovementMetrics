@@ -7,7 +7,9 @@ import sys
 import json, csv
 import matplotlib.pyplot as plt
 import numpy as np
+from rsa import sign
 import scipy.stats as stats
+import scipy.signal as signal
 from enum import Enum
 
 class PlotType(Enum):
@@ -31,6 +33,8 @@ class PlotType(Enum):
     MOV_HEAT_MAP = 13
     ANGLE_OVER_TIME = 14
     ANGLE_HIST = 15
+    
+    REL_ANGLES = 16
 
 plot_type_dict = dict({"point cloud":PlotType.POINT_CLOUD, "centroid of motion":PlotType.CENTROID, 
     "position spectrum":PlotType.POS_SPEC, "distance from center":PlotType.CENT_DIST, 
@@ -39,7 +43,7 @@ plot_type_dict = dict({"point cloud":PlotType.POINT_CLOUD, "centroid of motion":
     "aperature over time":PlotType.APERATURE, "accelerometer tree":PlotType.ACCEL_TREE,
     "relative position":PlotType.REL_POS, "relative position over time":PlotType.REL_POS_OVER_TIME, 
     "movement heatmap":PlotType.MOV_HEAT_MAP, "angles over time":PlotType.ANGLE_OVER_TIME, 
-    "angle histogram":PlotType.ANGLE_HIST})
+    "angle histogram":PlotType.ANGLE_HIST, "relative angles":PlotType.REL_ANGLES})
 keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left', 'elbow_left','wrist_left']
 #'spine_base','hip_right','knee_right','ankle_right','hip_left', 'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left', 'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right','palm_left', 'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left', 'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left', 'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left', 'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right', 'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right', 'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right', 'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right', 'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right'
 keypoint_nums = list(np.arange(1,len(keypoint_names)+1))
@@ -174,8 +178,21 @@ def getSpread(data1, data2):
 
     return np.pi * major_ax * minor_ax
 
-def getCorrelation(data1, data2):
+def getCorrelationR(data1, data2):
     return stats.pearsonr(data1, data2)
+
+def getPeaks(data):
+    return signal.find_peaks(data)
+
+def getCorrelationCross(data1, data2):
+    ccov = np.correlate(data1 - data1.mean(), data2 - data2.mean())
+    ccov_test = np.correlate(data1 - data1.mean(), data2 - data2.mean(), mode='full')
+    ccor = ccov / (len(data1) * data1.std() * data2.std())
+    ccor_test = ccov_test / (len(data1) * data1.std() * data2.std())
+    print(ccor)
+    print(max(ccor_test))
+    return ccor
+
 
 def getAxesCrossedCounts(data, start_less):
     cross_indicies = np.where(np.diff(np.sign(data)))[0]
@@ -184,7 +201,7 @@ def getAxesCrossedCounts(data, start_less):
     for ind in cross_indicies:
         if (start_less and data[ind] < data[ind+1]) or (not start_less and data[ind] > data[ind+1]):
             k = ind+1
-            while np.sign(data[k]) == np.sign(data[ind+1]):
+            while (len(data) > k+1) and (np.sign(data[k]) == np.sign(data[k+1])):
                 temp_total_count = temp_total_count+1
                 k=k+1
             temp_num_count = temp_num_count+1
@@ -1124,7 +1141,7 @@ def GetMovementHeatMapData(data, keypoints, video_fps, video_pix_per_m, vel_bloc
 
     return processed_data, [0, np_vals.shape[0]], axes_labels
 
-def GetAngleOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks, img_size):
+def GetAngleOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
     axes_labels = []
     axes_labels.append("time (s)")
     scale = 1.0
@@ -1311,6 +1328,9 @@ def run_script_get_data(frame_files, img_size, plot_type, keypoints, fps, pix_in
         processed_data, data_labels, ax_labels = GetAngleOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width)
     elif plot_type_dict[plot_type] == PlotType.ANGLE_HIST:
         processed_data, data_labels, ax_labels = GetAngleHistData(data, real_keypoints, fps, pix_in_m, cov_width)
+    # elif plot_type_dict[plot_type] == PlotType.REL_ANGLES:
+    #     processed_data, data_labels, ax_labels = GetAngleHistData(data, real_keypoints, fps, pix_in_m, cov_width)
+
 
     if processed_data == None or data_labels == None:
         print("WARNING: Could not process data as provided.")

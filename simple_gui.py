@@ -17,8 +17,9 @@ from colour import Color
 
 from enum import Enum
 
-graph_size = (475, 475)
-image_size = (475, 475)
+graph_size = (475, 325)
+long_graph_size = (980, 200)
+image_size = (475, 350)
 global frame_size
 frame_size = (1280, 720)
 colors = ["light blue", "olive drab", "purple", "LightPink1", "blue", "orange", "dark sea green", "red", "light salmon"]
@@ -65,8 +66,8 @@ def get_main_layout():
             sg.Listbox(
                 #"point cloud", "centroid of motion", "position spectrum", "distance from center", 
                 #"normalized distance from center", "speed over time", "velocity over time"
-                values=["relative position", "relative position over time", "movement heatmap", "angles over time", 
-                "angle histogram"], 
+                #"relative position", "relative position over time", "movement heatmap", "angles over time", "angle histogram"
+                values=["relative position", "relative angles"], 
                 enable_events=True, size=(30,5), key="-PLOT LIST-"
             )
         ],
@@ -93,14 +94,13 @@ def get_main_layout():
         [sg.Slider(range=(0, 100), default_value=0, disable_number_display=True, orientation='horizontal', size=(53,7), key="-SCRUB BAR-", visible=False, enable_events=True)],
         [sg.Button(button_text='Prev Key Frame', enable_events=True, key="-LEFT FRAME-"), sg.Button(button_text='Next Key Frame', enable_events=True, key="-RIGHT FRAME-")],
         [sg.Text("", key="-SELECTED FRAMES-")],
+        [sg.Graph(canvas_size=(graph_size[0], 20), graph_bottom_left=(0, 0), graph_top_right=(graph_size[0], 25), background_color="white", float_values = True, key="-PLOT LEGEND-")]
     ]
 
     plot_column = [
         [sg.Text("Plotted data will show up here", key="-PLOT TITLE-")],
-        [sg.Graph(canvas_size=(graph_size[0], 20), graph_bottom_left=(0, 0), graph_top_right=(graph_size[0], 25), background_color="white", float_values = True, key="-PLOT LEGEND-")],
         [sg.Graph(canvas_size=graph_size, graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS-", change_submits=True, drag_submits=True)],
-        [sg.pin(sg.Graph(canvas_size=(graph_size[0], graph_size[1]/2-3), graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS 2-", visible=False, change_submits=True, drag_submits=True))],
-        [sg.Text("Export plot as:", key="-EXPORT TEXT 1-"), 
+        [sg.Text("Export plots as:", key="-EXPORT TEXT 1-"), 
         sg.InputText(size=(20,1), key="-PLOT NAME-"), 
         sg.Text(".png", key="-EXPORT TEXT 2-"),
         sg.Button("Save Plot", key="-EXPORT PLOT-")]
@@ -109,7 +109,9 @@ def get_main_layout():
     main_column = [[sg.Text('Plots')],
     [sg.HSep()],
     [sg.HSep()],
-    [sg.Column(image_column, key="-FRAME COLUMN-", element_justification='c'), sg.Column(plot_column, key="-PLOT COLUMN-", element_justification='c')]   
+    [sg.Column(image_column, key="-FRAME COLUMN-", element_justification='c'), sg.Column(plot_column, key="-PLOT COLUMN-", element_justification='c')],
+    [sg.Graph(canvas_size=(long_graph_size[0], long_graph_size[1]), graph_bottom_left=(0, 0), graph_top_right=(long_graph_size[0], long_graph_size[1]), change_submits=True, drag_submits=True, background_color="white", float_values = True, key="-OVER TIME PLOT 1-")],
+    [sg.Graph(canvas_size=(long_graph_size[0], long_graph_size[1]), graph_bottom_left=(0, 0), graph_top_right=(long_graph_size[0], long_graph_size[1]), change_submits=True, drag_submits=True, background_color="white", float_values = True, key="-OVER TIME PLOT 2-", visible=False)]   
     ]
     right_column = [[sg.Text('Computed metrics:')],
     [sg.HSep()],
@@ -322,7 +324,7 @@ def draw_axes(graph, ax_lims, axes_labels, scale_axes, custom_tick_count_x = Non
     for y in range(int(ax_y_min), int(ax_y_max), int(y_tick_count)):
         graph.draw_line((max(0, scaled_x_min + x_tick_count)-h_tick_len, y), (max(0, scaled_x_min + x_tick_count)+h_tick_len, y))
         if y != 0:
-            graph.draw_text(str(y), (max(0, scaled_x_min + x_tick_count)-2.5*h_tick_len, y), color='black')
+            graph.draw_text(str(y), (max(0, scaled_x_min + x_tick_count)-2.25*h_tick_len, y), color='black')
     
     graph.draw_text(axes_labels[1], (max(0, scaled_x_min + x_tick_count)+x_shift, y_ax_label_pos), angle=label_angle, text_location = y_ax_label_anch, color="black")
     return dot_size
@@ -398,10 +400,6 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         if graph_type == GraphType.LINE_GRAPH:
             for key in range(len(data)):
                 line_color = colors[key]
-                print("For ", key, ":")
-                print("I'm plotting a line graph with ", len(data[key]), " points")
-                print("The maximum value I should reach is ", max(data[key][:][1]))
-                print("The minimum value I should reach is ", min(data[key][:][1]), "\n")
                 for point in range(len(data[key])-1):
                     graph.draw_line((data[key][point][0], data[key][point][1]), (data[key][point+1][0], data[key][point+1][1]), width=dot_size, color=line_color)
         elif graph_type == GraphType.POINT_GRAPH:
@@ -488,6 +486,7 @@ def read_pose_files(file_loc):
         file_list = []
     
     chosen_files = [val for val in file_list if val.lower().endswith((".json"))]
+    chosen_files = sorted(chosen_files)
     return chosen_files
 
 def get_img_data(f, maxsize=image_size, first=False):
@@ -705,7 +704,7 @@ def display_metrics(data, labels, plot_type):
         
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
 
-    elif plot_type == "angles over time":
+    elif plot_type == "angles over time" or plot_type == "relative angles":
         total_track_point_text = ""
         fps = (float)(values["-FPS-"])
         stds = []
@@ -723,16 +722,23 @@ def display_metrics(data, labels, plot_type):
             total_track_point_text = total_track_point_text + " - average angle is " + str(round(data_mean,2)) + "\n"
             total_track_point_text = total_track_point_text + " - with std of "+ str(round(data_var,2)) + "\n"
         
-        if len(data) > 0:
-            data1 = np.array(data[0])[:,1]
-            data2 = np.array(data[1])[:,1]
-            data1_new = np.delete(data1, np.where(np.isnan(data1)))
-            data2_new = np.delete(data2, np.where(np.isnan(data1)))
-            data1 = np.delete(data1_new, np.where(np.isnan(data2_new)))
-            data2 = np.delete(data2_new, np.where(np.isnan(data2_new)))
-            p = mm.getCorrelation(data1, data2)
-            total_track_point_text = total_track_point_text + "\nPearson's correlation r = " + str(round(p[0],2))
-            total_track_point_text = total_track_point_text + "\nTwo tailed p = " + str(p[1]) + "\n"
+        # if len(data) > 0:
+        #     data1 = np.array(data[0])[:,1]
+        #     data2 = np.array(data[1])[:,1]
+        #     data1_new = np.delete(data1, np.where(np.isnan(data1)))
+        #     data2_new = np.delete(data2, np.where(np.isnan(data1)))
+        #     data1 = np.delete(data1_new, np.where(np.isnan(data2_new)))
+        #     data2 = np.delete(data2_new, np.where(np.isnan(data2_new)))
+        #     p = mm.getCorrelationR(data1, data2)
+        #     total_track_point_text = total_track_point_text + "\nPearson's correlation r = " + str(round(p[0],2))
+        #     total_track_point_text = total_track_point_text + "\nTwo tailed p = " + str(p[1]) + "\n"
+
+        #     avg_corr = mm.getCorrelationCross(data1, data2)[0]
+        #     # abs_corr = np.abs(avg_corr)
+        #     # i_peaks = mm.getPeaks(abs_corr)
+        #     # mean_corr = np.array([abs_corr[int(i)] for i in i_peaks[0]])
+        #     # mean_corr = np.mean(mean_corr)
+        #     total_track_point_text = total_track_point_text + "\nAverage cross correlation = " + str(round(avg_corr,2))
             
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
     
@@ -753,7 +759,8 @@ if __name__ == '__main__':
     
     #plotting variables
     graph = window.Element("-PLOT CANVAS-")
-    graph2 = window.Element("-PLOT CANVAS 2-")
+    long_graph = window.Element("-OVER TIME PLOT 1-")
+    long_graph2 = window.Element("-OVER TIME PLOT 2-")
     dragging = False
     start_point = end_point = prior_plot = None
     prior_rect = (None, None)
@@ -823,17 +830,29 @@ if __name__ == '__main__':
             else:
                 pix_scale = -1
             cov_w = (int)(values["-CONV WIDTH-"])
-            data, labels, ax_labels = mm.run_script_get_data(real_files, frame_size, plot_type[0], track_points, fps, pix_scale, cov_w)
             
-            display_metrics(data, labels, plot_type[0])
+            data1, labels1, ax_labels1 = None, None, None
+            data2, labels2, ax_labels2 = None, None, None
+            if plot_type[0] == "relative position":
+                data1, labels1, ax_labels1 = mm.run_script_get_data(real_files, frame_size, "relative position", track_points, fps, pix_scale, cov_w)
+                data2, labels2, ax_labels2 = mm.run_script_get_data(real_files, frame_size, "relative position over time", track_points, fps, pix_scale, cov_w)
+            
+                display_metrics(data1, labels1, plot_type[0])
+            if plot_type[0] == "relative angles":
+                data1, labels1, ax_labels1 = mm.run_script_get_data(real_files, frame_size, "angle histogram", track_points, fps, pix_scale, cov_w)
+                data2, labels2, ax_labels2 = mm.run_script_get_data(real_files, frame_size, "angles over time", track_points, fps, pix_scale, cov_w)
+                
+                display_metrics(data2, labels2, plot_type[0])
 
             graph.Erase()
-            graph2.Erase()
+            #graph2.Erase()
+            long_graph.Erase()
+            long_graph2.Erase()
             window["-PLOT LEGEND-"].Erase()
 
             window["-PLOT TITLE-"].update(value=plot_type[0])
             current_plot_type = plot_type[0]
-            if plot_type[0] == "relative position" or plot_type[0] == "point cloud" or plot_type[0] == "centroid of motion" or plot_type[0] == "distance from center" or plot_type[0] == "normalized distance from center":
+            if plot_type[0] == "point cloud" or plot_type[0] == "centroid of motion" or plot_type[0] == "distance from center" or plot_type[0] == "normalized distance from center":
                 window["-PLOT CANVAS 2-"].update(visible=False)
                 window["-PLOT CANVAS-"].set_size(graph_size)
                 create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.POINT_GRAPH)
@@ -853,6 +872,21 @@ if __name__ == '__main__':
                 window["-PLOT CANVAS 2-"].update(visible=False)
                 window["-PLOT CANVAS-"].set_size(graph_size)
                 create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.HISTOGRAM)
+            elif plot_type[0] == 'relative angles':
+                window["-PLOT CANVAS-"].set_size(graph_size)
+                create_basic_plot(graph, data1, labels1, window["-PLOT LEGEND-"], ax_labels1, GraphType.HISTOGRAM)
+
+                window["-OVER TIME PLOT 2-"].update(visible=False)
+                window["-OVER TIME PLOT 1-"].set_size(long_graph_size)
+                create_basic_plot(long_graph, data2, labels2, window["-PLOT LEGEND-"], ax_labels2, GraphType.LINE_GRAPH)
+            elif plot_type[0] == 'relative position':
+                window["-PLOT CANVAS-"].set_size(graph_size)
+                create_basic_plot(graph, data1, labels1, window["-PLOT LEGEND-"], ax_labels1, GraphType.POINT_GRAPH)
+
+                window["-OVER TIME PLOT 2-"].update(visible=True)
+                window["-OVER TIME PLOT 1-"].set_size((long_graph_size[0], long_graph_size[1]/2-3))
+                window["-OVER TIME PLOT 2-"].set_size((long_graph_size[0], long_graph_size[1]/2-3))
+                create_two_plots([long_graph, long_graph2], data2, labels2, window["-PLOT LEGEND-"], ax_labels2, GraphType.LINE_GRAPH)
 
             
 
@@ -861,7 +895,7 @@ if __name__ == '__main__':
                 if plot_type[0] == "relative position over time" or plot_type[0] == "velocity over time":
                     widget = window["-PLOT CANVAS-"].Widget
                     # NOTE: these are magic numbers, no idea why only these work
-                    box = (widget.winfo_rootx() + widget.winfo_width() / 2.2, widget.winfo_rooty() + 30, widget.winfo_rootx() + 1.67 * widget.winfo_width(), widget.winfo_rooty() + 1.66 * widget.winfo_height() - 30)
+                    box = (widget.winfo_rootx() + widget.winfo_width() / 2.19, widget.winfo_rooty() + 30, widget.winfo_rootx() + 1.69 * widget.winfo_width(), widget.winfo_rooty() + 1.66 * widget.winfo_height() - 30)
                     grab = ImageGrab.grab(bbox=box)
                     grab.save(values["-PLOT NAME-"] + ".png")
                     print("Saved double canvas 1")
@@ -888,7 +922,7 @@ if __name__ == '__main__':
         else:
             window["-RUN SCRIPT-"].update(visible=False)
 
-        if event == "-PLOT CANVAS-" or event == "-PLOT CANVAS 2-":
+        if event == "-PLOT CANVAS-" or event == "-OVER TIME PLOT 1-" or event == "-OVER TIME PLOT 2-":
             x, y = values[event]
             if not dragging:
                 start_point = (x, y)
@@ -911,24 +945,40 @@ if __name__ == '__main__':
             min_y = min(start_point[1], end_point[1])
             max_y = max(start_point[1], end_point[1])
 
-            plot_specfic_data = data
-            if current_plot_type == "relative position over time" or current_plot_type == "velocity over time":
-                if prior_rect[0] == "-PLOT CANVAS-":
-                    plot_specfic_data = data[0]
-                elif prior_rect[0] == "-PLOT CANVAS 2-":
-                    plot_specfic_data = data[1]
+
+            plot_specfic_data1 = data1
+            plot_specfic_data2 = data2
+            # if current_plot_type == "relative position over time" or current_plot_type == "velocity over time":
+            #     if prior_rect[0] == "-PLOT CANVAS-":
+            #         plot_specfic_data = data[0]
+            #     elif prior_rect[0] == "-PLOT CANVAS 2-":
+            #         plot_specfic_data = data[1]
+            if current_plot_type == "relative position" :
+                if prior_rect[0] == "-OVER TIME PLOT 1-":
+                    plot_specfic_data2 = data2[0]
+                elif prior_rect[0] == "-OVER TIME PLOT 2-":
+                    plot_specfic_data2 = data2[1]
             
             max_points = 0
-            for key in range(len(plot_specfic_data)):
-                if len(plot_specfic_data[key]) > max_points:
-                    max_points = len(plot_specfic_data[key])
+            for key in range(len(plot_specfic_data1)):
+                if len(plot_specfic_data1[key]) > max_points:
+                    max_points = len(plot_specfic_data1[key])
+            for key in range(len(plot_specfic_data2)):
+                if len(plot_specfic_data2[key]) > max_points:
+                    max_points = len(plot_specfic_data2[key])
 
             highlight = [0 for i in range(max_points)]
             
-            for key in range(len(plot_specfic_data)):
-                for point in range(len(plot_specfic_data[key])):
-                    if highlight[point] == 0 and plot_specfic_data[key][point][0] > min_x and plot_specfic_data[key][point][0] < max_x and plot_specfic_data[key][point][1] > min_y and plot_specfic_data[key][point][1] < max_y:
-                        highlight[point] = 1
+            if prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
+                for key in range(len(plot_specfic_data2)):
+                    for point in range(len(plot_specfic_data2[key])):
+                        if highlight[point] == 0 and plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x and plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y:
+                            highlight[point] = 1
+            else:
+                for key in range(len(plot_specfic_data1)):
+                    for point in range(len(plot_specfic_data1[key])):
+                        if highlight[point] == 0 and plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x and plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y:
+                            highlight[point] = 1
             
             highlight_frames_iter = [i for i in range(max_points) if highlight[i]]
 
