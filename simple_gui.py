@@ -515,6 +515,7 @@ def display_frame(i):
 
 
 def display_metrics(data, labels, plot_type):
+
     if plot_type == "centroid of motion":
         np_data = np.array(data[0])
         spread = mm.getSpread(np_data[:,0], np_data[:,1])
@@ -560,7 +561,12 @@ def display_metrics(data, labels, plot_type):
                 right_spread.append(spread)
                 right_med.append([x_med,y_med])
 
-            total_track_point_text = total_track_point_text + name + " - \n" + spread_txt + "\n" + med_txt + "\n\n"
+            filter = np_data[:,2] > mm.GetPlotSpecificInfo("distance from center")[0]
+            included = sum(filter)
+            num_skipped = np_data[:,2].shape[0] - included
+            skipped_txt = "# frames skipped: \n"+str(num_skipped)
+
+            total_track_point_text = total_track_point_text + name + " - \n" + spread_txt + "\n" + med_txt + "\n" + skipped_txt + "\n\n"
 
         total_left_spread = float(sum(left_spread))
         total_right_spread = float(sum(right_spread))
@@ -582,6 +588,8 @@ def display_metrics(data, labels, plot_type):
         
         med_diffs = [abs(avg_right_med[i]-avg_left_med[i]) for i in range(len(avg_right_med))]
         med_diff_txt = "Difference between left \nand right medians:\n (" + str(round(med_diffs[0])) + ", " + str(round(med_diffs[1])) + ")"
+
+        
 
         window['-COMPUTED METRICS-'].update(value=total_track_point_text + "\n" + spread_proportions_txt + "\n" + med_diff_txt)
 
@@ -686,6 +694,10 @@ def display_metrics(data, labels, plot_type):
             data_y_var = mm.getSTD(np_data_vert[:,1])
             total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
             total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
+            filter = np_data[:,2] > mm.GetPlotSpecificInfo("distance from center")[0]
+            included = sum(filter)
+            num_skipped = np_data[:,2].shape[0] - included
+            total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
 
     elif plot_type == "relative position":
@@ -706,8 +718,14 @@ def display_metrics(data, labels, plot_type):
             data_y_var = mm.getSTD(np_data[:,1])
             total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
             total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
-        
+            
+            filter = np_data[:,2] > mm.GetPlotSpecificInfo("relative position")[0]
+            included = sum(filter)
+            num_skipped = np_data[:,2].shape[0] - included
+            total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
+
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
+        print(total_track_point_text)
 
     elif plot_type == "angles over time" or plot_type == "relative angles":
         total_track_point_text = ""
@@ -744,9 +762,13 @@ def display_metrics(data, labels, plot_type):
         #     # mean_corr = np.array([abs_corr[int(i)] for i in i_peaks[0]])
         #     # mean_corr = np.mean(mean_corr)
         #     total_track_point_text = total_track_point_text + "\nAverage cross correlation = " + str(round(avg_corr,2))
-            
+        filter = np_data[:,2] > mm.GetPlotSpecificInfo("angles over time")[0]
+        included = sum(filter)
+        num_skipped = np_data[:,2].shape[0] - included
+        total_track_point_text = total_track_point_text + " - # of skipped frames: " + str(num_skipped) + "\n"
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
-    
+        #TODO: remove this print statement at some point
+        print(total_track_point_text)
 
 if __name__ == '__main__':
     #matplotlib.use('TkAgg')
