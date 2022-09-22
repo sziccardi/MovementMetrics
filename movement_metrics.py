@@ -56,6 +56,9 @@ box_w = 25
 # ANGLE HIST globals
 bin_w = 10.0
 
+# ALL globals
+conf_filter = 0.5
+
 def ReadDataFromList(files):
     vals =[]
     for filename in files:
@@ -291,7 +294,7 @@ def GetPointCloudData(data, keypoints, fps, video_pix_per_m, cov_width):
         
         vals_cleaned[:,0] /= scale
         vals_cleaned[:,1] /= scale
-        processed_data.append(vals_cleaned[:,:2])
+        processed_data.append(vals_cleaned)
         
 
     int_arg = stoi_map['spine_top'] - 1
@@ -551,7 +554,7 @@ def GetDistFromCenterData(normalized, data, keypoints, fps, video_pix_per_m, cov
             select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
             vals_cleaned = selected[select,:]
 
-            processed_data.append(vals_cleaned[:,:2])
+            processed_data.append(vals_cleaned)
             
             labels.append(itos_map[point])
     
@@ -1007,7 +1010,7 @@ def GetRelativePositionData(data, keypoints, fps, video_pix_per_m, vel_blocks):
         select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
         vals_cleaned = selected[select,:]
 
-        processed_data.append(vals_cleaned[:,:2])
+        processed_data.append(vals_cleaned)
         
         labels.append(itos_map[point])
     
@@ -1049,8 +1052,8 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, video_pix_per_m, vel_b
         temp = []
         avged_pos_x = np.convolve(vals_cleaned[:my_scale,0], np.ones(vel_blocks), 'valid') / vel_blocks
         avged_pos_y = np.convolve(vals_cleaned[:my_scale,1], np.ones(vel_blocks), 'valid') / vel_blocks
-        temp.append(np.column_stack((ts[:len(avged_pos_x)], avged_pos_x)))
-        temp.append(np.column_stack((ts[:len(avged_pos_y)], avged_pos_y)))
+        temp.append(np.column_stack((ts[:len(avged_pos_x)], avged_pos_x, vals_cleaned[:,2])))
+        temp.append(np.column_stack((ts[:len(avged_pos_y)], avged_pos_y, vals_cleaned[:,2])))
         processed_data.append(temp)
 
         #processed_data.append(np.column_stack((np.arange(0, len(rel_pos) / float(video_fps), 1.0 / float(video_fps))[:len(rel_pos)], rel_pos)))
@@ -1185,7 +1188,9 @@ def GetAngleOverTimeData(data, keypoints, video_fps, video_pix_per_m, vel_blocks
             angle = np.arccos((np.multiply(a,a) + np.multiply(b,b) - np.multiply(c,c)) / (2*np.multiply(a,b)))
             angle = np.degrees(angle)
             avged_ang = np.convolve(angle, np.ones(vel_blocks), 'valid') / vel_blocks
-            processed_data.append(np.column_stack((np.arange(0, len(avged_ang) / float(video_fps), 1.0 / float(video_fps))[:len(avged_ang)], avged_ang)))
+            confs = np_vals[:,2,p2_i] + np_vals[:,2,p1_i] + np_vals[:,2,p3_i]
+            confs = confs / 3
+            processed_data.append(np.column_stack((np.arange(0, len(avged_ang) / float(video_fps), 1.0 / float(video_fps))[:len(avged_ang)], avged_ang, confs)))
             labels.append(itos_map[point])
 
     return processed_data, labels, axes_labels
@@ -1224,9 +1229,15 @@ def GetAngleHistData(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
             p3_i = stoi_map['elbow_left'] - 1
 
         if p1_i and p2_i and p3_i:
-            a_vec = np_vals[:,:,p1_i] - np_vals[:,:,p2_i]
-            b_vec = np_vals[:,:,p3_i] - np_vals[:,:,p2_i]
-            c_vec = np_vals[:,:,p3_i] - np_vals[:,:,p1_i]
+            filtered_p1 = np_vals[:,2,p1_i] > conf_filter
+            filtered_p2 = np_vals[:,2,p2_i] > conf_filter
+            filtered_p3 = np_vals[:,2,p3_i] > conf_filter
+
+            full_filter = filtered_p1 & filtered_p2 & filtered_p3
+
+            a_vec = np_vals[full_filter,:,p1_i] - np_vals[full_filter,:,p2_i]
+            b_vec = np_vals[full_filter,:,p3_i] - np_vals[full_filter,:,p2_i]
+            c_vec = np_vals[full_filter,:,p3_i] - np_vals[full_filter,:,p1_i]
 
             a = np.sqrt(np.multiply(a_vec[:,0],a_vec[:,0]) + np.multiply(a_vec[:,1],a_vec[:,1]))
             b = np.sqrt(np.multiply(b_vec[:,0],b_vec[:,0]) + np.multiply(b_vec[:,1],b_vec[:,1]))
@@ -1236,6 +1247,8 @@ def GetAngleHistData(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
             angle = np.degrees(angle)
             avged_ang = np.convolve(angle, np.ones(vel_blocks), 'valid') / vel_blocks
             
+
+
             indicies = (avged_ang / 10.0)
             indicies = np.floor(indicies)
             temp = [0 for i in range(int(180.0 / bin_w))]
@@ -1249,9 +1262,17 @@ def GetAngleHistData(data, keypoints, video_fps, video_pix_per_m, vel_blocks):
 
 def GetPlotSpecificInfo(plot_type):
     if plot_type_dict[plot_type] == PlotType.MOV_HEAT_MAP:
-        return box_w
+        return [box_w, conf_filter]
     if plot_type_dict[plot_type] == PlotType.ANGLE_HIST:
-        return bin_w
+        return [bin_w, conf_filter]
+    if plot_type_dict[plot_type] == PlotType.REL_POS_OVER_TIME:
+        return [conf_filter]
+    if plot_type_dict[plot_type] == PlotType.REL_POS:
+        return [conf_filter]
+    if plot_type_dict[plot_type] == PlotType.REL_ANGLES:
+        return [conf_filter]
+    if plot_type_dict[plot_type] == PlotType.ANGLE_OVER_TIME:
+        return [conf_filter]
 
 def Plot(data, keypoints, fps, pix_in_m, cov_w, type, img_size, filename = ""):
     
