@@ -481,7 +481,7 @@ def read_frame_files(file_loc):
     except:
         file_list = []
     frames = [(file_loc+'/video_frames/'+val) for val in file_list if val.lower().endswith((".jpg")) or val.lower().endswith((".png"))]
-        
+    frames.sort()
     return frames
 
 def read_pose_files(file_loc):
