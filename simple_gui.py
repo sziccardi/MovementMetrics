@@ -768,10 +768,13 @@ def display_metrics(data, labels, plot_type):
         #     # mean_corr = np.array([abs_corr[int(i)] for i in i_peaks[0]])
         #     # mean_corr = np.mean(mean_corr)
         #     total_track_point_text = total_track_point_text + "\nAverage cross correlation = " + str(round(avg_corr,2))
-        filter = np_data[:,2] > mm.GetPlotSpecificInfo("angles over time")[0]
-        included = sum(filter)
-        num_skipped = np_data[:,2].shape[0] - included
-        total_track_point_text = total_track_point_text + " - # of skipped frames: " + str(num_skipped) + "\n"
+            filter = np_data[:,2] > mm.GetPlotSpecificInfo("angles over time")[0]
+            included = sum(filter)
+            num_skipped = np_data[:,2].shape[0] - included
+            selected = np_data[filter]
+            avg_conf = np.mean(selected[:,2])
+            total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
+            total_track_point_text = total_track_point_text + "Average confidence: "+str(round(avg_conf,2)) + "\n"
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
         #TODO: remove this print statement at some point
         print(total_track_point_text)
