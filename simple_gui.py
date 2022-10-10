@@ -697,7 +697,10 @@ def display_metrics(data, labels, plot_type):
             filter = np_data[:,2] > mm.GetPlotSpecificInfo("distance from center")[0]
             included = sum(filter)
             num_skipped = np_data[:,2].shape[0] - included
+            not_filter = np.logical_not(filter)
+            avg_conf = np.mean(data[not_filter][2])
             total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
+            total_track_point_text = total_track_point_text + "Average confidence: "+str(avg_conf) + "\n"
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
 
     elif plot_type == "relative position":
@@ -722,7 +725,10 @@ def display_metrics(data, labels, plot_type):
             filter = np_data[:,2] > mm.GetPlotSpecificInfo("relative position")[0]
             included = sum(filter)
             num_skipped = np_data[:,2].shape[0] - included
+            selected = np_data[filter]
+            avg_conf = np.mean(selected[:,2])
             total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
+            total_track_point_text = total_track_point_text + "Average confidence: "+str(round(avg_conf,2)) + "\n"
 
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
         print(total_track_point_text)
