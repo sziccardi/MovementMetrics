@@ -93,7 +93,7 @@ def get_main_layout():
     image_column = [
         [sg.Text("Processed video will show up here", key="-IMAGE TITLE-")],
         [sg.Image(filename="placeholder.png", size=image_size, key='-FRAME IMAGE-')],
-        [sg.Graph(canvas_size=(image_size[0],7), graph_bottom_left=(0, 0), graph_top_right=(image_size[0], 5), background_color="white", float_values = True, key="-FRAME HIGHLIGHT BAR-")],
+        [sg.Graph(canvas_size=(image_size[0],7), graph_bottom_left=(0, 0), graph_top_right=(image_size[0], 5), change_submits=True, drag_submits=True, background_color="white", float_values = True, key="-FRAME HIGHLIGHT BAR-")],
         [sg.Slider(range=(0, 100), default_value=0, disable_number_display=True, orientation='horizontal', size=(53,7), key="-SCRUB BAR-", visible=False, enable_events=True)],
         [sg.Button(button_text='Prev Key Frame', enable_events=True, key="-LEFT FRAME-"), sg.Button(button_text='Next Key Frame', enable_events=True, key="-RIGHT FRAME-")],
         [sg.Text("", key="-SELECTED FRAMES-")],
@@ -1016,7 +1016,7 @@ if __name__ == '__main__':
         else:
             window["-RUN SCRIPT-"].update(visible=False)
 
-        if event == "-PLOT CANVAS-" or event == "-OVER TIME PLOT 1-" or event == "-OVER TIME PLOT 2-":
+        if event == "-PLOT CANVAS-" or event == "-OVER TIME PLOT 1-" or event == "-OVER TIME PLOT 2-" or event == "-FRAME HIGHLIGHT BAR-":
             x, y = values[event]
             if not dragging:
                 start_point = (x, y)
@@ -1067,7 +1067,17 @@ if __name__ == '__main__':
 
             highlight = [0 for i in range(max_points)]
             
-            if plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
+            if prior_rect[0] == "-FRAME HIGHLIGHT BAR-":
+                min_frame = min_x / image_size[0]
+                min_frame = int(min_frame*len(frames))
+                print("min frame ", min_frame)
+
+                max_frame = max_x / image_size[0]
+                max_frame = int(max_frame*len(frames))
+                print("max frame ", max_frame)
+
+                highlight[min_frame:max_frame] = [1 for k in range(max_frame-min_frame)]
+            elif plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
                 for key in range(len(plot_specfic_data2)):
                     for point in range(len(plot_specfic_data2[key])):
                         if highlight[point] == 0 and plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x and plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y:
@@ -1077,6 +1087,7 @@ if __name__ == '__main__':
                     for point in range(len(plot_specfic_data1[key])):
                         if highlight[point] == 0 and plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x and plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y:
                             highlight[point] = 1
+            
             
             highlight_frames_iter = [i for i in range(max_points) if highlight[i]]
 
