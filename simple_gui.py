@@ -1,4 +1,5 @@
 from cgitb import enable
+from codecs import latin_1_encode
 from fileinput import filename
 from turtle import right
 import PySimpleGUI as sg
@@ -92,25 +93,26 @@ def get_main_layout():
     image_column = [
         [sg.Text("Processed video will show up here", key="-IMAGE TITLE-")],
         [sg.Image(filename="placeholder.png", size=image_size, key='-FRAME IMAGE-')],
+        [sg.Graph(canvas_size=(image_size[0],7), graph_bottom_left=(0, 0), graph_top_right=(image_size[0], 5), background_color="white", float_values = True, key="-FRAME HIGHLIGHT BAR-")],
         [sg.Slider(range=(0, 100), default_value=0, disable_number_display=True, orientation='horizontal', size=(53,7), key="-SCRUB BAR-", visible=False, enable_events=True)],
         [sg.Button(button_text='Prev Key Frame', enable_events=True, key="-LEFT FRAME-"), sg.Button(button_text='Next Key Frame', enable_events=True, key="-RIGHT FRAME-")],
         [sg.Text("", key="-SELECTED FRAMES-")],
-        [sg.Graph(canvas_size=(graph_size[0], 20), graph_bottom_left=(0, 0), graph_top_right=(graph_size[0], 25), background_color="white", float_values = True, key="-PLOT LEGEND-")]
     ]
 
     plot_column = [
-        [sg.Text("Plotted data will show up here", key="-PLOT TITLE-")],
+        [sg.Text("Plotted data will show up here", key="-GENERAL PLOT TITLE-")],
         [sg.Graph(canvas_size=graph_size, graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS-", change_submits=True, drag_submits=True)],
-        [sg.Text("Export plots as:", key="-EXPORT TEXT 1-"), 
-        sg.InputText(size=(20,1), key="-PLOT NAME-"), 
-        sg.Text(".png", key="-EXPORT TEXT 2-"),
-        sg.Button("Save Plot", key="-EXPORT PLOT-")]
+        # [sg.Text("Export plots as:", key="-EXPORT TEXT 1-"), 
+        # sg.InputText(size=(20,1), key="-PLOT NAME-"), 
+        # sg.Text(".png", key="-EXPORT TEXT 2-"),
+        # sg.Button("Save Plot", key="-EXPORT PLOT-")]
     ]
 
     main_column = [[sg.Text('Plots')],
     [sg.HSep()],
     [sg.HSep()],
     [sg.Column(image_column, key="-FRAME COLUMN-", element_justification='c'), sg.Column(plot_column, key="-PLOT COLUMN-", element_justification='c')],
+    [sg.Graph(canvas_size=(graph_size[0]-95, 20), graph_bottom_left=(0, 0), graph_top_right=(graph_size[0]-95, 25), background_color="white", float_values = True, key="-PLOT LEGEND-"), sg.Text("And here", key="-OVER TIME PLOT TITLE-")],
     [sg.Graph(canvas_size=(long_graph_size[0], long_graph_size[1]), graph_bottom_left=(0, 0), graph_top_right=(long_graph_size[0], long_graph_size[1]), change_submits=True, drag_submits=True, background_color="white", float_values = True, key="-OVER TIME PLOT 1-")],
     [sg.Graph(canvas_size=(long_graph_size[0], long_graph_size[1]), graph_bottom_left=(0, 0), graph_top_right=(long_graph_size[0], long_graph_size[1]), change_submits=True, drag_submits=True, background_color="white", float_values = True, key="-OVER TIME PLOT 2-", visible=False)]   
     ]
@@ -552,6 +554,11 @@ def display_frame(i):
         window['-FRAME IMAGE-'].update(data=get_img_data(frames[i], first=False))
         img_name = frames[i][file_loc.rfind('/')+1:]
         window['-IMAGE TITLE-'].update(value=img_name)
+
+        frame_loc = i / len(frames)
+        frame_loc = frame_loc * image_size[0]
+        id = window["-FRAME HIGHLIGHT BAR-"].draw_rectangle((frame_loc, 7), (frame_loc+1, 0), fill_color='black', line_color="black")
+        return id
     
 
 
@@ -824,6 +831,8 @@ if __name__ == '__main__':
     current_frame = 0
     frames = []
     highlight_frames_iter = []
+    highlight_marks = []
+    current_frame_mark = None
     
     #plotting variables
     graph = window.Element("-PLOT CANVAS-")
@@ -924,8 +933,17 @@ if __name__ == '__main__':
             long_graph.Erase()
             long_graph2.Erase()
             window["-PLOT LEGEND-"].Erase()
-
-            window["-PLOT TITLE-"].update(value=plot_type[0])
+            title1 = ""
+            title2 = ""
+            if "position" in plot_type[0]:
+                title1 = "RELATIVE POSITION POINT CLOUD"
+                title2 = "RELATIVE POSITIONS OVER TIME"
+            elif "angle" in plot_type[0]:
+                title2 = "RELATIVE ANGLE OVER TIME"
+                title1 = "RELATIVE ANGLE HISTOGRAM"
+            window["-GENERAL PLOT TITLE-"].update(value=title1)
+            window["-OVER TIME PLOT TITLE-"].update(value=title2)
+            
             current_plot_type = plot_type[0]
             if plot_type[0] == "point cloud" or plot_type[0] == "centroid of motion" or plot_type[0] == "distance from center" or plot_type[0] == "normalized distance from center":
                 window["-PLOT CANVAS 2-"].update(visible=False)
@@ -1068,9 +1086,20 @@ if __name__ == '__main__':
             
             if len(highlight_frames_iter) > 0:
                 current_frame = highlight_frames_iter[0]
-                display_frame(current_frame)
+                window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
+                current_frame_mark = display_frame(current_frame)
                 window["-SCRUB BAR-"].update(value=current_frame)
                 window["-SELECTED FRAMES-"].update(value="Selected keyframe 1 / "+str(len(highlight_frames_iter)))
+                
+                for mark_i in highlight_marks:
+                    window["-FRAME HIGHLIGHT BAR-"].delete_figure(mark_i)
+                highlight_marks.clear()
+                window["-FRAME HIGHLIGHT BAR-"].Erase()
+                for frame_i in highlight_frames_iter:
+                    frame_loc = frame_i / len(frames)
+                    frame_loc = frame_loc * image_size[0]
+                    id = window["-FRAME HIGHLIGHT BAR-"].draw_rectangle((frame_loc, 7), (frame_loc+1, 0), fill_color='red', line_color="red")
+                    highlight_marks.append(id)
             else:
                 window["-SELECTED FRAMES-"].update(value="No keyframes selected")
             
@@ -1089,7 +1118,8 @@ if __name__ == '__main__':
                 current_frame = None
             else:
                 current_frame = highlight_frames_iter[index]
-                display_frame(current_frame)
+                window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
+                current_frame_mark = display_frame(current_frame)
                 window["-SCRUB BAR-"].update(value=current_frame)
                 window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight_frames_iter)))
 
@@ -1107,7 +1137,8 @@ if __name__ == '__main__':
                 current_frame = None
             else:
                 current_frame = highlight_frames_iter[index]
-                display_frame(current_frame)
+                window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
+                current_frame_mark = display_frame(current_frame)
                 window["-SCRUB BAR-"].update(value=current_frame)
                 window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight_frames_iter)))
 
@@ -1116,7 +1147,8 @@ if __name__ == '__main__':
         if event == "-SCRUB BAR-":
             
             current_frame = int(values['-SCRUB BAR-'])
-            display_frame(current_frame)
+            window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
+            current_frame_mark = display_frame(current_frame)
             window["-SELECTED FRAMES-"].update(value="Not one of the "+str(len(highlight_frames_iter)) + " selected keyframes")
 
         
