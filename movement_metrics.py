@@ -10,6 +10,7 @@ import numpy as np
 import scipy.stats as stats
 import scipy.signal as signal
 from enum import Enum
+import math
 
 class PlotType(Enum):
     NONE = 0
@@ -58,7 +59,7 @@ bin_w = 10.0
 # ALL globals
 conf_filter = 0.5
 
-def ReadDataFromList(files):
+def ReadDataFromList(files, img_size):
     vals =[]
     x = []
     y = []
@@ -70,47 +71,53 @@ def ReadDataFromList(files):
                 #print("read " + filename)
                 lines = f.readlines()
                 json_file = json.loads(lines[0])
+                if len(json_file['people']) > 0:
+                    # when multiple people are in the frame, only read the main one
+                    person_i = 0
+                    dist_from_cent = 0
+                    for person in range(len(json_file['people'])):
+                        # x distance of the right shoulder and the left shoulder
+                        # in theory the person in frame focus has the largest shoulder width
+                        x_dif = img_size[0]/2.0 - json_file['people'][person]['pose_keypoints_2d'][0]
+                        y_dif = img_size[1]/2.0 - json_file['people'][person]['pose_keypoints_2d'][1]
+                        if len(json_file['people'][person]['pose_keypoints_2d']) > 1:
+                            x_dif = img_size[0]/2.0 - json_file['people'][person]['pose_keypoints_2d'][0]
+                            y_dif = img_size[1]/2.0 - json_file['people'][person]['pose_keypoints_2d'][1]
+                            new_len = math.sqrt(x_dif*x_dif + y_dif*y_dif)
+                            if new_len < dist_from_cent:
+                                dist_from_cent = new_len
+                                person_i = person
 
-                # when multiple people are in the frame, only read the main one
-                person_i = 0
-                should_len = 0
-                for person in range(len(json_file['people'])):
-                    # x distance of the right shoulder and the left shoulder
-                    # in theory the person in frame focus has the largest shoulder width
-                    if len(json_file['people'][person]['pose_keypoints_2d']) > 15:
-                        new_len = json_file['people'][person]['pose_keypoints_2d'][6] - json_file['people'][person]['pose_keypoints_2d'][15]
-                        if new_len > should_len:
-                            should_len = new_len
-                            person_i = person
+                    data_array = json_file['people'][person_i]['pose_keypoints_2d']
+                    x_pose = data_array[::3]
+                    y_pose = [700 - x for x in data_array[1::3]]
+                    c_pose = data_array[2::3]
 
-                data_array = json_file['people'][person_i]['pose_keypoints_2d']
-                x_pose = data_array[::3]
-                y_pose = [700 - x for x in data_array[1::3]]
-                c_pose = data_array[2::3]
+                    #flipped left and right to respect participant left/right vs frame left/right
+                    data_array = json_file['people'][person_i]['hand_left_keypoints_2d'] 
+                    x_right_hand = data_array[::3]
+                    y_right_hand = [700 - x for x in data_array[1::3]]
+                    c_right_hand = data_array[2::3]
 
-                #flipped left and right to respect participant left/right vs frame left/right
-                data_array = json_file['people'][person_i]['hand_left_keypoints_2d'] 
-                x_right_hand = data_array[::3]
-                y_right_hand = [700 - x for x in data_array[1::3]]
-                c_right_hand = data_array[2::3]
+                    data_array = json_file['people'][person_i]['hand_right_keypoints_2d']
+                    x_left_hand = data_array[::3]
+                    y_left_hand = [700 - x for x in data_array[1::3]]
+                    c_left_hand = data_array[2::3]
 
-                data_array = json_file['people'][person_i]['hand_right_keypoints_2d']
-                x_left_hand = data_array[::3]
-                y_left_hand = [700 - x for x in data_array[1::3]]
-                c_left_hand = data_array[2::3]
-
-                x = []
-                x.extend(x_pose)
-                x.extend(x_right_hand)
-                x.extend(x_left_hand)
-                y = []
-                y.extend(y_pose)
-                y.extend(y_right_hand)
-                y.extend(y_left_hand)
-                c = []
-                c.extend(c_pose)
-                c.extend(c_right_hand)
-                c.extend(c_left_hand)
+                    x = []
+                    x.extend(x_pose)
+                    x.extend(x_right_hand)
+                    x.extend(x_left_hand)
+                    y = []
+                    y.extend(y_pose)
+                    y.extend(y_right_hand)
+                    y.extend(y_left_hand)
+                    c = []
+                    c.extend(c_pose)
+                    c.extend(c_right_hand)
+                    c.extend(c_left_hand)
+                else:
+                    c = [0 for i in range(len(x))]
 
                 vals.append([x,y,c])
 
@@ -1338,7 +1345,7 @@ def run_script(frame_files, img_size, plot_type, keypoints, fps, pix_in_m, cov_w
 
 def run_script_get_data(frame_files, img_size, plot_type, keypoints, fps, pix_in_m, cov_width):
     real_keypoints = [stoi_map[k] for k in keypoints]
-    data = ReadDataFromList(frame_files)
+    data = ReadDataFromList(frame_files, img_size)
     print("running ", plot_type)
     processed_data = data_labels = ax_labels = None
     if plot_type_dict[plot_type] == PlotType.POINT_CLOUD:
