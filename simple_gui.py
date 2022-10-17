@@ -62,17 +62,17 @@ def get_main_layout():
         'elbow_left','wrist_left'], enable_events=True, 
             size=(30,5), key="-TRACK POINT LIST-", select_mode='multiple'
         )], 
-        [sg.HSep()],
-        [sg.Text('Available Plot Types')],
-        [ 
-            sg.Listbox(
-                #"point cloud", "centroid of motion", "position spectrum", "distance from center", 
-                #"normalized distance from center", "speed over time", "velocity over time"
-                #"relative position", "relative position over time", "movement heatmap", "angles over time", "angle histogram"
-                values=["relative position", "relative angles"], 
-                enable_events=True, size=(30,5), key="-PLOT LIST-"
-            )
-        ],
+        # [sg.HSep()],
+        # [sg.Text('Available Plot Types')],
+        # [ 
+        #     sg.Listbox(
+        #         #"point cloud", "centroid of motion", "position spectrum", "distance from center", 
+        #         #"normalized distance from center", "speed over time", "velocity over time"
+        #         #"relative position", "relative position over time", "movement heatmap", "angles over time", "angle histogram"
+        #         values=["relative position", "relative angles"], 
+        #         enable_events=True, size=(30,5), key="-PLOT LIST-"
+        #     )
+        # ],
         [sg.HSep()],
         [sg.Text('Script settings')],
         [sg.HSep()],
@@ -443,7 +443,7 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         #color_select = random.sample(colors, len(data))
         if graph_type == GraphType.LINE_GRAPH: #must be angles over time
             for key in range(len(data)):
-                print("data shape: (", len(data), ", ", len(data[key]), ", ", len(data[key][0], ")"))
+                print("data shape: (", len(data), ", ", len(data[key]), ", ", len(data[key][0]), ")")
                 y_peaks = mm.getPeaks(data[key][:][1], 30)
                 if len(y_peaks[0]) > 0:
                     print("I found ", len(y_peaks[0]), " weird peaks in angle over time at ", y_peaks)
@@ -474,7 +474,7 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                             print("so I am replacing ", data[key][peak][0], " with ", val)
                             data[key][peak][0] = val
                     x_peaks = mm.getPeaks(data[key][:][0], 100)
-                    print("And after replacement I found ", len(x_peaks[0]), " weird peaks in the x values at ", x_peaks)
+                    print("And after replacement I found ", len(x_peaks[0]), " weird peaks in the y values at ", x_peaks)
 
                 y_peaks = mm.getPeaks(data[key][:][1], 100)
                 if len(y_peaks[0]) > 0:
@@ -950,7 +950,7 @@ if __name__ == '__main__':
             window['-COMPUTED METRICS-'].Widget.config(wrap='word')
             real_files = [os.path.join(file_loc+'/pose_info', f) for f in chosen_files]
             
-            plot_type = values["-PLOT LIST-"]
+            plot_type = ["relative position"] #values["-PLOT LIST-"]
             track_points = values["-TRACK POINT LIST-"]
 
             if len(frames) > 0:
@@ -1074,7 +1074,7 @@ if __name__ == '__main__':
             except:
                 print("ERROR: Couldn't save plot")
         # and ((current_process is not None and current_process.poll() is not None) or (current_process is None))
-        if len(chosen_files) > 0 and len(values["-PLOT LIST-"]) > 0 and len(values["-TRACK POINT LIST-"]) > 0:
+        if len(chosen_files) > 0 and len(values["-TRACK POINT LIST-"]) > 0:
             window["-RUN SCRIPT-"].update(visible=True)
         else:
             window["-RUN SCRIPT-"].update(visible=False)

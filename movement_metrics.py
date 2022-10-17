@@ -1347,6 +1347,7 @@ def run_script_get_data(frame_files, img_size, plot_type, keypoints, fps, pix_in
     real_keypoints = [stoi_map[k] for k in keypoints]
     data = ReadDataFromList(frame_files, img_size)
     print("running ", plot_type)
+    print(len(data))
     processed_data = data_labels = ax_labels = None
     if plot_type_dict[plot_type] == PlotType.POINT_CLOUD:
         processed_data, data_labels, ax_labels = GetPointCloudData(data, real_keypoints, fps, pix_in_m, cov_width)
