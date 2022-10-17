@@ -7,7 +7,6 @@ import sys
 import json, csv
 import matplotlib.pyplot as plt
 import numpy as np
-from rsa import sign
 import scipy.stats as stats
 import scipy.signal as signal
 from enum import Enum
@@ -61,6 +60,9 @@ conf_filter = 0.5
 
 def ReadDataFromList(files):
     vals =[]
+    x = []
+    y = []
+    c = []
     for filename in files:
         #print(filename)
         if ".json" in filename:
