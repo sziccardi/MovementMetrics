@@ -267,12 +267,7 @@ def draw_axes(graph, ax_lims, axes_labels, scale_axes, custom_tick_count_x = Non
         scaled_y_max = y_max+y_tick_count
         scaled_x_max = x_max+x_tick_count
     
-<<<<<<< Updated upstream
     dot_size=1 #x_range/150
-=======
-    dot_size=x_range/150
-    print("PLOTTING WITH SIZE ", dot_size)
->>>>>>> Stashed changes
 
     graph.change_coordinates((scaled_x_min, scaled_y_min),(scaled_x_max, scaled_y_max))
     
