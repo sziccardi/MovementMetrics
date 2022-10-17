@@ -155,6 +155,7 @@ def getMax(data):
     return max(data)
 
 def getMean(data):
+    print(data.shape)
     return mean(data)
 
 def getMedian(data):
