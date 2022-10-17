@@ -69,18 +69,30 @@ def ReadDataFromList(files):
                 lines = f.readlines()
                 json_file = json.loads(lines[0])
 
-                data_array = json_file['people'][0]['pose_keypoints_2d']
+                # when multiple people are in the frame, only read the main one
+                person_i = 0
+                should_len = 0
+                for person in range(len(json_file['people'])):
+                    # x distance of the right shoulder and the left shoulder
+                    # in theory the person in frame focus has the largest shoulder width
+                    if len(json_file['people'][person]['pose_keypoints_2d']) > 15:
+                        new_len = json_file['people'][person]['pose_keypoints_2d'][6] - json_file['people'][person]['pose_keypoints_2d'][15]
+                        if new_len > should_len:
+                            should_len = new_len
+                            person_i = person
+
+                data_array = json_file['people'][person_i]['pose_keypoints_2d']
                 x_pose = data_array[::3]
                 y_pose = [700 - x for x in data_array[1::3]]
                 c_pose = data_array[2::3]
 
                 #flipped left and right to respect participant left/right vs frame left/right
-                data_array = json_file['people'][0]['hand_left_keypoints_2d'] 
+                data_array = json_file['people'][person_i]['hand_left_keypoints_2d'] 
                 x_right_hand = data_array[::3]
                 y_right_hand = [700 - x for x in data_array[1::3]]
                 c_right_hand = data_array[2::3]
 
-                data_array = json_file['people'][0]['hand_right_keypoints_2d']
+                data_array = json_file['people'][person_i]['hand_right_keypoints_2d']
                 x_left_hand = data_array[::3]
                 y_left_hand = [700 - x for x in data_array[1::3]]
                 c_left_hand = data_array[2::3]
@@ -155,7 +167,6 @@ def getMax(data):
     return max(data)
 
 def getMean(data):
-    print(data.shape)
     return mean(data)
 
 def getMedian(data):
@@ -185,8 +196,8 @@ def getSpread(data1, data2):
 def getCorrelationR(data1, data2):
     return stats.pearsonr(data1, data2)
 
-def getPeaks(data):
-    return signal.find_peaks(data)
+def getPeaks(data, my_threshold):
+    return signal.find_peaks(data, threshold=my_threshold)
 
 def getCorrelationCross(data1, data2):
     ccov = np.correlate(data1 - data1.mean(), data2 - data2.mean())

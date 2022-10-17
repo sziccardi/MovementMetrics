@@ -418,7 +418,7 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         #         graph.draw_rectangle((start_point + sub_bin_w*key, amt), (start_point + sub_bin_w*(key+1), 0), colors[key])
         
         draw_legend(legend, data_labels, colors[:len(data)])
-    else:
+    else:  
         #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
         ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
         for key in range(len(data)):
@@ -441,14 +441,55 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         
         dot_size = draw_axes(graph, ax_lims, axes_labels, True)
         #color_select = random.sample(colors, len(data))
-        if graph_type == GraphType.LINE_GRAPH:
+        if graph_type == GraphType.LINE_GRAPH: #must be angles over time
             for key in range(len(data)):
+                print("data shape: (", len(data), ", ", len(data[key]), ", ", len(data[key][0], ")"))
+                y_peaks = mm.getPeaks(data[key][:][1], 30)
+                if len(y_peaks[0]) > 0:
+                    print("I found ", len(y_peaks[0]), " weird peaks in angle over time at ", y_peaks)
+                    for peak in y_peaks[0]:
+                        if peak > 0 and peak < len(data[key][:][1])-1:
+                            print("peak is ", data[key][peak][1])
+                            print("neighbors are ", data[key][peak-1][1], " and ", data[key][peak+1][1])
+                            val = (data[key][peak-1][1] + data[key][peak+1][1])/2.0
+                            print("so I am replacing ", data[key][peak][1], " with ", val)
+                            data[key][peak][1] = val
+                    y_peaks = mm.getPeaks(data[key][:][1], 30)
+                    print("And after replacement I found ", len(y_peaks[0]), " weird peaks in the y values at ", y_peaks)
+
                 line_color = colors[key]
                 for point in range(len(data[key])-1):
                     if data[key][point][2] > mm.GetPlotSpecificInfo("angles over time")[0]:
                         graph.draw_line((data[key][point][0], data[key][point][1]), (data[key][point+1][0], data[key][point+1][1]), width=dot_size, color=line_color)
-        elif graph_type == GraphType.POINT_GRAPH:
+        elif graph_type == GraphType.POINT_GRAPH: #must be point cloud
             for key in range(len(data)):
+                x_peaks = mm.getPeaks(data[key][:][0], 100)
+                if len(x_peaks[0]) > 0:
+                    print("I found ", len(x_peaks[0]), " weird peaks in the x values of point cloud at ", x_peaks)
+                    for peak in x_peaks[0]:
+                        if peak > 0 and peak < len(data[key][:][0])-1:
+                            print("peak is ", data[key][peak][0])
+                            print("neighbors are ", data[key][peak-1][0], " and ", data[key][peak+1][0])
+                            val = (data[key][peak-1][0] + data[key][peak+1][0])/2.0
+                            print("so I am replacing ", data[key][peak][0], " with ", val)
+                            data[key][peak][0] = val
+                    x_peaks = mm.getPeaks(data[key][:][0], 100)
+                    print("And after replacement I found ", len(x_peaks[0]), " weird peaks in the x values at ", x_peaks)
+
+                y_peaks = mm.getPeaks(data[key][:][1], 100)
+                if len(y_peaks[0]) > 0:
+                    print("I found ", len(y_peaks[0]), " weird peaks in the y values of point cloud at ", y_peaks)
+                    for peak in y_peaks[0]:
+                        if peak > 0 and peak < len(data[key][:][1])-1:
+                            print("peak is ", data[key][peak][1])
+                            print("neighbors are ", data[key][peak-1][1], " and ", data[key][peak+1][1])
+                            val = (data[key][peak-1][1] + data[key][peak+1][1])/2.0
+                            print("so I'm replacing ", data[key][peak][1], " with ", val)
+                            data[key][peak][1] = val
+                    y_peaks = mm.getPeaks(data[key][:][1], 100)
+                    print("And after replacement I found ", len(y_peaks[0]), " weird peaks in the y values at ", y_peaks)
+
+
                 for point in range(len(data[key])):
                     if data[key][point][2] > mm.GetPlotSpecificInfo("relative position")[0]:
                         graph.draw_point((data[key][point][0], data[key][point][1]), dot_size, color=colors[key])
@@ -491,15 +532,28 @@ def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type)
     dot_size = draw_axes(graphs[0], ax_lims, axes_labels[0], True)
     dot_size = draw_axes(graphs[1], ax_lims, axes_labels[1], True)
 
-    if graph_type == GraphType.LINE_GRAPH:
+    if graph_type == GraphType.LINE_GRAPH: # must be relative pos over time
         for key in range(len(data)):
             plot_data = data[key]
             line_color = colors[key]
             for plot in range(len(plot_data)):
+                y_peaks = mm.getPeaks(plot_data[key][:][1], 100)
+                if len(y_peaks[0]) > 0:
+                    print("I found ", len(y_peaks[0]), " weird peaks in plot #", plot, " of relative pos over time at ", y_peaks)
+                    for peak in y_peaks[0]:
+                        if peak > 0 and peak < len(plot_data[key][:][1])-1:
+                            print("peak is ", plot_data[key][peak][1])
+                            print("neighbors are ", plot_data[key][peak-1][1], " and ", plot_data[key][peak+1][1])
+                            val = (plot_data[key][peak-1][1] + plot_data[key][peak+1][1])/2.0
+                            print("replacing ", plot_data[key][peak][1], " with ", val)
+                            plot_data[key][peak][1] = val
+                    y_peaks = mm.getPeaks(plot_data[key][:][1], 100)
+                    print("And after replacement I found ", len(y_peaks[0]), " weird peaks in the y values at ", y_peaks)
+
                 for point in range(len(plot_data[plot])-1):
                     if plot_data[plot][point][2] > mm.GetPlotSpecificInfo("relative position over time")[0]:
                         graphs[plot].draw_line((plot_data[plot][point][0], plot_data[plot][point][1]), (plot_data[plot][point+1][0], plot_data[plot][point+1][1]), color=line_color, width=dot_size)
-    elif graph_type == GraphType.POINT_GRAPH:
+    elif graph_type == GraphType.POINT_GRAPH: #not used anumore
         for key in range(len(data)):
             plot_data = data[key]
             line_color = colors[key]
@@ -793,7 +847,6 @@ def display_metrics(data, labels, plot_type):
             temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], True, 30)
             total_track_point_text = total_track_point_text + " - fully tucked  " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent tucked\n"
             
-            print(np_data.shape)
             data_mean = mm.getMean(np_data[:,1])
             data_var = mm.getSTD(np_data[:,1])
             stds.append(data_var)
