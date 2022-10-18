@@ -1,9 +1,11 @@
 import PySimpleGUI as sg
 import os.path
+import json
 
 import movement_metrics as mm
 import numpy as np
 import scipy.signal as signal
+import math
 
 from PIL import Image, ImageTk
 import io
@@ -440,6 +442,71 @@ def read_pose_files(file_loc):
     chosen_files = sorted(chosen_files)
     return chosen_files
 
+def read_pose_data(files):
+    vals =[]
+    x = []
+    y = []
+    c = []
+    for filename in files:
+        #print(filename)
+        if ".json" in filename:
+            with open(filename, 'r', encoding='utf-8') as f: 
+                #print("read " + filename)
+                lines = f.readlines()
+                json_file = json.loads(lines[0])
+                if len(json_file['people']) > 0:
+                    # when multiple people are in the frame, only read the main one
+                    person_i = 0
+                    dist_from_cent = 0
+                    for person in range(len(json_file['people'])):
+                        # x distance of the right shoulder and the left shoulder
+                        # in theory the person in frame focus has the largest shoulder width
+                        x_dif = frame_size[0]/2.0 - json_file['people'][person]['pose_keypoints_2d'][0]
+                        y_dif = frame_size[1]/2.0 - json_file['people'][person]['pose_keypoints_2d'][1]
+                        if len(json_file['people'][person]['pose_keypoints_2d']) > 1:
+                            x_dif = frame_size[0]/2.0 - json_file['people'][person]['pose_keypoints_2d'][0]
+                            y_dif = frame_size[1]/2.0 - json_file['people'][person]['pose_keypoints_2d'][1]
+                            new_len = math.sqrt(x_dif*x_dif + y_dif*y_dif)
+                            if new_len < dist_from_cent:
+                                dist_from_cent = new_len
+                                person_i = person
+
+                    data_array = json_file['people'][person_i]['pose_keypoints_2d']
+                    x_pose = data_array[::3]
+                    y_pose = [700 - x for x in data_array[1::3]]
+                    c_pose = data_array[2::3]
+
+                    #flipped left and right to respect participant left/right vs frame left/right
+                    data_array = json_file['people'][person_i]['hand_left_keypoints_2d'] 
+                    x_right_hand = data_array[::3]
+                    y_right_hand = [700 - x for x in data_array[1::3]]
+                    c_right_hand = data_array[2::3]
+
+                    data_array = json_file['people'][person_i]['hand_right_keypoints_2d']
+                    x_left_hand = data_array[::3]
+                    y_left_hand = [700 - x for x in data_array[1::3]]
+                    c_left_hand = data_array[2::3]
+
+                    x = []
+                    x.extend(x_pose)
+                    x.extend(x_right_hand)
+                    x.extend(x_left_hand)
+                    y = []
+                    y.extend(y_pose)
+                    y.extend(y_right_hand)
+                    y.extend(y_left_hand)
+                    c = []
+                    c.extend(c_pose)
+                    c.extend(c_right_hand)
+                    c.extend(c_left_hand)
+                else:
+                    c = [0 for i in range(len(x))]
+
+                vals.append([x,y,c])
+
+    return vals
+
+
 def get_img_data(f, maxsize=image_size, first=False):
     img = Image.open(f)
     global frame_size
@@ -497,7 +564,7 @@ def display_metrics(data, labels):
         print(total_track_point_text)
 
 if __name__ == '__main__':
-    #matplotlib.use('TkAgg')
+    
     current_layout = get_main_layout()
     window = sg.Window(title="Bilateral Coordination Metric Viewer", layout=current_layout)
     
@@ -531,15 +598,21 @@ if __name__ == '__main__':
         
 
         if event == "-EXISTING VIDEO BUTTON-":
+            old_chosen_file = chosen_file
             file_loc, chosen_file = display_file_select(chosen_file)
-            chosen_files.clear()
-            frames.clear()
-            chosen_files = read_pose_files(file_loc)
-            loc_name = file_loc[file_loc.rfind('/')+1:]
-            frames = read_frame_files(file_loc)
-            if len(frames) == 0:
-                print("WARNING: No video frames found for the selected folder.")
+            print(chosen_file)
+            if old_chosen_file == chosen_file and chosen_file != '':
+                print("Use the same files as last run")
+            else:
+                chosen_files.clear()
+                frames.clear()
+                chosen_files = read_pose_files(file_loc)
+                
+                frames = read_frame_files(file_loc)
+                if len(frames) == 0:
+                    print("WARNING: No video frames found for the selected folder.")
 
+            loc_name = file_loc[file_loc.rfind('/')+1:]
             window["-SELECTED FILE-"].update(value="Currently selected: " + loc_name, visible=True)
             window.TKroot.attributes('-topmost', 1)
             window.TKroot.attributes('-topmost', 0)
@@ -547,7 +620,9 @@ if __name__ == '__main__':
         #lets run plotting!
         if event == "-RUN SCRIPT-":
             window['-COMPUTED METRICS-'].Widget.config(wrap='word')
+            
             real_files = [os.path.join(file_loc+'/pose_info', f) for f in chosen_files]
+            real_data = read_pose_data(real_files)
             
             track_points = values["-TRACK POINT LIST-"]
 
@@ -569,8 +644,8 @@ if __name__ == '__main__':
                 pix_scale = -1
             cov_w = (int)(values["-CONV WIDTH-"])
             
-            data1, labels1, ax_labels1 = mm.run_script_get_data(real_files, frame_size, "relative position", track_points, fps, pix_scale, cov_w)
-            data2, labels2, ax_labels2 = mm.run_script_get_data(real_files, frame_size, "relative position over time", track_points, fps, pix_scale, cov_w)
+            data1, labels1, ax_labels1 = mm.run_script_get_data(real_data, "relative position", track_points, fps, pix_scale, cov_w)
+            data2, labels2, ax_labels2 = mm.run_script_get_data(real_data, "relative position over time", track_points, fps, pix_scale, cov_w)
             display_metrics(data1, labels1)
 
             graph.Erase()

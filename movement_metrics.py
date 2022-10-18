@@ -238,9 +238,9 @@ def GetPlotSpecificInfo(plot_type):
     if plot_type_dict[plot_type] == PlotType.REL_POS:
         return [conf_filter]
 
-def run_script_get_data(frame_files, img_size, plot_type, keypoints, fps, pix_in_m, cov_width):
+def run_script_get_data(data, plot_type, keypoints, fps, pix_in_m, cov_width):
     real_keypoints = [stoi_map[k] for k in keypoints]
-    data = ReadDataFromList(frame_files, img_size)
+    
     print("running ", plot_type)
     processed_data = data_labels = ax_labels = None
     if plot_type_dict[plot_type] == PlotType.REL_POS:
