@@ -318,7 +318,6 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                 if data[key][point][2] > mm.GetPlotSpecificInfo("angles over time")[0]:
                     graph.draw_line((data[key][point][0], data[key][point][1]), (data[key][point+1][0], data[key][point+1][1]), width=dot_size, color=line_color)
     elif graph_type == GraphType.POINT_GRAPH: #must be point cloud
-        print("DATA SHAPE (", len(data), ", ", len(data[0]), ", ", len(data[0][0]), ")")
         for key in range(len(data)):
             temp_thing = np.array(data[key])
             x_peaks = signal.find_peaks(temp_thing[:,0], threshold=100.0)
