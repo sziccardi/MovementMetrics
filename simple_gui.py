@@ -461,13 +461,14 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                     if data[key][point][2] > mm.GetPlotSpecificInfo("angles over time")[0]:
                         graph.draw_line((data[key][point][0], data[key][point][1]), (data[key][point+1][0], data[key][point+1][1]), width=dot_size, color=line_color)
         elif graph_type == GraphType.POINT_GRAPH: #must be point cloud
+            conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
             for key in range(len(data)):
                 np_data = np.array(data[key])
                 x_peaks = signal.find_peaks(np_data[:,0], threshold=100.0)
                 if len(x_peaks[0]) > 0:
                     print("I found ", len(x_peaks[0]), " weird peaks in the x values of point cloud at ", x_peaks)
                     for peak in x_peaks[0]:
-                        if peak > 0 and peak < np_data.shape[0]-1:
+                        if np_data[point,2] > conf_thresh and np_data[point-1,2] > conf_thresh and np_data[point+1,2] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
                             print("peak is ", np_data[peak,0])
                             print("neighbors are ", np_data[peak-1,0], " and ", np_data[peak+1,0])
                             val = (np_data[peak-1][0] + np_data[peak+1,0])/2.0
@@ -478,7 +479,7 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                 if len(y_peaks[0]) > 0:
                     print("I found ", len(y_peaks[0]), " weird peaks in the y values of point cloud at ", y_peaks)
                     for peak in y_peaks[0]:
-                        if peak > 0 and peak < np_data.shape[0]-1:
+                        if np_data[point,2] > conf_thresh and np_data[point-1,2] > conf_thresh and np_data[point+1,2] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
                             print("peak is ", np_data[peak,1])
                             print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
                             val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
@@ -487,7 +488,7 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                     
 
                 for point in range(len(data[key])):
-                    if data[key][point][2] > mm.GetPlotSpecificInfo("relative position")[0]:
+                    if np_data[point,2] > conf_thresh:
                         graph.draw_point((data[key][point][0], data[key][point][1]), dot_size, color=colors[key])
         
             
@@ -527,7 +528,7 @@ def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type)
     
     dot_size = draw_axes(graphs[0], ax_lims, axes_labels[0], True)
     dot_size = draw_axes(graphs[1], ax_lims, axes_labels[1], True)
-
+    conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
     if graph_type == GraphType.LINE_GRAPH: # must be relative pos over time
         for key in range(len(data)):
             plot_data = data[key]
@@ -538,7 +539,7 @@ def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type)
                 if len(y_peaks[0]) > 0:
                     print("I found ", len(y_peaks[0]), " weird peaks in plot #", plot, " of relative pos over time at ", y_peaks)
                     for peak in y_peaks[0]:
-                        if peak > 0 and peak < len(np_data[:,1])-1:
+                        if np_data[point,2] > conf_thresh and np_data[point-1,2] > conf_thresh and np_data[point+1,2] > conf_thresh and peak > 0 and peak < len(np_data[:,1])-1:
                             print("peak is ", np_data[peak,1])
                             print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
                             val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
@@ -546,7 +547,7 @@ def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type)
                             plot_data[key][peak][1] = val
                     
                 for point in range(len(plot_data[plot])-1):
-                    if plot_data[plot][point][2] > mm.GetPlotSpecificInfo("relative position over time")[0]:
+                    if np_data[point,2] > conf_thresh and np_data[point+1,2] > conf_thresh:
                         graphs[plot].draw_line((plot_data[plot][point][0], plot_data[plot][point][1]), (plot_data[plot][point+1][0], plot_data[plot][point+1][1]), color=line_color, width=dot_size)
     elif graph_type == GraphType.POINT_GRAPH: #not used anumore
         for key in range(len(data)):
@@ -1124,7 +1125,7 @@ if __name__ == '__main__':
                         max_points = len(plot_specfic_data2[key])
 
             highlight = [0 for i in range(max_points)]
-            
+            conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
             if prior_rect[0] == "-FRAME HIGHLIGHT BAR-":
                 min_frame = min_x / image_size[0]
                 min_frame = int(min_frame*len(frames))
@@ -1138,12 +1139,12 @@ if __name__ == '__main__':
             elif plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
                 for key in range(len(plot_specfic_data2)):
                     for point in range(len(plot_specfic_data2[key])):
-                        if highlight[point] == 0 and plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x and plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y:
+                        if highlight[point] == 0 and plot_specfic_data2[key][point][2] > conf_thresh and plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x and plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y:
                             highlight[point] = 1
             elif plot_specfic_data1 is not None:
                 for key in range(len(plot_specfic_data1)):
                     for point in range(len(plot_specfic_data1[key])):
-                        if highlight[point] == 0 and plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x and plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y:
+                        if highlight[point] == 0 and plot_specfic_data2[key][point][2] > conf_thresh and plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x and plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y:
                             highlight[point] = 1
             
             
