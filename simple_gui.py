@@ -1093,85 +1093,93 @@ if __name__ == '__main__':
             highlight_frames_iter.clear()
             highlight_frames_iter = []
 
-            min_x = min(start_point[0], end_point[0])
-            max_x = max(start_point[0], end_point[0])
-            min_y = min(start_point[1], end_point[1])
-            max_y = max(start_point[1], end_point[1])
+            if start_point is not None and end_point is not None:
+
+                min_x = min(start_point[0], end_point[0])
+                max_x = max(start_point[0], end_point[0])
+                min_y = min(start_point[1], end_point[1])
+                max_y = max(start_point[1], end_point[1])
 
 
-            plot_specfic_data1 = data1
-            plot_specfic_data2 = data2
-            # if current_plot_type == "relative position over time" or current_plot_type == "velocity over time":
-            #     if prior_rect[0] == "-PLOT CANVAS-":
-            #         plot_specfic_data = data[0]
-            #     elif prior_rect[0] == "-PLOT CANVAS 2-":
-            #         plot_specfic_data = data[1]
-            if current_plot_type == "relative position" :
-                if prior_rect[0] == "-OVER TIME PLOT 1-":
-                    plot_specfic_data2 = data2[0]
-                elif prior_rect[0] == "-OVER TIME PLOT 2-":
-                    plot_specfic_data2 = data2[1]
-            
-            max_points = 0
-            
-            if plot_specfic_data1 is not None:
-                for key in range(len(plot_specfic_data1)):
-                    if len(plot_specfic_data1[key]) > max_points:
-                        max_points = len(plot_specfic_data1[key])
-
-            if plot_specfic_data2 is not None:
-                for key in range(len(plot_specfic_data2)):
-                    if len(plot_specfic_data2[key]) > max_points:
-                        max_points = len(plot_specfic_data2[key])
-
-            highlight = [0 for i in range(max_points)]
-            conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
-            if prior_rect[0] == "-FRAME HIGHLIGHT BAR-":
-                min_frame = min_x / image_size[0]
-                min_frame = int(min_frame*len(frames))
-                print("min frame ", min_frame)
-
-                max_frame = max_x / image_size[0]
-                max_frame = int(max_frame*len(frames))
-                print("max frame ", max_frame)
-
-                highlight[min_frame:max_frame] = [1 for k in range(max_frame-min_frame)]
-            elif plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
-                for key in range(len(plot_specfic_data2)):
-                    for point in range(len(plot_specfic_data2[key])):
-                        if highlight[point] == 0 and plot_specfic_data2[key][point][2] > conf_thresh and plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x and plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y:
-                            highlight[point] = 1
-            elif plot_specfic_data1 is not None:
-                for key in range(len(plot_specfic_data1)):
-                    for point in range(len(plot_specfic_data1[key])):
-                        if highlight[point] == 0 and plot_specfic_data2[key][point][2] > conf_thresh and plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x and plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y:
-                            highlight[point] = 1
-            
-            
-            highlight_frames_iter = [i for i in range(max_points) if highlight[i]]
-
-            print(f"grabbed rectangle from {start_point} to {end_point}")
-            start_point, end_point = None, None  # enable grabbing a new rect
-            dragging = False
-            
-            if len(highlight_frames_iter) > 0:
-                current_frame = highlight_frames_iter[0]
-                window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
-                current_frame_mark = display_frame(current_frame)
-                window["-SCRUB BAR-"].update(value=current_frame)
-                window["-SELECTED FRAMES-"].update(value="Selected keyframe 1 / "+str(len(highlight_frames_iter)))
+                plot_specfic_data1 = data1
+                plot_specfic_data2 = data2
+                # if current_plot_type == "relative position over time" or current_plot_type == "velocity over time":
+                #     if prior_rect[0] == "-PLOT CANVAS-":
+                #         plot_specfic_data = data[0]
+                #     elif prior_rect[0] == "-PLOT CANVAS 2-":
+                #         plot_specfic_data = data[1]
+                if current_plot_type == "relative position" :
+                    if prior_rect[0] == "-OVER TIME PLOT 1-":
+                        plot_specfic_data2 = data2[0]
+                    elif prior_rect[0] == "-OVER TIME PLOT 2-":
+                        plot_specfic_data2 = data2[1]
                 
-                for mark_i in highlight_marks:
-                    window["-FRAME HIGHLIGHT BAR-"].delete_figure(mark_i)
-                highlight_marks.clear()
-                window["-FRAME HIGHLIGHT BAR-"].Erase()
-                for frame_i in highlight_frames_iter:
-                    frame_loc = frame_i / len(frames)
-                    frame_loc = frame_loc * image_size[0]
-                    id = window["-FRAME HIGHLIGHT BAR-"].draw_rectangle((frame_loc, 7), (frame_loc+1, 0), fill_color='red', line_color="red")
-                    highlight_marks.append(id)
-            else:
-                window["-SELECTED FRAMES-"].update(value="No keyframes selected")
+                max_points = 0
+                
+                if plot_specfic_data1 is not None:
+                    for key in range(len(plot_specfic_data1)):
+                        if len(plot_specfic_data1[key]) > max_points:
+                            max_points = len(plot_specfic_data1[key])
+
+                if plot_specfic_data2 is not None:
+                    for key in range(len(plot_specfic_data2)):
+                        if len(plot_specfic_data2[key]) > max_points:
+                            max_points = len(plot_specfic_data2[key])
+
+                highlight = [0 for i in range(max_points)]
+                conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
+                if prior_rect[0] == "-FRAME HIGHLIGHT BAR-":
+                    min_frame = min_x / image_size[0]
+                    min_frame = int(min_frame*len(frames))
+                    print("min frame ", min_frame)
+
+                    max_frame = max_x / image_size[0]
+                    max_frame = int(max_frame*len(frames))
+                    print("max frame ", max_frame)
+
+                    highlight[min_frame:max_frame] = [1 for k in range(max_frame-min_frame)]
+                elif plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
+                    for key in range(len(plot_specfic_data2)):
+                        for point in range(len(plot_specfic_data2[key])):
+                            conf = plot_specfic_data2[key][point][2] > conf_thresh
+                            within_x = plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x
+                            within_y = plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y
+                            if highlight[point] == 0 and conf and within_x and within_y:
+                                highlight[point] = 1
+                elif plot_specfic_data1 is not None:
+                    for key in range(len(plot_specfic_data1)):
+                        for point in range(len(plot_specfic_data1[key])):
+                            conf = plot_specfic_data1[key][point][2] > conf_thresh
+                            within_x = plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x
+                            within_y = plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y
+                            if highlight[point] == 0 and conf and within_x and within_y:
+                                highlight[point] = 1
+                
+                
+                highlight_frames_iter = [i for i in range(max_points) if highlight[i]]
+
+                print(f"grabbed rectangle from {start_point} to {end_point}")
+                start_point, end_point = None, None  # enable grabbing a new rect
+                dragging = False
+                
+                if len(highlight_frames_iter) > 0:
+                    current_frame = highlight_frames_iter[0]
+                    window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
+                    current_frame_mark = display_frame(current_frame)
+                    window["-SCRUB BAR-"].update(value=current_frame)
+                    window["-SELECTED FRAMES-"].update(value="Selected keyframe 1 / "+str(len(highlight_frames_iter)))
+                    
+                    for mark_i in highlight_marks:
+                        window["-FRAME HIGHLIGHT BAR-"].delete_figure(mark_i)
+                    highlight_marks.clear()
+                    window["-FRAME HIGHLIGHT BAR-"].Erase()
+                    for frame_i in highlight_frames_iter:
+                        frame_loc = frame_i / len(frames)
+                        frame_loc = frame_loc * image_size[0]
+                        id = window["-FRAME HIGHLIGHT BAR-"].draw_rectangle((frame_loc, 7), (frame_loc+1, 0), fill_color='red', line_color="red")
+                        highlight_marks.append(id)
+                else:
+                    window["-SELECTED FRAMES-"].update(value="No keyframes selected")
             
             
         if event == "-LEFT FRAME-":
