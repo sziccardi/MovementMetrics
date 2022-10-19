@@ -423,7 +423,7 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
         ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
         for key in range(len(data)):
-            vals_plot_0 = data[key]
+            vals_plot_0 = list(data[key].values())
 
             max_x = max([point[0] for point in vals_plot_0])
             max_y = max([point[1] for point in vals_plot_0])
@@ -444,16 +444,16 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         #color_select = random.sample(colors, len(data))
         if graph_type == GraphType.LINE_GRAPH: #must be angles over time
             for key in range(len(data)):
-                np_data = np.array(data[key])
+                np_data = np.array(list(data[key].values()))
                 y_peaks = signal.find_peaks(np_data[:,1], threshold=30.0)
                 if len(y_peaks[0]) > 0:
-                    print("I found ", len(y_peaks[0]), " weird peaks in the y values of point cloud at ", y_peaks)
+                    #print("I found ", len(y_peaks[0]), " weird peaks in the y values of point cloud at ", y_peaks)
                     for peak in y_peaks[0]:
                         if peak > 0 and peak < np_data.shape[0]-1:
-                            print("peak is ", np_data[peak,1])
-                            print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
+                            #print("peak is ", np_data[peak,1])
+                            #print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
                             val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
-                            print("so I'm replacing ", np_data[peak,1], " with ", val)
+                            #print("so I'm replacing ", np_data[peak,1], " with ", val)
                             data[key][peak][1] = val
 
                 line_color = colors[key]
@@ -463,27 +463,27 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         elif graph_type == GraphType.POINT_GRAPH: #must be point cloud
             conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
             for key in range(len(data)):
-                np_data = np.array(data[key])
+                np_data = np.array(list(data[key].values()))
                 x_peaks = signal.find_peaks(np_data[:,0], threshold=100.0)
                 if len(x_peaks[0]) > 0:
-                    print("I found ", len(x_peaks[0]), " weird peaks in the x values of point cloud at ", x_peaks)
+                    #print("I found ", len(x_peaks[0]), " weird peaks in the x values of point cloud at ", x_peaks)
                     for peak in x_peaks[0]:
-                        if np_data[point,2] > conf_thresh and np_data[point-1,2] > conf_thresh and np_data[point+1,2] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
-                            print("peak is ", np_data[peak,0])
-                            print("neighbors are ", np_data[peak-1,0], " and ", np_data[peak+1,0])
+                        if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
+                            #print("peak is ", np_data[peak,0])
+                            #print("neighbors are ", np_data[peak-1,0], " and ", np_data[peak+1,0])
                             val = (np_data[peak-1][0] + np_data[peak+1,0])/2.0
-                            print("so I am replacing ", np_data[peak,0], " with ", val)
+                            #print("so I am replacing ", np_data[peak,0], " with ", val)
                             data[key][peak][0] = val
                     
                 y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
                 if len(y_peaks[0]) > 0:
-                    print("I found ", len(y_peaks[0]), " weird peaks in the y values of point cloud at ", y_peaks)
+                    #print("I found ", len(y_peaks[0]), " weird peaks in the y values of point cloud at ", y_peaks)
                     for peak in y_peaks[0]:
-                        if np_data[point,2] > conf_thresh and np_data[point-1,2] > conf_thresh and np_data[point+1,2] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
-                            print("peak is ", np_data[peak,1])
-                            print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
+                        if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
+                            #print("peak is ", np_data[peak,1])
+                            #print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
                             val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
-                            print("so I'm replacing ", np_data[peak,1], " with ", val)
+                            #print("so I'm replacing ", np_data[peak,1], " with ", val)
                             data[key][peak][1] = val
                     
 
@@ -537,13 +537,13 @@ def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type)
                 np_data = np.array(plot_data[plot])
                 y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
                 if len(y_peaks[0]) > 0:
-                    print("I found ", len(y_peaks[0]), " weird peaks in plot #", plot, " of relative pos over time at ", y_peaks)
+                    #print("I found ", len(y_peaks[0]), " weird peaks in plot #", plot, " of relative pos over time at ", y_peaks)
                     for peak in y_peaks[0]:
-                        if np_data[point,2] > conf_thresh and np_data[point-1,2] > conf_thresh and np_data[point+1,2] > conf_thresh and peak > 0 and peak < len(np_data[:,1])-1:
-                            print("peak is ", np_data[peak,1])
-                            print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
+                        if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < len(np_data[:,1])-1:
+                            #print("peak is ", np_data[peak,1])
+                            #print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
                             val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
-                            print("replacing ", np_data[peak,1], " with ", val)
+                            #print("replacing ", np_data[peak,1], " with ", val)
                             plot_data[key][peak][1] = val
                     
                 for point in range(len(plot_data[plot])-1):
@@ -614,171 +614,172 @@ def display_frame(i):
 
 def display_metrics(data, labels, plot_type):
 
-    if plot_type == "centroid of motion":
-        np_data = np.array(data[0])
-        spread = mm.getSpread(np_data[:,0], np_data[:,1])
-        spread_txt = "Data spread: \n" + str(round(spread,2))
-        avg_txt = "Average centroid value: \n( "+str(round(data[1][0][0],2))+", "+str(round(data[1][0][1],2))+" )"
-        window['-COMPUTED METRICS-'].update(value=spread_txt + "\n" + avg_txt)
+    # if plot_type == "centroid of motion":
+    #     np_data = np.array(data[0])
+    #     spread = mm.getSpread(np_data[:,0], np_data[:,1])
+    #     spread_txt = "Data spread: \n" + str(round(spread,2))
+    #     avg_txt = "Average centroid value: \n( "+str(round(data[1][0][0],2))+", "+str(round(data[1][0][1],2))+" )"
+    #     window['-COMPUTED METRICS-'].update(value=spread_txt + "\n" + avg_txt)
     
-    elif plot_type == "point cloud" or plot_type == "distance from center" or plot_type == "normalized distance from center":
-        left_spread = []
-        right_spread = []
-        left_med = []
-        right_med = []
-        total_track_point_text = ""
-        for i, name in enumerate(labels):
-            np_data = np.array(data[i])
-            spread = mm.getSpread(np_data[:,0], np_data[:,1])
-            spread_txt = "Data spread:\n" + str(round(spread,2))
+    # elif plot_type == "point cloud" or plot_type == "distance from center" or plot_type == "normalized distance from center":
+    #     left_spread = []
+    #     right_spread = []
+    #     left_med = []
+    #     right_med = []
+    #     total_track_point_text = ""
+    #     for i, name in enumerate(labels):
+    #         np_data = np.array(data[i])
+    #         spread = mm.getSpread(np_data[:,0], np_data[:,1])
+    #         spread_txt = "Data spread:\n" + str(round(spread,2))
 
-            # min_x = mm.getMin(np_data[:,0])
-            # min_y = mm.getMin(np_data[:,1])
-            # max_x = mm.getMax(np_data[:,0])
-            # max_y = mm.getMax(np_data[:,1])
-            # range_x_txt = "X range: " + str(round(max_x,2)) + " - " + str(round(min_x,2)) + " = " + str(round(max_x - min_x, 2))
-            # range_y_txt = "Y range: " + str(round(max_y,2)) + " - " + str(round(min_y,2)) + " = " + str(round(max_y - min_y, 2))
-            x_med = mm.getMedian(np_data[:,0])
-            y_med = mm.getMedian(np_data[:,1])
-            med_txt = "Median values: \n(" + str(round(x_med,2)) + ", " + str(round(y_med,2)) + " )"
+    #         # min_x = mm.getMin(np_data[:,0])
+    #         # min_y = mm.getMin(np_data[:,1])
+    #         # max_x = mm.getMax(np_data[:,0])
+    #         # max_y = mm.getMax(np_data[:,1])
+    #         # range_x_txt = "X range: " + str(round(max_x,2)) + " - " + str(round(min_x,2)) + " = " + str(round(max_x - min_x, 2))
+    #         # range_y_txt = "Y range: " + str(round(max_y,2)) + " - " + str(round(min_y,2)) + " = " + str(round(max_y - min_y, 2))
+    #         x_med = mm.getMedian(np_data[:,0])
+    #         y_med = mm.getMedian(np_data[:,1])
+    #         med_txt = "Median values: \n(" + str(round(x_med,2)) + ", " + str(round(y_med,2)) + " )"
 
-            # avg_x_txt = "X mean: " + str(round(mm.getMean(np_data[:,0]),2))
-            # avg_y_txt = "Y mean: " + str(round(mm.getMean(np_data[:,1]),2))
+    #         # avg_x_txt = "X mean: " + str(round(mm.getMean(np_data[:,0]),2))
+    #         # avg_y_txt = "Y mean: " + str(round(mm.getMean(np_data[:,1]),2))
 
-            # quart1_x = mm.getMin(np_data[:,0], 1)
-            # quart3_x = mm.getMin(np_data[:,0], 3)
-            # quart1_y = mm.getMin(np_data[:,1], 1)
-            # quart3_y = mm.getMin(np_data[:,1], 3)
-            # irc_x_txt = "X IQR: " + str(round(quart3_x, 2)) + " - " + str(round(quart1_x, 2)) + " = " + str(round(quart3_x-quart1_x,2))
-            # irc_y_txt = "Y IQR: " + str(round(quart3_y, 2)) + " - " + str(round(quart1_y, 2)) + " = " + str(round(quart3_y-quart1_y,2))
+    #         # quart1_x = mm.getMin(np_data[:,0], 1)
+    #         # quart3_x = mm.getMin(np_data[:,0], 3)
+    #         # quart1_y = mm.getMin(np_data[:,1], 1)
+    #         # quart3_y = mm.getMin(np_data[:,1], 3)
+    #         # irc_x_txt = "X IQR: " + str(round(quart3_x, 2)) + " - " + str(round(quart1_x, 2)) + " = " + str(round(quart3_x-quart1_x,2))
+    #         # irc_y_txt = "Y IQR: " + str(round(quart3_y, 2)) + " - " + str(round(quart1_y, 2)) + " = " + str(round(quart3_y-quart1_y,2))
             
-            if "left" in name:
-                left_spread.append(spread)
-                left_med.append([x_med,y_med])
-            elif "right" in name:
-                right_spread.append(spread)
-                right_med.append([x_med,y_med])
+    #         if "left" in name:
+    #             left_spread.append(spread)
+    #             left_med.append([x_med,y_med])
+    #         elif "right" in name:
+    #             right_spread.append(spread)
+    #             right_med.append([x_med,y_med])
 
-            filter = np_data[:,2] > mm.GetPlotSpecificInfo("distance from center")[0]
-            included = sum(filter)
-            num_skipped = np_data[:,2].shape[0] - included
-            skipped_txt = "# frames skipped: \n"+str(num_skipped)
+    #         filter = np_data[:,2] > mm.GetPlotSpecificInfo("distance from center")[0]
+    #         included = sum(filter)
+    #         num_skipped = np_data[:,2].shape[0] - included
+    #         skipped_txt = "# frames skipped: \n"+str(num_skipped)
 
-            total_track_point_text = total_track_point_text + name + " - \n" + spread_txt + "\n" + med_txt + "\n" + skipped_txt + "\n\n"
+    #         total_track_point_text = total_track_point_text + name + " - \n" + spread_txt + "\n" + med_txt + "\n" + skipped_txt + "\n\n"
 
-        total_left_spread = float(sum(left_spread))
-        total_right_spread = float(sum(right_spread))
-        total_spread = total_left_spread + total_right_spread
-        spread_proportions_txt = "Left proportion of \nmovement:\n" + str(round(total_left_spread / total_spread,2)) +"\nRight proportion of \nmovement:\n"+str(round(total_right_spread / total_spread,2))
+    #     total_left_spread = float(sum(left_spread))
+    #     total_right_spread = float(sum(right_spread))
+    #     total_spread = total_left_spread + total_right_spread
+    #     spread_proportions_txt = "Left proportion of \nmovement:\n" + str(round(total_left_spread / total_spread,2)) +"\nRight proportion of \nmovement:\n"+str(round(total_right_spread / total_spread,2))
         
-        x = 0.0
-        y = 0.0
-        for val in left_med:
-            x = x + val[0]
-            y = y + val[1]
-        avg_left_med = [float(x / len(left_med)), float(y / len(left_med)) ]
-        x = 0.0
-        y = 0.0
-        for val in right_med:
-            x = x + val[0]
-            y = y + val[1]
-        avg_right_med = [float(x / len(right_med)), float(y / len(right_med)) ]
+    #     x = 0.0
+    #     y = 0.0
+    #     for val in left_med:
+    #         x = x + val[0]
+    #         y = y + val[1]
+    #     avg_left_med = [float(x / len(left_med)), float(y / len(left_med)) ]
+    #     x = 0.0
+    #     y = 0.0
+    #     for val in right_med:
+    #         x = x + val[0]
+    #         y = y + val[1]
+    #     avg_right_med = [float(x / len(right_med)), float(y / len(right_med)) ]
         
-        med_diffs = [abs(avg_right_med[i]-avg_left_med[i]) for i in range(len(avg_right_med))]
-        med_diff_txt = "Difference between left \nand right medians:\n (" + str(round(med_diffs[0])) + ", " + str(round(med_diffs[1])) + ")"
+    #     med_diffs = [abs(avg_right_med[i]-avg_left_med[i]) for i in range(len(avg_right_med))]
+    #     med_diff_txt = "Difference between left \nand right medians:\n (" + str(round(med_diffs[0])) + ", " + str(round(med_diffs[1])) + ")"
 
         
 
-        window['-COMPUTED METRICS-'].update(value=total_track_point_text + "\n" + spread_proportions_txt + "\n" + med_diff_txt)
+    #     window['-COMPUTED METRICS-'].update(value=total_track_point_text + "\n" + spread_proportions_txt + "\n" + med_diff_txt)
 
-    elif plot_type == "speed over time":
-        left_avg = []
-        right_avg = []
-        total_track_point_text = ""
-        for i, name in enumerate(labels):
-            np_data = np.array(data[i])
+    # elif plot_type == "speed over time":
+    #     left_avg = []
+    #     right_avg = []
+    #     total_track_point_text = ""
+    #     for i, name in enumerate(labels):
+    #         np_data = np.array(data[i])
 
-            avg = mm.getMean(np_data[:,1])
-            avg_txt = "Mean: " + str(round(avg,2))
+    #         avg = mm.getMean(np_data[:,1])
+    #         avg_txt = "Mean: " + str(round(avg,2))
 
-            quart1_y = mm.getQuartile(np_data[:,1], 1)
-            quart3_y = mm.getQuartile(np_data[:,1], 3)
-            irc_txt = "IQR: " + str(round(quart3_y, 2)) + " - " + str(round(quart1_y, 2)) + " = " + str(round(quart3_y-quart1_y,2))
+    #         quart1_y = mm.getQuartile(np_data[:,1], 1)
+    #         quart3_y = mm.getQuartile(np_data[:,1], 3)
+    #         irc_txt = "IQR: " + str(round(quart3_y, 2)) + " - " + str(round(quart1_y, 2)) + " = " + str(round(quart3_y-quart1_y,2))
             
-            total_track_point_text = total_track_point_text + name + "- \n" + avg_txt + "\n" + irc_txt + "\n"
+    #         total_track_point_text = total_track_point_text + name + "- \n" + avg_txt + "\n" + irc_txt + "\n"
 
-            if "left" in name:
-                left_avg.append(avg)
-            elif "right" in name:
-                right_avg.append(avg)
+    #         if "left" in name:
+    #             left_avg.append(avg)
+    #         elif "right" in name:
+    #             right_avg.append(avg)
         
-        tot_left_avg = mm.getMean(left_avg)
-        tot_right_avg = mm.getMean(right_avg)
+    #     tot_left_avg = mm.getMean(left_avg)
+    #     tot_right_avg = mm.getMean(right_avg)
 
-        avg_proportions_txt = "Left proportion of \nmovement:\n" + str(round(tot_left_avg / (tot_left_avg+tot_right_avg),2)) +"\nRight proportion of \nmovement:\n"+str(round(tot_right_avg / (tot_left_avg+tot_right_avg),2))
-        window['-COMPUTED METRICS-'].update(value=total_track_point_text+"\n"+avg_proportions_txt)
+    #     avg_proportions_txt = "Left proportion of \nmovement:\n" + str(round(tot_left_avg / (tot_left_avg+tot_right_avg),2)) +"\nRight proportion of \nmovement:\n"+str(round(tot_right_avg / (tot_left_avg+tot_right_avg),2))
+    #     window['-COMPUTED METRICS-'].update(value=total_track_point_text+"\n"+avg_proportions_txt)
 
-    elif plot_type == "velocity over time":
-        left_horiz_avg = []
-        left_vert_avg = []
-        right_horiz_avg = []
-        right_vert_avg = []
-        total_track_point_text = ""
-        for i, name in enumerate(labels):
-            np_data_horiz = np.array(data[i][0])
-            np_data_vert = np.array(data[i][1])
+    # elif plot_type == "velocity over time":
+    #     left_horiz_avg = []
+    #     left_vert_avg = []
+    #     right_horiz_avg = []
+    #     right_vert_avg = []
+    #     total_track_point_text = ""
+    #     for i, name in enumerate(labels):
+    #         np_data_horiz = np.array(data[i][0])
+    #         np_data_vert = np.array(data[i][1])
 
-            avg_horiz = mm.getMean(np_data_horiz[:,1])
-            avg_horiz_txt = "Horizontal mean: \n" + str(round(avg_horiz,2))
+    #         avg_horiz = mm.getMean(np_data_horiz[:,1])
+    #         avg_horiz_txt = "Horizontal mean: \n" + str(round(avg_horiz,2))
 
-            quart1_horiz = mm.getQuartile(np_data_horiz[:,1], 1)
-            quart3_horiz = mm.getQuartile(np_data_horiz[:,1], 3)
-            irc_horiz_txt = "Horizontal IQR: \n" + str(round(quart3_horiz, 2)) + " - " + str(round(quart1_horiz, 2)) + " = " + str(round(quart3_horiz-quart1_horiz,2))
+    #         quart1_horiz = mm.getQuartile(np_data_horiz[:,1], 1)
+    #         quart3_horiz = mm.getQuartile(np_data_horiz[:,1], 3)
+    #         irc_horiz_txt = "Horizontal IQR: \n" + str(round(quart3_horiz, 2)) + " - " + str(round(quart1_horiz, 2)) + " = " + str(round(quart3_horiz-quart1_horiz,2))
             
             
-            avg_vert = mm.getMean(np_data_vert[:,1])
-            avg_vert_txt = "Vertical mean: \n" + str(round(avg_vert,2))
+    #         avg_vert = mm.getMean(np_data_vert[:,1])
+    #         avg_vert_txt = "Vertical mean: \n" + str(round(avg_vert,2))
 
-            quart1_vert = mm.getQuartile(np_data_vert[:,1], 1)
-            quart3_vert = mm.getQuartile(np_data_vert[:,1], 3)
-            irc_vert_txt = "Vertical IQR: \n" + str(round(quart3_vert, 2)) + " - " + str(round(quart1_vert, 2)) + " = " + str(round(quart3_vert-quart1_vert,2))
+    #         quart1_vert = mm.getQuartile(np_data_vert[:,1], 1)
+    #         quart3_vert = mm.getQuartile(np_data_vert[:,1], 3)
+    #         irc_vert_txt = "Vertical IQR: \n" + str(round(quart3_vert, 2)) + " - " + str(round(quart1_vert, 2)) + " = " + str(round(quart3_vert-quart1_vert,2))
             
-            total_track_point_text = total_track_point_text + "\n" +name + "- \n" + avg_horiz_txt + "\n" + irc_horiz_txt + "\n" + avg_vert_txt + "\n" + irc_vert_txt + "\n"
+    #         total_track_point_text = total_track_point_text + "\n" +name + "- \n" + avg_horiz_txt + "\n" + irc_horiz_txt + "\n" + avg_vert_txt + "\n" + irc_vert_txt + "\n"
             
-            if "left" in name:
-                left_horiz_avg.append(avg_horiz)
-                left_vert_avg.append(avg_vert)
-            elif "right" in name:
-                right_horiz_avg.append(avg_horiz)
-                right_vert_avg.append(avg_vert)
+    #         if "left" in name:
+    #             left_horiz_avg.append(avg_horiz)
+    #             left_vert_avg.append(avg_vert)
+    #         elif "right" in name:
+    #             right_horiz_avg.append(avg_horiz)
+    #             right_vert_avg.append(avg_vert)
         
-        all_left = left_horiz_avg.copy()
-        all_right = right_horiz_avg.copy()
-        all_horiz = left_horiz_avg.copy()
-        all_vert = left_vert_avg.copy()
-        all_left.extend(left_vert_avg)
-        all_right.extend(right_vert_avg)
-        all_vert.extend(right_vert_avg)
-        all_horiz.extend(right_horiz_avg)
+    #     all_left = left_horiz_avg.copy()
+    #     all_right = right_horiz_avg.copy()
+    #     all_horiz = left_horiz_avg.copy()
+    #     all_vert = left_vert_avg.copy()
+    #     all_left.extend(left_vert_avg)
+    #     all_right.extend(right_vert_avg)
+    #     all_vert.extend(right_vert_avg)
+    #     all_horiz.extend(right_horiz_avg)
 
-        tot_left_avg = mm.getMean([abs(e) for e in all_left])
-        tot_right_avg = mm.getMean([abs(e) for e in all_right])
-        tot_horiz_avg = mm.getMean([abs(e) for e in all_horiz])
-        tot_vert_avg = mm.getMean([abs(e) for e in all_vert])
+    #     tot_left_avg = mm.getMean([abs(e) for e in all_left])
+    #     tot_right_avg = mm.getMean([abs(e) for e in all_right])
+    #     tot_horiz_avg = mm.getMean([abs(e) for e in all_horiz])
+    #     tot_vert_avg = mm.getMean([abs(e) for e in all_vert])
 
-        avg_proportions_txt = "Left proportion of \nmovement:\n" + str(round(tot_left_avg / (tot_left_avg+tot_right_avg),2)) 
-        avg_proportions_txt = avg_proportions_txt + "\nRight proportion of \nmovement:\n"+str(round(tot_right_avg / (tot_left_avg+tot_right_avg),2))
-        avg_proportions_txt = avg_proportions_txt + "\nHorizontal proportion of \nmovement:\n"+str(round(tot_horiz_avg / (tot_horiz_avg+tot_vert_avg),2))
-        avg_proportions_txt = avg_proportions_txt + "\nVertical proportion of \nmovement:\n"+str(round(tot_vert_avg / (tot_horiz_avg+tot_vert_avg),2))
-        window['-COMPUTED METRICS-'].update(value=total_track_point_text+"\n"+avg_proportions_txt)
+    #     avg_proportions_txt = "Left proportion of \nmovement:\n" + str(round(tot_left_avg / (tot_left_avg+tot_right_avg),2)) 
+    #     avg_proportions_txt = avg_proportions_txt + "\nRight proportion of \nmovement:\n"+str(round(tot_right_avg / (tot_left_avg+tot_right_avg),2))
+    #     avg_proportions_txt = avg_proportions_txt + "\nHorizontal proportion of \nmovement:\n"+str(round(tot_horiz_avg / (tot_horiz_avg+tot_vert_avg),2))
+    #     avg_proportions_txt = avg_proportions_txt + "\nVertical proportion of \nmovement:\n"+str(round(tot_vert_avg / (tot_horiz_avg+tot_vert_avg),2))
+    #     window['-COMPUTED METRICS-'].update(value=total_track_point_text+"\n"+avg_proportions_txt)
 
-    elif plot_type == "relative position over time":
+    if plot_type == "relative position over time":
         total_track_point_text = ""
         fps = (float)(values["-FPS-"])
 
         for i, name in enumerate(labels):
-            np_data_horiz = np.array(data[i][0])
-            np_data_vert = np.array(data[i][1])
+            data_list = list(data[i].values())
+            np_data_horiz = np.array(data_list[0])
+            np_data_vert = np.array(data_list[1])
             
             temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data_horiz[:,1], ("right" in name))
             total_track_point_text = total_track_point_text + "\n" + name + " : \n - crossed body midline " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
@@ -786,13 +787,17 @@ def display_metrics(data, labels, plot_type):
             temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data_vert[:,1], True)
             total_track_point_text = total_track_point_text + " - raised above shoulders " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
             
-            data_x_mean = mm.getMean(np_data_horiz[:,1])
-            data_y_mean = mm.getMean(np_data_vert[:,1])
-            data_x_var = mm.getSTD(np_data_horiz[:,1])
-            data_y_var = mm.getSTD(np_data_vert[:,1])
+            conf = mm.GetPlotSpecificInfo("relative position")[0]
+            data_filter_horiz = np_data_horiz[:,2] > conf
+            data_filter_vert = np_data_vert[:,2] > conf
+
+            data_x_mean = mm.getMean(np_data_horiz[data_filter_horiz,1])
+            data_y_mean = mm.getMean(np_data_vert[data_filter_vert,1])
+            data_x_var = mm.getSTD(np_data_horiz[data_filter_horiz,1])
+            data_y_var = mm.getSTD(np_data_vert[data_filter_vert,1])
             total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
             total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
-            filter = np_data[:,2] > mm.GetPlotSpecificInfo("distance from center")[0]
+            filter = np_data[:,2] > conf
             included = sum(filter)
             num_skipped = np_data[:,2].shape[0] - included
             not_filter = np.logical_not(filter)
@@ -806,21 +811,25 @@ def display_metrics(data, labels, plot_type):
         fps = (float)(values["-FPS-"])
 
         for i, name in enumerate(labels):
-            np_data = np.array(data[i])
+            data_list = list(data[i].values())
+            np_data = np.array(data_list)
             temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[:,0], ("right" in name))
             total_track_point_text = total_track_point_text + "\n" + name + " : \n - crossed body midline " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
             
             temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[:,1], True)
             total_track_point_text = total_track_point_text + " - raised above shoulders " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
             
-            data_x_mean = mm.getMean(np_data[:,0])
-            data_y_mean = mm.getMean(np_data[:,1])
-            data_x_var = mm.getSTD(np_data[:,0])
-            data_y_var = mm.getSTD(np_data[:,1])
+            conf = mm.GetPlotSpecificInfo("relative position")[0]
+            data_filter = np_data[:,2] > conf
+
+            data_x_mean = mm.getMean(np_data[data_filter,0])
+            data_y_mean = mm.getMean(np_data[data_filter,1])
+            data_x_var = mm.getSTD(np_data[data_filter,0])
+            data_y_var = mm.getSTD(np_data[data_filter,1])
             total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
             total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
             
-            filter = np_data[:,2] > mm.GetPlotSpecificInfo("relative position")[0]
+            filter = np_data[:,2] > conf
             included = sum(filter)
             num_skipped = np_data[:,2].shape[0] - included
             selected = np_data[filter]
@@ -831,48 +840,48 @@ def display_metrics(data, labels, plot_type):
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
         print(total_track_point_text)
 
-    elif plot_type == "angles over time" or plot_type == "relative angles":
-        total_track_point_text = ""
-        fps = (float)(values["-FPS-"])
-        stds = []
-        for i, name in enumerate(labels):
-            np_data = np.array(data[i])
-            temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], False, 165)
-            total_track_point_text = total_track_point_text + "\n" + name + " : \n - fully extended " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent fully extended\n"
+    # elif plot_type == "angles over time" or plot_type == "relative angles":
+    #     total_track_point_text = ""
+    #     fps = (float)(values["-FPS-"])
+    #     stds = []
+    #     for i, name in enumerate(labels):
+    #         np_data = np.array(data[i])
+    #         temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], False, 165)
+    #         total_track_point_text = total_track_point_text + "\n" + name + " : \n - fully extended " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent fully extended\n"
             
-            temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], True, 30)
-            total_track_point_text = total_track_point_text + " - fully tucked  " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent tucked\n"
+    #         temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[:,1], True, 30)
+    #         total_track_point_text = total_track_point_text + " - fully tucked  " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent tucked\n"
             
-            data_mean = mm.getMean(np_data[:,1])
-            data_var = mm.getSTD(np_data[:,1])
-            stds.append(data_var)
-            total_track_point_text = total_track_point_text + " - average angle is " + str(round(data_mean,2)) + "\n"
-            total_track_point_text = total_track_point_text + " - with std of "+ str(round(data_var,2)) + "\n"
+    #         data_mean = mm.getMean(np_data[:,1])
+    #         data_var = mm.getSTD(np_data[:,1])
+    #         stds.append(data_var)
+    #         total_track_point_text = total_track_point_text + " - average angle is " + str(round(data_mean,2)) + "\n"
+    #         total_track_point_text = total_track_point_text + " - with std of "+ str(round(data_var,2)) + "\n"
         
-        # if len(data) > 0:
-        #     data1 = np.array(data[0])[:,1]
-        #     data2 = np.array(data[1])[:,1]
-        #     data1_new = np.delete(data1, np.where(np.isnan(data1)))
-        #     data2_new = np.delete(data2, np.where(np.isnan(data1)))
-        #     data1 = np.delete(data1_new, np.where(np.isnan(data2_new)))
-        #     data2 = np.delete(data2_new, np.where(np.isnan(data2_new)))
-        #     p = mm.getCorrelationR(data1, data2)
-        #     total_track_point_text = total_track_point_text + "\nPearson's correlation r = " + str(round(p[0],2))
-        #     total_track_point_text = total_track_point_text + "\nTwo tailed p = " + str(p[1]) + "\n"
+    #     # if len(data) > 0:
+    #     #     data1 = np.array(data[0])[:,1]
+    #     #     data2 = np.array(data[1])[:,1]
+    #     #     data1_new = np.delete(data1, np.where(np.isnan(data1)))
+    #     #     data2_new = np.delete(data2, np.where(np.isnan(data1)))
+    #     #     data1 = np.delete(data1_new, np.where(np.isnan(data2_new)))
+    #     #     data2 = np.delete(data2_new, np.where(np.isnan(data2_new)))
+    #     #     p = mm.getCorrelationR(data1, data2)
+    #     #     total_track_point_text = total_track_point_text + "\nPearson's correlation r = " + str(round(p[0],2))
+    #     #     total_track_point_text = total_track_point_text + "\nTwo tailed p = " + str(p[1]) + "\n"
 
-        #     avg_corr = mm.getCorrelationCross(data1, data2)[0]
-        #     # abs_corr = np.abs(avg_corr)
-        #     # i_peaks = mm.getPeaks(abs_corr)
-        #     # mean_corr = np.array([abs_corr[int(i)] for i in i_peaks[0]])
-        #     # mean_corr = np.mean(mean_corr)
-        #     total_track_point_text = total_track_point_text + "\nAverage cross correlation = " + str(round(avg_corr,2))
-            filter = np_data[:,2] > mm.GetPlotSpecificInfo("angles over time")[0]
-            included = sum(filter)
-            num_skipped = np_data[:,2].shape[0] - included
-            selected = np_data[filter]
-            avg_conf = np.mean(selected[:,2])
-            total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
-            total_track_point_text = total_track_point_text + "Average confidence: "+str(round(avg_conf,2)) + "\n"
+    #     #     avg_corr = mm.getCorrelationCross(data1, data2)[0]
+    #     #     # abs_corr = np.abs(avg_corr)
+    #     #     # i_peaks = mm.getPeaks(abs_corr)
+    #     #     # mean_corr = np.array([abs_corr[int(i)] for i in i_peaks[0]])
+    #     #     # mean_corr = np.mean(mean_corr)
+    #     #     total_track_point_text = total_track_point_text + "\nAverage cross correlation = " + str(round(avg_corr,2))
+    #         filter = np_data[:,2] > mm.GetPlotSpecificInfo("angles over time")[0]
+    #         included = sum(filter)
+    #         num_skipped = np_data[:,2].shape[0] - included
+    #         selected = np_data[filter]
+    #         avg_conf = np.mean(selected[:,2])
+    #         total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
+    #         total_track_point_text = total_track_point_text + "Average confidence: "+str(round(avg_conf,2)) + "\n"
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
         #TODO: remove this print statement at some point
         print(total_track_point_text)
@@ -974,18 +983,18 @@ if __name__ == '__main__':
                 data2, labels2, ax_labels2 = mm.run_script_get_data(real_files, frame_size, "relative position over time", track_points, fps, pix_scale, cov_w)
             
                 display_metrics(data1, labels1, plot_type[0])
-            if plot_type[0] == "relative angles":
-                if "head" in track_points:
-                    track_points.remove("head")
-                if "wrist_left" in track_points:
-                    track_points.remove("wrist_left")
-                if "wrist_right" in track_points:
-                    track_points.remove("wrist_right")
-                if len(track_points) > 0:
-                    data1, labels1, ax_labels1 = mm.run_script_get_data(real_files, frame_size, "angle histogram", track_points, fps, pix_scale, cov_w)
-                    data2, labels2, ax_labels2 = mm.run_script_get_data(real_files, frame_size, "angles over time", track_points, fps, pix_scale, cov_w)
+            # if plot_type[0] == "relative angles":
+            #     if "head" in track_points:
+            #         track_points.remove("head")
+            #     if "wrist_left" in track_points:
+            #         track_points.remove("wrist_left")
+            #     if "wrist_right" in track_points:
+            #         track_points.remove("wrist_right")
+            #     if len(track_points) > 0:
+            #         data1, labels1, ax_labels1 = mm.run_script_get_data(real_files, frame_size, "angle histogram", track_points, fps, pix_scale, cov_w)
+            #         data2, labels2, ax_labels2 = mm.run_script_get_data(real_files, frame_size, "angles over time", track_points, fps, pix_scale, cov_w)
                     
-                    display_metrics(data2, labels2, plot_type[0])
+            #         display_metrics(data2.values(), labels2, plot_type[0])
 
             graph.Erase()
             #graph2.Erase()
@@ -1004,35 +1013,35 @@ if __name__ == '__main__':
             window["-OVER TIME PLOT TITLE-"].update(value=title2)
             
             current_plot_type = plot_type[0]
-            if plot_type[0] == "point cloud" or plot_type[0] == "centroid of motion" or plot_type[0] == "distance from center" or plot_type[0] == "normalized distance from center":
-                window["-PLOT CANVAS 2-"].update(visible=False)
-                window["-PLOT CANVAS-"].set_size(graph_size)
-                create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.POINT_GRAPH)
-            elif plot_type[0] == "speed over time" or plot_type[0] == "angles over time" :
-                window["-PLOT CANVAS 2-"].update(visible=False)
-                window["-PLOT CANVAS-"].set_size(graph_size)
-                create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.LINE_GRAPH)
-            elif plot_type[0] == "relative position over time" or plot_type[0] == "velocity over time":
-                window["-PLOT CANVAS 2-"].update(visible=True)
-                window["-PLOT CANVAS-"].set_size((graph_size[0], graph_size[1]/2-3))
-                create_two_plots([graph, graph2], data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.LINE_GRAPH)
-            elif plot_type[0] == 'movement heatmap':
-                window["-PLOT CANVAS 2-"].update(visible=False)
-                window["-PLOT CANVAS-"].set_size(graph_size)
-                create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.HEAT_MAP)
-            elif plot_type[0] == 'angle histogram':
-                window["-PLOT CANVAS 2-"].update(visible=False)
-                window["-PLOT CANVAS-"].set_size(graph_size)
-                create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.HISTOGRAM)
+            # if plot_type[0] == "point cloud" or plot_type[0] == "centroid of motion" or plot_type[0] == "distance from center" or plot_type[0] == "normalized distance from center":
+            #     window["-PLOT CANVAS 2-"].update(visible=False)
+            #     window["-PLOT CANVAS-"].set_size(graph_size)
+            #     create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.POINT_GRAPH)
+            # elif plot_type[0] == "speed over time" or plot_type[0] == "angles over time" :
+            #     window["-PLOT CANVAS 2-"].update(visible=False)
+            #     window["-PLOT CANVAS-"].set_size(graph_size)
+            #     create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.LINE_GRAPH)
+            # if plot_type[0] == "relative position over time" or plot_type[0] == "velocity over time":
+            #     window["-PLOT CANVAS 2-"].update(visible=True)
+            #     window["-PLOT CANVAS-"].set_size((graph_size[0], graph_size[1]/2-3))
+            #     create_two_plots([graph, graph2], data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.LINE_GRAPH)
+            # elif plot_type[0] == 'movement heatmap':
+            #     window["-PLOT CANVAS 2-"].update(visible=False)
+            #     window["-PLOT CANVAS-"].set_size(graph_size)
+            #     create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.HEAT_MAP)
+            # elif plot_type[0] == 'angle histogram':
+            #     window["-PLOT CANVAS 2-"].update(visible=False)
+            #     window["-PLOT CANVAS-"].set_size(graph_size)
+            #     create_basic_plot(graph, data, labels, window["-PLOT LEGEND-"], ax_labels, GraphType.HISTOGRAM)
             
-            elif data1 is not None and data2 is not None and plot_type[0] == 'relative angles':
-                window["-PLOT CANVAS-"].set_size(graph_size)
-                create_basic_plot(graph, data1, labels1, window["-PLOT LEGEND-"], ax_labels1, GraphType.HISTOGRAM)
+            # elif data1 is not None and data2 is not None and plot_type[0] == 'relative angles':
+            #     window["-PLOT CANVAS-"].set_size(graph_size)
+            #     create_basic_plot(graph, data1, labels1, window["-PLOT LEGEND-"], ax_labels1, GraphType.HISTOGRAM)
 
-                window["-OVER TIME PLOT 2-"].update(visible=False)
-                window["-OVER TIME PLOT 1-"].set_size(long_graph_size)
-                create_basic_plot(long_graph, data2, labels2, window["-PLOT LEGEND-"], ax_labels2, GraphType.LINE_GRAPH)
-            elif plot_type[0] == 'relative position':
+            #     window["-OVER TIME PLOT 2-"].update(visible=False)
+            #     window["-OVER TIME PLOT 1-"].set_size(long_graph_size)
+            #     create_basic_plot(long_graph, data2, labels2, window["-PLOT LEGEND-"], ax_labels2, GraphType.LINE_GRAPH)
+            if plot_type[0] == 'relative position':
                 window["-PLOT CANVAS-"].set_size(graph_size)
                 create_basic_plot(graph, data1, labels1, window["-PLOT LEGEND-"], ax_labels1, GraphType.POINT_GRAPH)
 
@@ -1043,32 +1052,34 @@ if __name__ == '__main__':
 
             
 
-        elif event == "-EXPORT PLOT-":
-            try:
-                if plot_type[0] == "relative position over time" or plot_type[0] == "velocity over time":
-                    widget = window["-PLOT CANVAS-"].Widget
-                    # NOTE: these are magic numbers, no idea why only these work
-                    box = (widget.winfo_rootx() + widget.winfo_width() / 2.19, widget.winfo_rooty() + 30, widget.winfo_rootx() + 1.69 * widget.winfo_width(), widget.winfo_rooty() + 1.66 * widget.winfo_height() - 30)
-                    grab = ImageGrab.grab(bbox=box)
-                    grab.save(values["-PLOT NAME-"] + ".png")
-                    print("Saved double canvas 1")
+        # elif event == "-EXPORT PLOT-":
+        #     try:
+        #         if plot_type[0] == "relative position over time" or plot_type[0] == "velocity over time":
+        #             widget = window["-PLOT CANVAS-"].Widget
+        #             # NOTE: these are magic numbers, no idea why only these work
+        #             box = (widget.winfo_rootx() + widget.winfo_width() / 2.19, widget.winfo_rooty() + 30, widget.winfo_rootx() + 1.69 * widget.winfo_width(), widget.winfo_rooty() + 1.66 * widget.winfo_height() - 30)
+        #             grab = ImageGrab.grab(bbox=box)
+        #             grab.save(values["-PLOT NAME-"] + ".png")
+        #             print("Saved double canvas 1")
 
-                    widget = window["-PLOT CANVAS 2-"].Widget
-                    box = (widget.winfo_rootx() + widget.winfo_width() / 2.2, widget.winfo_rooty() + 0.52 * widget.winfo_height(), widget.winfo_rootx() + 1.67 * widget.winfo_width(), widget.winfo_rooty() + 1.78 * widget.winfo_height())
-                    grab = ImageGrab.grab(bbox=box)
-                    grab.save(values["-PLOT NAME-"] + "_1.png")
-                    print("Saved double canvas 2")
-                else:
-                    widget = window["-PLOT CANVAS-"].Widget
-                    # NOTE: these are magic numbers, no idea why only these work
-                    box = (widget.winfo_rootx() + widget.winfo_width() / 2.2, widget.winfo_rooty() + 30, widget.winfo_rootx() + 1.67 * widget.winfo_width(), widget.winfo_rooty() + 1.36 * widget.winfo_height())
-                    grab = ImageGrab.grab(bbox=box)
-                    grab.save(values["-PLOT NAME-"] + ".png")
-                    print("Saved single canvas plot")
+        #             widget = window["-PLOT CANVAS 2-"].Widget
+        #             box = (widget.winfo_rootx() + widget.winfo_width() / 2.2, widget.winfo_rooty() + 0.52 * widget.winfo_height(), widget.winfo_rootx() + 1.67 * widget.winfo_width(), widget.winfo_rooty() + 1.78 * widget.winfo_height())
+        #             grab = ImageGrab.grab(bbox=box)
+        #             grab.save(values["-PLOT NAME-"] + "_1.png")
+        #             print("Saved double canvas 2")
+        #         else:
+        #             widget = window["-PLOT CANVAS-"].Widget
+        #             # NOTE: these are magic numbers, no idea why only these work
+        #             box = (widget.winfo_rootx() + widget.winfo_width() / 2.2, widget.winfo_rooty() + 30, widget.winfo_rootx() + 1.67 * widget.winfo_width(), widget.winfo_rooty() + 1.36 * widget.winfo_height())
+        #             grab = ImageGrab.grab(bbox=box)
+        #             grab.save(values["-PLOT NAME-"] + ".png")
+        #             print("Saved single canvas plot")
 
-                window["-PLOT NAME-"].update("")
-            except:
-                print("ERROR: Couldn't save plot")
+        #         window["-PLOT NAME-"].update("")
+        #     except:
+        #         print("ERROR: Couldn't save plot")
+
+
         # and ((current_process is not None and current_process.poll() is not None) or (current_process is None))
         if len(chosen_files) > 0 and len(values["-TRACK POINT LIST-"]) > 0:
             window["-RUN SCRIPT-"].update(visible=True)
