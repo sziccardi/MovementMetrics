@@ -575,7 +575,11 @@ def read_frame_files(file_loc):
         file_list = []
     frames = [(file_loc+'/video_frames/'+val) for val in file_list if val.lower().endswith((".jpg")) or val.lower().endswith((".png"))]
     frames.sort()
-    return frames
+    keys= [int(filename[filename.rfind('/')+1:][filename[filename.rfind('/')+1:].find('0'):filename[filename.rfind('/')+1:].find('0')+filename[filename.rfind('/')+1:][filename[filename.rfind('/')+1:].find('0'):].find('.')]) for filename in frames]
+    
+    frames_dict = {keys[i]: frames[i] for i in range(len(keys))}
+    
+    return frames_dict
 
 def read_pose_files(file_loc):
     try:
@@ -898,7 +902,7 @@ if __name__ == '__main__':
     #mocap video frames
     current_frame = 0
     frames = []
-    highlight_frames_iter = []
+    highlight = []
     highlight_marks = []
     current_frame_mark = None
     
@@ -945,6 +949,7 @@ if __name__ == '__main__':
             frames = read_frame_files(file_loc)
             if len(frames) == 0:
                 print("WARNING: No video frames found for the selected folder.")
+            current_frame = list(frames.keys())[0]
 
             window["-SELECTED FILE-"].update(value="Currently selected: " + loc_name, visible=True)
             window.TKroot.attributes('-topmost', 1)
@@ -1101,8 +1106,8 @@ if __name__ == '__main__':
                 
 
         elif event.endswith('+UP'):  # The drawing has ended because mouse up
-            highlight_frames_iter.clear()
-            highlight_frames_iter = []
+            highlight.clear()
+            highlight = []
 
             if start_point is not None and end_point is not None:
 
@@ -1121,9 +1126,11 @@ if __name__ == '__main__':
                 #         plot_specfic_data = data[1]
                 if current_plot_type == "relative position" :
                     if prior_rect[0] == "-OVER TIME PLOT 1-":
-                        plot_specfic_data2 = data2[0]
+                        print(len(data2))
+                        plot_specfic_data2 = data2[:][0]
                     elif prior_rect[0] == "-OVER TIME PLOT 2-":
-                        plot_specfic_data2 = data2[1]
+                        print(len(data2))
+                        plot_specfic_data2 = data2[:][1]
                 
                 max_points = 0
                 
@@ -1137,7 +1144,8 @@ if __name__ == '__main__':
                         if len(plot_specfic_data2[key]) > max_points:
                             max_points = len(plot_specfic_data2[key])
 
-                highlight = [0 for i in range(max_points)]
+                
+                #highlight = [0 for i in range(max_points)]
                 conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
                 if prior_rect[0] == "-FRAME HIGHLIGHT BAR-":
                     min_frame = min_x / image_size[0]
@@ -1148,43 +1156,46 @@ if __name__ == '__main__':
                     max_frame = int(max_frame*len(frames))
                     print("max frame ", max_frame)
 
-                    highlight[min_frame:max_frame] = [1 for k in range(max_frame-min_frame)]
+                    highlight = list(frames.keys())[min_frame:max_frame]
                 elif plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
+                    frame_list = list(frames.keys())
                     for key in range(len(plot_specfic_data2)):
                         for point in range(len(plot_specfic_data2[key])):
                             conf = plot_specfic_data2[key][point][2] > conf_thresh
                             within_x = plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x
                             within_y = plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y
-                            if highlight[point] == 0 and conf and within_x and within_y:
-                                highlight[point] = 1
+                            if conf and within_x and within_y:
+                                highlight.append(frame_list[point])
                 elif plot_specfic_data1 is not None:
+                    frame_list = list(frames.keys())
                     for key in range(len(plot_specfic_data1)):
                         for point in range(len(plot_specfic_data1[key])):
                             conf = plot_specfic_data1[key][point][2] > conf_thresh
                             within_x = plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x
                             within_y = plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y
-                            if highlight[point] == 0 and conf and within_x and within_y:
-                                highlight[point] = 1
+                            if conf and within_x and within_y:
+                               highlight.append(frame_list[point])
                 
                 
-                highlight_frames_iter = [i for i in range(max_points) if highlight[i]]
+                #highlight_frames_iter = [i for i in range(max_points) if highlight[i]]
 
                 print(f"grabbed rectangle from {start_point} to {end_point}")
                 start_point, end_point = None, None  # enable grabbing a new rect
                 dragging = False
                 
-                if len(highlight_frames_iter) > 0:
-                    current_frame = highlight_frames_iter[0]
+                if len(highlight) > 0:
+                    current_frame = highlight[0]
+                    print("CURRENT FRAME:", current_frame)
                     window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
                     current_frame_mark = display_frame(current_frame)
                     window["-SCRUB BAR-"].update(value=current_frame)
-                    window["-SELECTED FRAMES-"].update(value="Selected keyframe 1 / "+str(len(highlight_frames_iter)))
+                    window["-SELECTED FRAMES-"].update(value="Selected keyframe 1 / "+str(len(highlight)))
                     
                     for mark_i in highlight_marks:
                         window["-FRAME HIGHLIGHT BAR-"].delete_figure(mark_i)
                     highlight_marks.clear()
                     window["-FRAME HIGHLIGHT BAR-"].Erase()
-                    for frame_i in highlight_frames_iter:
+                    for frame_i in highlight:
                         frame_loc = frame_i / len(frames)
                         frame_loc = frame_loc * image_size[0]
                         id = window["-FRAME HIGHLIGHT BAR-"].draw_rectangle((frame_loc, 7), (frame_loc+1, 0), fill_color='red', line_color="red")
@@ -1195,41 +1206,41 @@ if __name__ == '__main__':
             
         if event == "-LEFT FRAME-":
             try:
-                index = highlight_frames_iter.index(current_frame)
+                index = highlight.index(current_frame)
                 index = index - 1
             except:
                 index = 0
 
             if index < 0:
-                index = len(highlight_frames_iter) - 1
+                index = len(highlight) - 1
             
-            if len(highlight_frames_iter) == 0:
+            if len(highlight) == 0:
                 current_frame = None
             else:
-                current_frame = highlight_frames_iter[index]
+                current_frame = highlight[index]
                 window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
                 current_frame_mark = display_frame(current_frame)
                 window["-SCRUB BAR-"].update(value=current_frame)
-                window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight_frames_iter)))
+                window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight)))
 
         if event == "-RIGHT FRAME-":
             try:
-                index = highlight_frames_iter.index(current_frame)
+                index = highlight.index(current_frame)
                 index = index + 1
             except:
                 index = 0
 
-            if index > len(highlight_frames_iter) - 1:
+            if index > len(highlight) - 1:
                 index = 0
             
-            if len(highlight_frames_iter) == 0:
+            if len(highlight) == 0:
                 current_frame = None
             else:
-                current_frame = highlight_frames_iter[index]
+                current_frame = highlight[index]
                 window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
                 current_frame_mark = display_frame(current_frame)
                 window["-SCRUB BAR-"].update(value=current_frame)
-                window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight_frames_iter)))
+                window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight)))
 
 
         #video events
@@ -1238,7 +1249,7 @@ if __name__ == '__main__':
             current_frame = int(values['-SCRUB BAR-'])
             window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
             current_frame_mark = display_frame(current_frame)
-            window["-SELECTED FRAMES-"].update(value="Not one of the "+str(len(highlight_frames_iter)) + " selected keyframes")
+            window["-SELECTED FRAMES-"].update(value="Not one of the "+str(len(highlight)) + " selected keyframes")
 
         
 
