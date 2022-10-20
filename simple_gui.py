@@ -120,7 +120,7 @@ def get_main_layout():
     right_column = [[sg.Text('Computed metrics:')],
     [sg.HSep()],
     [sg.HSep()],
-    [sg.Multiline("", expand_x=True, expand_y=True, disabled=True, size=(20,25), key="-COMPUTED METRICS-")]
+    [sg.Multiline("", expand_x=True, expand_y=True, disabled=True, size=(20,38), key="-COMPUTED METRICS-")]
     
     ]
 
@@ -497,17 +497,18 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
 
 def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type):
     ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
+    
     for key in range(len(data)):
         vals_plot_0 = data[key][0]
         vals_plot_1 = data[key][1]
-        max_x_0 = max([point[0] for point in vals_plot_0])
-        max_y_0 = max([point[1] for point in vals_plot_0])
-        min_x_0 = min([point[0] for point in vals_plot_0])
-        min_y_0 = min([point[1] for point in vals_plot_0])
-        max_x_1 = max([point[0] for point in vals_plot_1])
-        max_y_1 = max([point[1] for point in vals_plot_1])
-        min_x_1 = min([point[0] for point in vals_plot_1])
-        min_y_1 = min([point[1] for point in vals_plot_1])
+        max_x_0 = max([vals_plot_0[key_point][0] for key_point in vals_plot_0])
+        max_y_0 = max([vals_plot_0[key_point][1] for key_point in vals_plot_0])
+        min_x_0 = min([vals_plot_0[key_point][0] for key_point in vals_plot_0])
+        min_y_0 = min([vals_plot_0[key_point][1] for key_point in vals_plot_0])
+        max_x_1 = max([vals_plot_1[key_point][0] for key_point in vals_plot_1])
+        max_y_1 = max([vals_plot_1[key_point][1] for key_point in vals_plot_1])
+        min_x_1 = min([vals_plot_1[key_point][0] for key_point in vals_plot_1])
+        min_y_1 = min([vals_plot_1[key_point][1] for key_point in vals_plot_1])
         
         if ax_lims[0] < max_x_0:
             ax_lims[0] = max_x_0
@@ -534,7 +535,7 @@ def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type)
             plot_data = data[key]
             line_color = colors[key]
             for plot in range(len(plot_data)):
-                np_data = np.array(plot_data[plot])
+                np_data = np.array(list(plot_data[plot].values()))
                 y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
                 if len(y_peaks[0]) > 0:
                     #print("I found ", len(y_peaks[0]), " weird peaks in plot #", plot, " of relative pos over time at ", y_peaks)
@@ -573,9 +574,12 @@ def read_frame_files(file_loc):
         file_list = os.listdir(file_loc+'/video_frames')
     except:
         file_list = []
-    frames = [(file_loc+'/video_frames/'+val) for val in file_list if val.lower().endswith((".jpg")) or val.lower().endswith((".png"))]
+    file_list = [val for val in file_list if val.lower().endswith((".jpg")) or val.lower().endswith((".png"))]
+    frames = [(file_loc+'/video_frames/'+val) for val in file_list]
     frames.sort()
-    keys= [int(filename[filename.rfind('/')+1:][filename[filename.rfind('/')+1:].find('0'):filename[filename.rfind('/')+1:].find('0')+filename[filename.rfind('/')+1:][filename[filename.rfind('/')+1:].find('0'):].find('.')]) for filename in frames]
+    file_list.sort()
+    
+    keys= [ int(filename[filename.find('_')+1:filename.find('_')+1+filename[filename.find('_')+1:].find('.')]) -1 for filename in file_list]
     
     frames_dict = {keys[i]: frames[i] for i in range(len(keys))}
     
