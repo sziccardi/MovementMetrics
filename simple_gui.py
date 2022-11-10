@@ -3,6 +3,7 @@ import os.path
 import json
 
 import movement_metrics as mm
+import scipy.signal as signal
 import numpy as np
 import scipy.signal as signal
 import math
@@ -12,11 +13,15 @@ import io
 
 from enum import Enum
 
-graph_size = (475, 325)
-long_graph_size = (980, 200)
+graph_size = (520, 325)
+long_graph_size = (1020, 200)
 image_size = (475, 350)
 global frame_size
 frame_size = (1280, 720)
+font = 'Ariel'
+font_size_heading = 16
+font_size_subheading = 12
+font_size_regular = 10
 colors = ["blue", "orange", "olivedrab", "slategrey", "purple", "red", "salmon", "light blue"]
 window = None
 
@@ -27,96 +32,68 @@ class GraphType(Enum):
 
 def get_main_layout():
     left_column = [
-        [sg.Text("Plot Settings")],
+        [sg.Text("Plot Settings", font=(font, font_size_heading, 'bold'))],
         [sg.HSep()],
         [sg.HSep()],
-        [sg.Text('Currently selected:', key="-SELECTED FILE-")],
-        #[sg.Text(key="-SELECTED FILE-", size=(30,1), enable_events=False, visible=False)], 
-        #[sg.Button(button_text='Browse New', size=(23,1),enable_events=True,key="-NEW VIDEO BUTTON-"), sg.Image(data=processing_gif, size=(2,2), key="-PROCESSING GIF-", visible=False)], 
-        [sg.Button(button_text='Browse Existing', size=(30,1),enable_events=True,key="-EXISTING VIDEO BUTTON-")],
+        [sg.Text('Video to analyze:', font=(font, font_size_subheading), key="-SELECTED FILE-")],
+        [sg.Button(button_text='Browse', size=(25,1),enable_events=True,key="-EXISTING VIDEO BUTTON-")],
         [sg.HSep()],
-        [sg.Text('Track Points')],
-        [sg.Listbox( #'spine_top','spine_base','hip_right','knee_right','ankle_right','hip_left',
-        #'knee_left','ankle_left','eye_right','eye_left','ear_right','ear_left','big_toe_left',
-        #'little_toe_left','heel_left','big_toe_right','little_toe_right','heel_right',,'palm_left',
-        #'thumb_base_left','thumb_1_left','thumb_2_left','thumb_tip_left','pointer_base_left',
-        #'pointer_1_left','pointer_2_left','pointer_tip_left','middle_base_left','middle_1_left',
-        #'middle_2_left','middle_tip_left','ring_base_left','ring_1_left','ring_2_left','ring_tip_left',
-        #'pinky_base_left','pinky_1_left','pinky_2_left','pinky_tip_left','palm_right','thumb_base_right',
-        #'thumb_1_right','thumb_2_right','thumb_tip_right','pointer_base_right','pointer_1_right',
-        #'pointer_2_right','pointer_tip_right','middle_base_right','middle_1_right','middle_2_right',
-        #'middle_tip_right','ring_base_right','ring_1_right','ring_2_right','ring_tip_right',
-        #'pinky_base_right','pinky_1_right','pinky_2_right','pinky_tip_right'
-        values=['head','shoulder_right','elbow_right','wrist_right','shoulder_left',
-        'elbow_left','wrist_left'], enable_events=True, 
-            size=(30,5), key="-TRACK POINT LIST-", select_mode='multiple'
+        [sg.Text('Track Points', font=(font, font_size_subheading))],
+        [sg.Listbox(values=['head','shoulder_right','elbow_right','wrist_right','shoulder_left',
+        'elbow_left','wrist_left'], font=(font, font_size_regular), enable_events=True, 
+            size=(26,7), key="-TRACK POINT LIST-", select_mode='multiple'
         )], 
-        # [sg.HSep()],
-        # [sg.Text('Available Plot Types')],
-        # [ 
-        #     sg.Listbox(
-        #         #"point cloud", "centroid of motion", "position spectrum", "distance from center", 
-        #         #"normalized distance from center", "speed over time", "velocity over time"
-        #         #"relative position", "relative position over time", "movement heatmap", "angles over time", "angle histogram"
-        #         values=["relative position", "relative angles"], 
-        #         enable_events=True, size=(30,5), key="-PLOT LIST-"
-        #     )
-        # ],
         [sg.HSep()],
-        [sg.Text('Script settings')],
+        [sg.Text('Script settings', font=(font, font_size_heading, 'bold'))],
         [sg.HSep()],
         [sg.HSep()],
-        [sg.Text("Camera frame rate")],
-        [sg.InputText("30", size=(5,1), key="-FPS-"), sg.Text("FPS")],
+        [sg.Text("Camera frame rate", font=(font, font_size_subheading))],
+        [sg.InputText("30", font=(font, font_size_regular), size=(5,1), key="-FPS-"), sg.Text("FPS", font=(font, font_size_regular))],
         [sg.HSep()],
-        [sg.Text("Number of Pixels that make up 1 meter")],
-        [sg.Text("*If blank, plot units are pixels*")],
-        [sg.InputText(size=(8,1), key="-PIX SCALE-"), sg.Text("Pixels")],
+        [sg.Text("Pixels to Meters", font=(font, font_size_subheading))],
+        [sg.Text("*If blank, plot units are pixels*", font=(font, font_size_subheading))],
+        [sg.InputText(size=(8,1), key="-PIX SCALE-", font=(font, font_size_regular)), sg.Text("Pixels", font=(font, font_size_regular))],
         [sg.HSep()],
-        [sg.Text("Smoothing amount or Convolution size")],
-        [sg.InputText("1", size=(5,1), key="-CONV WIDTH-"), sg.Text("Frames")],
+        [sg.Text("Smoothing amount", font=(font, font_size_subheading))],
+        [sg.InputText("1", font=(font, font_size_regular), size=(5,1), key="-CONV WIDTH-"), sg.Text("Frames", font=(font, font_size_regular))],
         [sg.HSep()],
-        [sg.Button(button_text='PLOT', size=(30,1),enable_events=True,key="-RUN SCRIPT-", visible=False)],
+        [sg.Button(button_text='PLOT', font=(font, font_size_subheading), size=(15,1),enable_events=True,key="-RUN SCRIPT-", visible=False)],
         ]
 
     image_column = [
-        [sg.Text("Processed video will show up here", key="-IMAGE TITLE-")],
+        [sg.Text("Processed video will show up here", font=(font, font_size_subheading), key="-IMAGE TITLE-")],
         [sg.Image(filename="placeholder.png", size=image_size, key='-FRAME IMAGE-')],
         [sg.Graph(canvas_size=(image_size[0],7), graph_bottom_left=(0, 0), graph_top_right=(image_size[0], 5), change_submits=True, drag_submits=True, background_color="white", float_values = True, key="-FRAME HIGHLIGHT BAR-")],
         [sg.Slider(range=(0, 100), default_value=0, disable_number_display=True, orientation='horizontal', size=(53,7), key="-SCRUB BAR-", visible=False, enable_events=True)],
-        [sg.Button(button_text='Prev Key Frame', enable_events=True, key="-LEFT FRAME-"), sg.Button(button_text='Next Key Frame', enable_events=True, key="-RIGHT FRAME-")],
-        [sg.Text("", key="-SELECTED FRAMES-")],
+        [sg.Button(button_text='Prev Key Frame', font=(font, font_size_regular), enable_events=True, key="-LEFT FRAME-"),sg.Text("", key="-SELECTED FRAMES-", font=(font, font_size_regular)), sg.Button(button_text='Next Key Frame', font=(font, font_size_regular), enable_events=True, key="-RIGHT FRAME-")],
+        [sg.Text("And here", font=(font, font_size_subheading), justification = 'left', key="-OVER TIME PLOT TITLE-")],
     ]
 
     plot_column = [
-        [sg.Text("Plotted data will show up here", key="-GENERAL PLOT TITLE-")],
+        [sg.Text("Plotted data will show up here", font=(font, font_size_subheading), key="-GENERAL PLOT TITLE-")],
         [sg.Graph(canvas_size=graph_size, graph_bottom_left=(0, 0), graph_top_right=graph_size, background_color="white", float_values = True, key="-PLOT CANVAS-", change_submits=True, drag_submits=True)],
-        # [sg.Text("Export plots as:", key="-EXPORT TEXT 1-"), 
-        # sg.InputText(size=(20,1), key="-PLOT NAME-"), 
-        # sg.Text(".png", key="-EXPORT TEXT 2-"),
-        # sg.Button("Save Plot", key="-EXPORT PLOT-")]
+        [sg.Graph(canvas_size=(graph_size[0], 20), graph_bottom_left=(0, 0), graph_top_right=(graph_size[0]-95, 25), background_color="white", float_values = True, key="-PLOT LEGEND-")]
     ]
 
-    main_column = [[sg.Text('Plots')],
+    main_column = [[sg.Text('Plots', font=(font, font_size_heading, 'bold'))],
     [sg.HSep()],
     [sg.HSep()],
     [sg.Column(image_column, key="-FRAME COLUMN-", element_justification='c'), sg.Column(plot_column, key="-PLOT COLUMN-", element_justification='c')],
-    [sg.Graph(canvas_size=(graph_size[0]-95, 20), graph_bottom_left=(0, 0), graph_top_right=(graph_size[0]-95, 25), background_color="white", float_values = True, key="-PLOT LEGEND-"), sg.Text("And here", key="-OVER TIME PLOT TITLE-")],
     [sg.Graph(canvas_size=(long_graph_size[0], long_graph_size[1]), graph_bottom_left=(0, 0), graph_top_right=(long_graph_size[0], long_graph_size[1]), change_submits=True, drag_submits=True, background_color="white", float_values = True, key="-OVER TIME PLOT 1-")],
     [sg.Graph(canvas_size=(long_graph_size[0], long_graph_size[1]), graph_bottom_left=(0, 0), graph_top_right=(long_graph_size[0], long_graph_size[1]), change_submits=True, drag_submits=True, background_color="white", float_values = True, key="-OVER TIME PLOT 2-", visible=False)]   
     ]
-    right_column = [[sg.Text('Computed metrics:')],
+    right_column = [[sg.Text('Metrics:', font=(font, font_size_heading, 'bold'))],
     [sg.HSep()],
     [sg.HSep()],
-    [sg.Multiline("", expand_x=True, expand_y=True, disabled=True, size=(20,25), key="-COMPUTED METRICS-")]
+    [sg.Multiline("", font=(font, font_size_regular), expand_x=True, expand_y=True, disabled=True, size=(20,38), key="-COMPUTED METRICS-")]
     
     ]
 
     layout = [
         [
-            sg.Column(left_column, key="-MAIN OPTIONS COL-", size=(250, 650)),
+            sg.Column(left_column, key="-MAIN OPTIONS COL-", size=(210, 650)),
             sg.VSeperator(),
-            sg.Column(main_column, key="-MAIN PLOT DISPLAY-", size=(1000, 650)),
+            sg.Column(main_column, key="-MAIN PLOT DISPLAY-", size=(1040, 650)),
             sg.VSeperator(),
             sg.Column(right_column, key="-MAIN SCRIPT SETTINGS-", size=(150,650))
         ]
@@ -280,70 +257,59 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
     #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
     ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
     for key in range(len(data)):
-        vals_plot_0 = data[key]
+        vals_plot_0 = list(data[key].values())
 
-        max_x = max([point[0] for point in vals_plot_0])
-        max_y = max([point[1] for point in vals_plot_0])
-        min_x = min([point[0] for point in vals_plot_0])
-        min_y = min([point[1] for point in vals_plot_0])
-        
-        if ax_lims[0] < max_x:
-            ax_lims[0] = max_x
-        if ax_lims[2] < max_y:
-            ax_lims[2] = max_y
-        if ax_lims[4] > min_x:
-            ax_lims[4] = min_x
-        if ax_lims[6] > min_y:
-            ax_lims[6] = min_y
+    max_x = max([point[0] for point in vals_plot_0])
+    max_y = max([point[1] for point in vals_plot_0])
+    min_x = min([point[0] for point in vals_plot_0])
+    min_y = min([point[1] for point in vals_plot_0])
+    
+    if ax_lims[0] < max_x:
+        ax_lims[0] = max_x
+    if ax_lims[2] < max_y:
+        ax_lims[2] = max_y
+    if ax_lims[4] > min_x:
+        ax_lims[4] = min_x
+    if ax_lims[6] > min_y:
+        ax_lims[6] = min_y
 
+    conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
+    
     dot_size = draw_axes(graph, ax_lims, axes_labels, True)
     #color_select = random.sample(colors, len(data))
     if graph_type == GraphType.LINE_GRAPH: #must be angles over time
         for key in range(len(data)):
-            print("")
-            print("data shape: (", len(data), ", ", len(data[key]), ", ", len(data[key][0]), ")")
-            y_peaks = mm.getPeaks(data[key][:][1], 30)
+            np_data = np.array(list(data[key].values()))
+            y_peaks = signal.find_peaks(np_data[:,1], threshold=30.0)
             if len(y_peaks[0]) > 0:
-                print("I found ", len(y_peaks[0]), " weird peaks in angle over time at ", y_peaks)
+                #print("I found ", len(y_peaks[0]), " weird peaks in the y values of point cloud at ", y_peaks)
                 for peak in y_peaks[0]:
-                    if peak > 0 and peak < len(data[key][:][1])-1:
-                        print("peak is ", data[key][peak][1])
-                        print("neighbors are ", data[key][peak-1][1], " and ", data[key][peak+1][1])
-                        val = (data[key][peak-1][1] + data[key][peak+1][1])/2.0
-                        print("so I am replacing ", data[key][peak][1], " with ", val)
+                    if peak > 0 and peak < np_data.shape[0]-1:
+                        #print("peak is ", np_data[peak,1])
+                        #print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
+                        val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
+                        #print("so I'm replacing ", np_data[peak,1], " with ", val)
                         data[key][peak][1] = val
-                y_peaks = mm.getPeaks(data[key][:][1], 30)
-                print("And after replacement I found ", len(y_peaks[0]), " weird peaks in the y values at ", y_peaks)
 
-            line_color = colors[key]
-            for point in range(len(data[key])-1):
-                if data[key][point][2] > mm.GetPlotSpecificInfo("angles over time")[0]:
-                    graph.draw_line((data[key][point][0], data[key][point][1]), (data[key][point+1][0], data[key][point+1][1]), width=dot_size, color=line_color)
+        line_color = colors[key]
+        for point in range(len(data[key])-1):
+            if data[key][point][2] > mm.GetPlotSpecificInfo("angles over time")[0]:
+                graph.draw_line((data[key][point][0], data[key][point][1]), (data[key][point+1][0], data[key][point+1][1]), width=dot_size, color=line_color)
     elif graph_type == GraphType.POINT_GRAPH: #must be point cloud
         for key in range(len(data)):
-            temp_thing = np.array(data[key])
-            x_peaks = signal.find_peaks(temp_thing[:,0], threshold=100.0)
+            np_data = np.array(list(data[key].values()))
+            x_peaks = signal.find_peaks(np_data[:,0], threshold=100.0)
             if len(x_peaks[0]) > 0:
-                print("")
-                print("I found ", len(x_peaks[0]), " weird peaks in the x values of point cloud at ", x_peaks)
                 for peak in x_peaks[0]:
-                    if peak > 0 and peak < temp_thing.shape[0]-1:
-                        print("peak is ", temp_thing[peak,0])
-                        print("neighbors are ", temp_thing[peak-1,0], " and ", temp_thing[peak+1,0])
-                        val = (temp_thing[peak-1,0] + temp_thing[peak+1,0])/2.0
-                        print("so I am replacing ", temp_thing[peak,0], " with ", val)
+                    if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
+                        val = (np_data[peak-1][0] + np_data[peak+1,0])/2.0
                         data[key][peak][0] = val
-            
-            y_peaks = signal.find_peaks(temp_thing[:,1], threshold=100.0)
+                
+            y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
             if len(y_peaks[0]) > 0:
-                print("")
-                print("I found ", len(y_peaks[0]), " weird peaks in the y values of point cloud at ", y_peaks)
                 for peak in y_peaks[0]:
-                    if peak > 0 and peak < temp_thing.shape[1]-1:
-                        print("peak at ", peak, " is ", temp_thing[peak,1])
-                        print("neighbors are ", temp_thing[peak-1,1], " and ", temp_thing[peak+1,1])
-                        val = (temp_thing[peak-1,1] + temp_thing[peak+1,1])/2.0
-                        print("so I'm replacing ", temp_thing[peak,1], " with ", val)
+                    if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
+                        val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
                         data[key][peak][1] = val
 
 
@@ -351,22 +317,22 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
                 if data[key][point][2] > mm.GetPlotSpecificInfo("relative position")[0]:
                     graph.draw_point((data[key][point][0], data[key][point][1]), dot_size, color=colors[key])
     
-        
     draw_legend(legend, data_labels, colors[:len(data)])
 
 def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type):
     ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
+    
     for key in range(len(data)):
         vals_plot_0 = data[key][0]
         vals_plot_1 = data[key][1]
-        max_x_0 = max([point[0] for point in vals_plot_0])
-        max_y_0 = max([point[1] for point in vals_plot_0])
-        min_x_0 = min([point[0] for point in vals_plot_0])
-        min_y_0 = min([point[1] for point in vals_plot_0])
-        max_x_1 = max([point[0] for point in vals_plot_1])
-        max_y_1 = max([point[1] for point in vals_plot_1])
-        min_x_1 = min([point[0] for point in vals_plot_1])
-        min_y_1 = min([point[1] for point in vals_plot_1])
+        max_x_0 = max([vals_plot_0[key_point][0] for key_point in vals_plot_0])
+        max_y_0 = max([vals_plot_0[key_point][1] for key_point in vals_plot_0])
+        min_x_0 = min([vals_plot_0[key_point][0] for key_point in vals_plot_0])
+        min_y_0 = min([vals_plot_0[key_point][1] for key_point in vals_plot_0])
+        max_x_1 = max([vals_plot_1[key_point][0] for key_point in vals_plot_1])
+        max_y_1 = max([vals_plot_1[key_point][1] for key_point in vals_plot_1])
+        min_x_1 = min([vals_plot_1[key_point][0] for key_point in vals_plot_1])
+        min_y_1 = min([vals_plot_1[key_point][1] for key_point in vals_plot_1])
         
         if ax_lims[0] < max_x_0:
             ax_lims[0] = max_x_0
@@ -387,29 +353,27 @@ def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type)
     
     dot_size = draw_axes(graphs[0], ax_lims, axes_labels[0], True)
     dot_size = draw_axes(graphs[1], ax_lims, axes_labels[1], True)
-
+    conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
     if graph_type == GraphType.LINE_GRAPH: # must be relative pos over time
         
         for key in range(len(data)):
             plot_data = data[key]
             line_color = colors[key]
             for plot in range(len(plot_data)):
-                temp_thing = np.array(plot_data[plot])
-                y_peaks = signal.find_peaks(temp_thing[:,1], threshold=30.0)
+                np_data = np.array(list(plot_data[plot].values()))
+                y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
                 if len(y_peaks[0]) > 0:
-                    print("I found ", len(y_peaks[0]), " weird peaks in plot #", plot, " of relative pos over time at ", y_peaks)
+                    #print("I found ", len(y_peaks[0]), " weird peaks in plot #", plot, " of relative pos over time at ", y_peaks)
                     for peak in y_peaks[0]:
-                        if peak > 0 and peak < temp_thing.shape[1]-1:
-                            print("peak is ", temp_thing[peak][1])
-                            print("neighbors are ", temp_thing[peak-1][1], " and ", temp_thing[peak+1][1])
-                            val = (temp_thing[peak-1][1] + temp_thing[peak+1][1])/2.0
-                            print("replacing ", temp_thing[peak][1], " with ", val)
-                            plot_data[plot][peak][1] = val
-                    # y_peaks = mm.getPeaks(plot_data[plot][:][1], 100)
-                    # print("And after replacement I found ", len(y_peaks[0]), " weird peaks in the y values at ", y_peaks)
-
+                        if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < len(np_data[:,1])-1:
+                            #print("peak is ", np_data[peak,1])
+                            #print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
+                            val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
+                            #print("replacing ", np_data[peak,1], " with ", val)
+                            plot_data[key][peak][1] = val
+                    
                 for point in range(len(plot_data[plot])-1):
-                    if plot_data[plot][point][2] > mm.GetPlotSpecificInfo("relative position over time")[0]:
+                    if np_data[point,2] > conf_thresh and np_data[point+1,2] > conf_thresh:
                         graphs[plot].draw_line((plot_data[plot][point][0], plot_data[plot][point][1]), (plot_data[plot][point+1][0], plot_data[plot][point+1][1]), color=line_color, width=dot_size)
     elif graph_type == GraphType.POINT_GRAPH: #not used anumore
         for key in range(len(data)):
@@ -428,9 +392,16 @@ def read_frame_files(file_loc):
         file_list = os.listdir(file_loc+'/video_frames')
     except:
         file_list = []
-    frames = [(file_loc+'/video_frames/'+val) for val in file_list if val.lower().endswith((".jpg")) or val.lower().endswith((".png"))]
+    file_list = [val for val in file_list if val.lower().endswith((".jpg")) or val.lower().endswith((".png"))]
+    frames = [(file_loc+'/video_frames/'+val) for val in file_list]
     frames.sort()
-    return frames
+    file_list.sort()
+    
+    keys= [ int(filename[filename.find('_')+1:filename.find('_')+1+filename[filename.find('_')+1:].find('.')]) -1 for filename in file_list]
+    
+    frames_dict = {keys[i]: frames[i] for i in range(len(keys))}
+    
+    return frames_dict
 
 def read_pose_files(file_loc):
     try:
@@ -533,26 +504,29 @@ def display_frame(i):
 
 
 def display_metrics(data, labels):
-
     total_track_point_text = ""
     fps = (float)(values["-FPS-"])
 
     for i, name in enumerate(labels):
-        np_data = np.array(data[i])
+        data_list = list(data[i].values())
+        np_data = np.array(data_list)
         temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[:,0], ("right" in name))
         total_track_point_text = total_track_point_text + "\n" + name + " : \n - crossed body midline " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
         
         temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[:,1], True)
         total_track_point_text = total_track_point_text + " - raised above shoulders " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
         
-        data_x_mean = mm.getMean(np_data[:,0])
-        data_y_mean = mm.getMean(np_data[:,1])
-        data_x_var = mm.getSTD(np_data[:,0])
-        data_y_var = mm.getSTD(np_data[:,1])
+        conf = mm.GetPlotSpecificInfo("relative position")[0]
+        data_filter = np_data[:,2] > conf
+
+        data_x_mean = mm.getMean(np_data[data_filter,0])
+        data_y_mean = mm.getMean(np_data[data_filter,1])
+        data_x_var = mm.getSTD(np_data[data_filter,0])
+        data_y_var = mm.getSTD(np_data[data_filter,1])
         total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
         total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
         
-        filter = np_data[:,2] > mm.GetPlotSpecificInfo("relative position")[0]
+        filter = np_data[:,2] > conf
         included = sum(filter)
         num_skipped = np_data[:,2].shape[0] - included
         selected = np_data[filter]
@@ -566,7 +540,7 @@ def display_metrics(data, labels):
 if __name__ == '__main__':
     
     current_layout = get_main_layout()
-    window = sg.Window(title="Bilateral Coordination Metric Viewer", layout=current_layout)
+    window = sg.Window(title="Bilateral Motion Analysis Toolkit (BMAT)", layout=current_layout)
     
     #mocap file select variables
     chosen_file = ''
@@ -575,7 +549,7 @@ if __name__ == '__main__':
     #mocap video frames
     current_frame = 0
     frames = []
-    highlight_frames_iter = []
+    highlight = []
     highlight_marks = []
     current_frame_mark = None
     
@@ -596,21 +570,16 @@ if __name__ == '__main__':
         if event == "Exit" or event == sg.WIN_CLOSED:
             break
         
-
         if event == "-EXISTING VIDEO BUTTON-":
-            old_chosen_file = chosen_file
             file_loc, chosen_file = display_file_select(chosen_file)
-            print(chosen_file)
-            if old_chosen_file == chosen_file and chosen_file != '':
-                print("Use the same files as last run")
-            else:
-                chosen_files.clear()
-                frames.clear()
-                chosen_files = read_pose_files(file_loc)
-                
-                frames = read_frame_files(file_loc)
-                if len(frames) == 0:
-                    print("WARNING: No video frames found for the selected folder.")
+            chosen_files.clear()
+            frames.clear()
+            chosen_files = read_pose_files(file_loc)
+            loc_name = file_loc[file_loc.rfind('/')+1:]
+            frames = read_frame_files(file_loc)
+            if len(frames) == 0:
+                print("WARNING: No video frames found for the selected folder.")
+            current_frame = list(frames.keys())[0]
 
             loc_name = file_loc[file_loc.rfind('/')+1:]
             window["-SELECTED FILE-"].update(value="Currently selected: " + loc_name, visible=True)
@@ -644,8 +613,8 @@ if __name__ == '__main__':
                 pix_scale = -1
             cov_w = (int)(values["-CONV WIDTH-"])
             
-            data1, labels1, ax_labels1 = mm.run_script_get_data(real_data, "relative position", track_points, fps, pix_scale, cov_w)
-            data2, labels2, ax_labels2 = mm.run_script_get_data(real_data, "relative position over time", track_points, fps, pix_scale, cov_w)
+            data1, labels1, ax_labels1 = mm.run_script_get_data(real_files, frame_size, "relative position", track_points, fps, pix_scale, cov_w)
+            data2, labels2, ax_labels2 = mm.run_script_get_data(real_files, frame_size, "relative position over time", track_points, fps, pix_scale, cov_w)
             display_metrics(data1, labels1)
 
             graph.Erase()
@@ -689,13 +658,15 @@ if __name__ == '__main__':
                 
 
         elif event.endswith('+UP'):  # The drawing has ended because mouse up
-            highlight_frames_iter.clear()
-            highlight_frames_iter = []
+            highlight.clear()
+            highlight = []
 
-            min_x = min(start_point[0], end_point[0])
-            max_x = max(start_point[0], end_point[0])
-            min_y = min(start_point[1], end_point[1])
-            max_y = max(start_point[1], end_point[1])
+            if start_point is not None and end_point is not None:
+
+                min_x = min(start_point[0], end_point[0])
+                max_x = max(start_point[0], end_point[0])
+                min_y = min(start_point[1], end_point[1])
+                max_y = max(start_point[1], end_point[1])
 
 
             plot_specfic_data1 = data1
@@ -713,98 +684,108 @@ if __name__ == '__main__':
                     if len(plot_specfic_data1[key]) > max_points:
                         max_points = len(plot_specfic_data1[key])
 
-            if plot_specfic_data2 is not None:
-                for key in range(len(plot_specfic_data2)):
-                    if len(plot_specfic_data2[key]) > max_points:
-                        max_points = len(plot_specfic_data2[key])
+                if plot_specfic_data2 is not None:
+                    for key in range(len(plot_specfic_data2)):
+                        if len(plot_specfic_data2[key]) > max_points:
+                            max_points = len(plot_specfic_data2[key])
 
-            highlight = [0 for i in range(max_points)]
-            
-            if prior_rect[0] == "-FRAME HIGHLIGHT BAR-":
-                min_frame = min_x / image_size[0]
-                min_frame = int(min_frame*len(frames))
-                print("min frame ", min_frame)
-
-                max_frame = max_x / image_size[0]
-                max_frame = int(max_frame*len(frames))
-                print("max frame ", max_frame)
-
-                highlight[min_frame:max_frame] = [1 for k in range(max_frame-min_frame)]
-            elif plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
-                for key in range(len(plot_specfic_data2)):
-                    for point in range(len(plot_specfic_data2[key])):
-                        if highlight[point] == 0 and plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x and plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y:
-                            highlight[point] = 1
-            elif plot_specfic_data1 is not None:
-                for key in range(len(plot_specfic_data1)):
-                    for point in range(len(plot_specfic_data1[key])):
-                        if highlight[point] == 0 and plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x and plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y:
-                            highlight[point] = 1
-            
-            
-            highlight_frames_iter = [i for i in range(max_points) if highlight[i]]
-
-            print(f"grabbed rectangle from {start_point} to {end_point}")
-            start_point, end_point = None, None  # enable grabbing a new rect
-            dragging = False
-            
-            if len(highlight_frames_iter) > 0:
-                current_frame = highlight_frames_iter[0]
-                window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
-                current_frame_mark = display_frame(current_frame)
-                window["-SCRUB BAR-"].update(value=current_frame)
-                window["-SELECTED FRAMES-"].update(value="Selected keyframe 1 / "+str(len(highlight_frames_iter)))
                 
-                for mark_i in highlight_marks:
-                    window["-FRAME HIGHLIGHT BAR-"].delete_figure(mark_i)
-                highlight_marks.clear()
-                window["-FRAME HIGHLIGHT BAR-"].Erase()
-                for frame_i in highlight_frames_iter:
-                    frame_loc = frame_i / len(frames)
-                    frame_loc = frame_loc * image_size[0]
-                    id = window["-FRAME HIGHLIGHT BAR-"].draw_rectangle((frame_loc, 7), (frame_loc+1, 0), fill_color='red', line_color="red")
-                    highlight_marks.append(id)
-            else:
-                window["-SELECTED FRAMES-"].update(value="No keyframes selected")
+                #highlight = [0 for i in range(max_points)]
+                conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
+                if prior_rect[0] == "-FRAME HIGHLIGHT BAR-":
+                    min_frame = min_x / image_size[0]
+                    min_frame = int(min_frame*len(frames))
+                    print("min frame ", min_frame)
+
+                    max_frame = max_x / image_size[0]
+                    max_frame = int(max_frame*len(frames))
+                    print("max frame ", max_frame)
+
+                    highlight = list(frames.keys())[min_frame:max_frame]
+                elif plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
+                    frame_list = list(frames.keys())
+                    for key in range(len(plot_specfic_data2)):
+                        for point in range(len(plot_specfic_data2[key])):
+                            conf = plot_specfic_data2[key][point][2] > conf_thresh
+                            within_x = plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x
+                            within_y = plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y
+                            if conf and within_x and within_y:
+                                highlight.append(frame_list[point])
+                elif plot_specfic_data1 is not None:
+                    frame_list = list(frames.keys())
+                    for key in range(len(plot_specfic_data1)):
+                        for point in range(len(plot_specfic_data1[key])):
+                            conf = plot_specfic_data1[key][point][2] > conf_thresh
+                            within_x = plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x
+                            within_y = plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y
+                            if conf and within_x and within_y:
+                               highlight.append(frame_list[point])
+                
+                
+                #highlight_frames_iter = [i for i in range(max_points) if highlight[i]]
+
+                print(f"grabbed rectangle from {start_point} to {end_point}")
+                start_point, end_point = None, None  # enable grabbing a new rect
+                dragging = False
+                
+                if len(highlight) > 0:
+                    current_frame = highlight[0]
+                    print("CURRENT FRAME:", current_frame)
+                    window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
+                    current_frame_mark = display_frame(current_frame)
+                    window["-SCRUB BAR-"].update(value=current_frame)
+                    window["-SELECTED FRAMES-"].update(value="Selected keyframe 1 / "+str(len(highlight)))
+                    
+                    for mark_i in highlight_marks:
+                        window["-FRAME HIGHLIGHT BAR-"].delete_figure(mark_i)
+                    highlight_marks.clear()
+                    window["-FRAME HIGHLIGHT BAR-"].Erase()
+                    for frame_i in highlight:
+                        frame_loc = frame_i / len(frames)
+                        frame_loc = frame_loc * image_size[0]
+                        id = window["-FRAME HIGHLIGHT BAR-"].draw_rectangle((frame_loc, 7), (frame_loc+1, 0), fill_color='red', line_color="red")
+                        highlight_marks.append(id)
+                else:
+                    window["-SELECTED FRAMES-"].update(value="No keyframes selected")
             
             
         if event == "-LEFT FRAME-":
             try:
-                index = highlight_frames_iter.index(current_frame)
+                index = highlight.index(current_frame)
                 index = index - 1
             except:
                 index = 0
 
             if index < 0:
-                index = len(highlight_frames_iter) - 1
+                index = len(highlight) - 1
             
-            if len(highlight_frames_iter) == 0:
+            if len(highlight) == 0:
                 current_frame = None
             else:
-                current_frame = highlight_frames_iter[index]
+                current_frame = highlight[index]
                 window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
                 current_frame_mark = display_frame(current_frame)
                 window["-SCRUB BAR-"].update(value=current_frame)
-                window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight_frames_iter)))
+                window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight)))
 
         if event == "-RIGHT FRAME-":
             try:
-                index = highlight_frames_iter.index(current_frame)
+                index = highlight.index(current_frame)
                 index = index + 1
             except:
                 index = 0
 
-            if index > len(highlight_frames_iter) - 1:
+            if index > len(highlight) - 1:
                 index = 0
             
-            if len(highlight_frames_iter) == 0:
+            if len(highlight) == 0:
                 current_frame = None
             else:
-                current_frame = highlight_frames_iter[index]
+                current_frame = highlight[index]
                 window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
                 current_frame_mark = display_frame(current_frame)
                 window["-SCRUB BAR-"].update(value=current_frame)
-                window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight_frames_iter)))
+                window["-SELECTED FRAMES-"].update(value="Selected keyframe " + str(index + 1)+" / "+str(len(highlight)))
 
 
         #video events
@@ -813,7 +794,7 @@ if __name__ == '__main__':
             current_frame = int(values['-SCRUB BAR-'])
             window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
             current_frame_mark = display_frame(current_frame)
-            window["-SELECTED FRAMES-"].update(value="Not one of the "+str(len(highlight_frames_iter)) + " selected keyframes")
+            window["-SELECTED FRAMES-"].update(value="Not one of the "+str(len(highlight)) + " selected keyframes")
 
    
     window.close()
