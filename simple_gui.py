@@ -274,21 +274,16 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
         ax_lims[6] = min_y
 
     conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
-    
+
     dot_size = draw_axes(graph, ax_lims, axes_labels, True)
-    #color_select = random.sample(colors, len(data))
     if graph_type == GraphType.LINE_GRAPH: #must be angles over time
         for key in range(len(data)):
             np_data = np.array(list(data[key].values()))
             y_peaks = signal.find_peaks(np_data[:,1], threshold=30.0)
             if len(y_peaks[0]) > 0:
-                #print("I found ", len(y_peaks[0]), " weird peaks in the y values of point cloud at ", y_peaks)
                 for peak in y_peaks[0]:
                     if peak > 0 and peak < np_data.shape[0]-1:
-                        #print("peak is ", np_data[peak,1])
-                        #print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
                         val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
-                        #print("so I'm replacing ", np_data[peak,1], " with ", val)
                         data[key][peak][1] = val
 
         line_color = colors[key]
@@ -363,14 +358,10 @@ def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type)
                 np_data = np.array(list(plot_data[plot].values()))
                 y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
                 if len(y_peaks[0]) > 0:
-                    #print("I found ", len(y_peaks[0]), " weird peaks in plot #", plot, " of relative pos over time at ", y_peaks)
                     for peak in y_peaks[0]:
                         if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < len(np_data[:,1])-1:
-                            #print("peak is ", np_data[peak,1])
-                            #print("neighbors are ", np_data[peak-1,1], " and ", np_data[peak+1,1])
                             val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
-                            #print("replacing ", np_data[peak,1], " with ", val)
-                            plot_data[key][peak][1] = val
+                            plot_data[plot][peak][1] = val
                     
                 for point in range(len(plot_data[plot])-1):
                     if np_data[point,2] > conf_thresh and np_data[point+1,2] > conf_thresh:
@@ -419,10 +410,8 @@ def read_pose_data(files):
     y = []
     c = []
     for filename in files:
-        #print(filename)
         if ".json" in filename:
             with open(filename, 'r', encoding='utf-8') as f: 
-                #print("read " + filename)
                 lines = f.readlines()
                 json_file = json.loads(lines[0])
                 if len(json_file['people']) > 0:
@@ -690,7 +679,6 @@ if __name__ == '__main__':
                             max_points = len(plot_specfic_data2[key])
 
                 
-                #highlight = [0 for i in range(max_points)]
                 conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
                 if prior_rect[0] == "-FRAME HIGHLIGHT BAR-":
                     min_frame = min_x / image_size[0]
@@ -720,9 +708,6 @@ if __name__ == '__main__':
                             within_y = plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y
                             if conf and within_x and within_y:
                                highlight.append(frame_list[point])
-                
-                
-                #highlight_frames_iter = [i for i in range(max_points) if highlight[i]]
 
                 print(f"grabbed rectangle from {start_point} to {end_point}")
                 start_point, end_point = None, None  # enable grabbing a new rect
