@@ -65,7 +65,6 @@ def ReadDataFromList(files, img_size):
     y = []
     c = []
     for filename in files:
-        #print(filename)
         if ".json" in filename:
             with open(filename, 'r', encoding='utf-8') as f: 
                 #print("read " + filename)
@@ -76,12 +75,19 @@ def ReadDataFromList(files, img_size):
                     person_i = 0
                     dist_from_cent = 2000
                     max_keypoints = 0
+
+                    data_array = json_file['people'][person_i]['pose_keypoints_2d']
+                    x_pose = data_array[::3]
+                    y_pose = [700 - x for x in data_array[1::3]]
+                    c_pose = data_array[2::3]
+
                     for person in range(len(json_file['people'])):
-                        new_num = len(json_file['people'][person]['pose_keypoints_2d'])
-                        if new_num > max_keypoints:
-                            max_keypoints = new_num
+                        filter = np.array(c_pose) < conf_filter
+                        new_num = np.sum(filter)
+                        if min(8,new_num) > max_keypoints:
+                            max_keypoints = min(8,new_num)
                             person_i = person
-                        elif new_num == max_keypoints and new_num > 1:
+                        else:
                             x_dif = img_size[0]/2.0 - json_file['people'][person]['pose_keypoints_2d'][0]
                             y_dif = img_size[1]/2.0 - json_file['people'][person]['pose_keypoints_2d'][1]
                             new_len = math.sqrt(x_dif*x_dif + y_dif*y_dif)
@@ -89,11 +95,6 @@ def ReadDataFromList(files, img_size):
                                 dist_from_cent = new_len
                                 person_i = person
                     
-                    data_array = json_file['people'][person_i]['pose_keypoints_2d']
-                    x_pose = data_array[::3]
-                    y_pose = [700 - x for x in data_array[1::3]]
-                    c_pose = data_array[2::3]
-
                     #flipped left and right to respect participant left/right vs frame left/right
                     data_array = json_file['people'][person_i]['hand_left_keypoints_2d'] 
                     x_right_hand = data_array[::3]
@@ -120,10 +121,9 @@ def ReadDataFromList(files, img_size):
                 else:
                     c = [0 for i in range(len(x))]
 
-                start_val = filename.find('0')
-                end_val = filename[start_val:].find("_")
-                n = int(filename[start_val:start_val+end_val])
-
+                end_val = filename.find("_keypoints.json")
+                start_val = filename[:end_val].rfind("_")
+                n = int(filename[start_val+1:end_val])
                 vals[n] = [x,y,c]
 
     print("read in ", len(vals))
