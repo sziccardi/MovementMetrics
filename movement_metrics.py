@@ -154,19 +154,9 @@ def getValueCrossedCounts(data, less_than, lim):
 
 #Plotting
 # [frame, x/y/c, keypoint]
-def GetRelativePositionData(data, keypoints, video_pix_per_m):
+def GetRelativePositionData(data, keypoints):
     data_list = list(data.values())
     np_vals = np.array(data_list)
-
-    axes_labels = []
-    scale = 1.0
-    if video_pix_per_m > 0:
-        scale = video_pix_per_m
-        axes_labels.append("x Position (m)")
-        axes_labels.append("y Position (m)")
-    else:
-        axes_labels.append("x Position (pixel)")
-        axes_labels.append("y Position (pixel)")
         
     int_arg = stoi_map['spine_top'] - 1
     mid_x = np_vals[:,0,int_arg]
@@ -177,8 +167,8 @@ def GetRelativePositionData(data, keypoints, video_pix_per_m):
         start_iter = (point - 1)
             
         selected = np_vals[:,:,start_iter]
-        selected[:,0] = (selected[:,0] - mid_x) / scale
-        selected[:,1] = (selected[:,1] - mid_y) / scale
+        selected[:,0] = (selected[:,0] - mid_x)
+        selected[:,1] = (selected[:,1] - mid_y)
         
         key_list = list(data.keys())
         dict_processed_data = {key_list[i]: selected[i] for i in range(len(key_list))}
@@ -188,21 +178,11 @@ def GetRelativePositionData(data, keypoints, video_pix_per_m):
         labels.append(itos_map[point])
 
     
-    return processed_data, labels, axes_labels
+    return processed_data, labels
 
-def GetRelativePositionOverTimeData(data, keypoints, fps, video_pix_per_m, vel_blocks):
+def GetRelativePositionOverTimeData(data, keypoints, fps, vel_blocks):
     data_list = list(data.values())
     np_vals = np.array(data_list)
-
-    axes_labels = []
-    scale = 1.0
-    if video_pix_per_m > 0:
-        scale = video_pix_per_m
-        axes_labels.append(["time (s)", "Horizontal position (m)"])
-        axes_labels.append(["time (s)", "Vertical position (m)"])
-    else:
-        axes_labels.append(["time (s)", "Horizontal position (pixels)"])
-        axes_labels.append(["time (s)", "Vertical position (pixels)"])
         
     int_arg = stoi_map['spine_top'] - 1
     mid_x = np_vals[:,0,int_arg]
@@ -213,13 +193,8 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, video_pix_per_m, vel_b
         start_iter = (point - 1)
         
         selected = np_vals[:,:,start_iter]
-        selected[:,0] = (selected[:,0] - mid_x) / scale
-        selected[:,1] = (selected[:,1] - mid_y) / scale
-        
-        # z_x = np.abs(stats.zscore(selected[:,0]))
-        # z_y = np.abs(stats.zscore(selected[:,1]))
-        # select = [(a < 3) and (b < 3) for a, b in zip(z_x, z_y)]
-        # vals_cleaned = selected[select,:]
+        selected[:,0] = (selected[:,0] - mid_x)
+        selected[:,1] = (selected[:,1] - mid_y)
 
         rel_pos = selected[:,:2]
         ts = np.arange(0, len(rel_pos) / float(fps), 1.0 / float(fps))
@@ -237,13 +212,10 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, video_pix_per_m, vel_b
         temp.append(dict_vert)
 
         processed_data.append(temp)
-
-        #processed_data.append(np.column_stack((np.arange(0, len(rel_pos) / float(video_fps), 1.0 / float(video_fps))[:len(rel_pos)], rel_pos)))
-        #processed_data.append(rel_pos)
         
         labels.append(itos_map[point])
     
-    return processed_data, labels, axes_labels
+    return processed_data, labels
 
 
 def GetPlotSpecificInfo(plot_type):
@@ -252,20 +224,20 @@ def GetPlotSpecificInfo(plot_type):
     if plot_type_dict[plot_type] == PlotType.REL_POS:
         return [conf_filter]
 
-def run_script_get_data(frame_files, img_size, plot_type, keypoints, fps, pix_in_m, cov_width):
+def run_script_get_data(frame_files, img_size, plot_type, keypoints, fps, cov_width):
     real_keypoints = [stoi_map[k] for k in keypoints]
     data = ReadDataFromList(frame_files, img_size)
     print("running ", plot_type)
     processed_data = data_labels = ax_labels = None
     if plot_type_dict[plot_type] == PlotType.REL_POS:
-        processed_data, data_labels, ax_labels = GetRelativePositionData(data, real_keypoints, pix_in_m)
+        processed_data, data_labels = GetRelativePositionData(data, real_keypoints)
     elif plot_type_dict[plot_type] == PlotType.REL_POS_OVER_TIME:
-        processed_data, data_labels, ax_labels = GetRelativePositionOverTimeData(data, real_keypoints, fps, pix_in_m, cov_width)
+        processed_data, data_labels = GetRelativePositionOverTimeData(data, real_keypoints, fps, cov_width)
     
     if processed_data == None or data_labels == None:
         print("WARNING: Could not process data as provided.")
     
-    return processed_data, data_labels, ax_labels
+    return processed_data, data_labels
 
     
     

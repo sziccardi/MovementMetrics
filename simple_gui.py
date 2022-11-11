@@ -22,7 +22,8 @@ font = 'Ariel'
 font_size_heading = 16
 font_size_subheading = 12
 font_size_regular = 10
-colors = ["blue", "orange", "olivedrab", "slategrey", "purple", "red", "salmon", "light blue"]
+pix_scale = ''
+colors = ["MidnightBlue", "Orange2", "Cyan4","Maroon4","Chartreuse3","Gold","SteelBlue4"]
 window = None
 
 class GraphType(Enum):
@@ -35,7 +36,8 @@ def get_main_layout():
         [sg.Text("Plot Settings", font=(font, font_size_heading, 'bold'))],
         [sg.HSep()],
         [sg.HSep()],
-        [sg.Text('Video to analyze:', font=(font, font_size_subheading), key="-SELECTED FILE-")],
+        [sg.Text('Video to analyze:', font=(font, font_size_subheading), key="-SELECTED FILE LABEL-")],
+        [sg.Text('', font=(font, font_size_subheading), key="-SELECTED FILE-")],
         [sg.Button(button_text='Browse', size=(25,1),enable_events=True,key="-EXISTING VIDEO BUTTON-")],
         [sg.HSep()],
         [sg.Text('Track Points', font=(font, font_size_subheading))],
@@ -57,7 +59,7 @@ def get_main_layout():
         [sg.Text("Smoothing amount", font=(font, font_size_subheading))],
         [sg.InputText("1", font=(font, font_size_regular), size=(5,1), key="-CONV WIDTH-"), sg.Text("Frames", font=(font, font_size_regular))],
         [sg.HSep()],
-        [sg.Button(button_text='PLOT', font=(font, font_size_subheading), size=(15,1),enable_events=True,key="-RUN SCRIPT-", visible=False)],
+        [sg.Button(button_text='PLOT', font=(font, font_size_subheading), size=(25,1),enable_events=True,key="-RUN SCRIPT-", visible=False)],
         ]
 
     image_column = [
@@ -144,8 +146,36 @@ def display_file_select(chosen_file):
     sub_window.close()
     return file_loc, chosen_file
 
+def round_to_multiple(number, multiple):
+    return multiple * round(number / multiple)
+def get_rounding(number):
+    if number < 0.01:
+        return 0.01
+    elif number < 0.05:
+        return 0.05
+    elif number < 0.1:
+        return 0.1
+    elif number < 0.5:
+        return 0.5
+    elif number < 1:
+        return 1
+    elif number < 5:
+        return 5
+    elif number < 10:
+        return 10
+    elif number < 50:
+        return round_to_multiple(number,10)
+    elif number < 100:
+        return round_to_multiple(number,25)
+    elif number < 500:
+        return round_to_multiple(number,100)
+    elif number < 1000:
+        return round_to_multiple(number,250)
+    elif number < 5000:
+        return round_to_multiple(number,1000)
 
-def draw_axes(graph, ax_lims, axes_labels, scale_axes, custom_tick_count_x = None, custom_tick_count_y = None):
+#draw_axes(graphs[0], ax_lims, scale, axes_labels[0], 20, 4)
+def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_y = 10):
     #                    0        1        2        3        4        5        6        7
     #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
     x_min = min(ax_lims[4], ax_lims[5])
@@ -155,66 +185,56 @@ def draw_axes(graph, ax_lims, axes_labels, scale_axes, custom_tick_count_x = Non
 
     x_range = x_max - x_min
     y_range = y_max - y_min
-
-    if custom_tick_count_x:
-        x_tick_count = custom_tick_count_x
-    else:
-        x_tick_count = x_range/7.0
-        if x_range < 7:
-            x_tick_count = 1
-
-    if custom_tick_count_y:
-        y_tick_count = custom_tick_count_y
-    else:
-        y_tick_count = y_range/7.0
-        if y_range < 7:
-            y_tick_count = 1
     
-   
+    x_tick_spacing = x_range / float(tick_count_x)
+    rounding = get_rounding(x_tick_spacing)
+    x_tick_spacing = round_to_multiple(x_tick_spacing, rounding)
+    x_rounded_min = round_to_multiple(x_min, rounding) - x_tick_spacing
+    x_rounded_max = round_to_multiple(x_max, rounding) + x_tick_spacing
 
-    scaled_y_min = y_min 
-    scaled_x_min = x_min
-    scaled_y_max = y_max
-    scaled_x_max = x_max
-    if scale_axes:
-        scaled_y_min = y_min-y_tick_count
-        scaled_x_min = x_min-x_tick_count
-        scaled_y_max = y_max+y_tick_count
-        scaled_x_max = x_max+x_tick_count
-    
-    dot_size=1 #x_range/150
+    y_tick_spacing = y_range / float(tick_count_y)
+    rounding = get_rounding(y_tick_spacing)
+    y_tick_spacing = round_to_multiple(y_tick_spacing, rounding)
+    y_rounded_min = round_to_multiple(y_min, rounding) - y_tick_spacing
+    y_rounded_max = round_to_multiple(y_max, rounding) + y_tick_spacing
 
-    graph.change_coordinates((scaled_x_min, scaled_y_min),(scaled_x_max, scaled_y_max))
+
+    dot_size_x=x_tick_spacing/75.0
+    dot_size_y=y_tick_spacing/75.0
+
+    graph.change_coordinates((x_rounded_min, y_rounded_min),(x_rounded_max, y_rounded_max))
     
     #draw axes
-    ax_x_min = x_min if scaled_x_min > 0 else scaled_x_min
-    ax_x_max = x_max if scaled_x_max < 0 else scaled_x_max
-    ax_y_min = y_min if scaled_y_min > 0 else scaled_y_min
-    ax_y_max = y_max if scaled_y_max < 0 else scaled_y_max
-
     x_ax_label_pos = y_ax_label_pos = 0
     x_ax_label_anch = y_ax_label_anch = "center"
 
+    x_ax_min = min(x_tick_spacing, x_rounded_min)
+    x_ax_max = max(-1*x_tick_spacing, x_rounded_max)
+
+    y_ax_min = min(y_tick_spacing, y_rounded_min)
+    y_ax_max = max(-1*y_tick_spacing, y_rounded_max)
+
+
     label_angle = 0
-    if scaled_x_min > 0:
-        x_ax_label_pos = x_range/2 + ax_x_min
+    if x_rounded_min > 0:
+        x_ax_label_pos = x_range/2 + x_ax_min
     else:
-        if abs(scaled_x_min) > abs(scaled_x_max):
-            x_ax_label_pos = ax_x_min + x_range/75
+        if abs(x_rounded_min) > abs(x_rounded_max):
+            x_ax_label_pos = x_ax_min + x_range/75
             x_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
         else:
-            x_ax_label_pos = ax_x_max - x_range/75
+            x_ax_label_pos = x_ax_max - x_range/75
             x_ax_label_anch = sg.TEXT_LOCATION_TOP_RIGHT
 
-    if scaled_y_min > 0:
-        y_ax_label_pos = y_range/2 + ax_y_min
+    if y_rounded_min > 0:
+        y_ax_label_pos = y_range/2 + y_ax_min
         label_angle = 90
     else:
-        if abs(scaled_y_min) > abs(scaled_y_max):
-            y_ax_label_pos = ax_y_min + y_range/75
+        if abs(y_rounded_min) > abs(y_rounded_max):
+            y_ax_label_pos = y_ax_min + y_range/75
             y_ax_label_anch = sg.TEXT_LOCATION_BOTTOM_LEFT
         else:
-            y_ax_label_pos = ax_y_max - y_range/75
+            y_ax_label_pos = y_ax_max - y_range/75
             y_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
 
     h_tick_len = x_range/60.0
@@ -223,29 +243,26 @@ def draw_axes(graph, ax_lims, axes_labels, scale_axes, custom_tick_count_x = Non
     if label_angle != 0:
         x_shift = -4.5*h_tick_len
 
-    graph.draw_line(
-        (ax_x_min, max(0, scaled_y_min + y_tick_count)), 
-        (ax_x_max, max(0, scaled_y_min + y_tick_count)), color="black", width=dot_size*0.75) #x axis
+
+    graph.draw_line((x_ax_min, max(0, y_ax_min)), (x_ax_max, max(0, y_ax_min)), color="black", width=1) #x axis
         
-    for x in range(int(ax_x_min), int(ax_x_max), int(x_tick_count)):
-        graph.draw_line((x, max(0, scaled_y_min + y_tick_count)-v_tick_len), (x, max(0, scaled_y_min + y_tick_count)+v_tick_len))  #Draw a scale
+    for x in range(int(x_ax_min), int(x_ax_max), int(x_tick_spacing)):
+        graph.draw_line((x, max(0, y_ax_min + y_tick_spacing)-v_tick_len), (x, max(0, y_ax_min + y_tick_spacing)+v_tick_len))  #Draw a scale
         if x != 0:
-            graph.draw_text(str(x), (x, max(0, scaled_y_min + y_tick_count)-2.5*v_tick_len), color='black')  #Draw the value of the scale
+            graph.draw_text(str('%s' % float('%.2g' % (x/scale))), (x, max(0, y_ax_min + y_tick_spacing)-2.5*v_tick_len), color='black')  #Draw the value of the scale
     
-    graph.draw_text(axes_labels[0], (x_ax_label_pos, max(0, scaled_y_min + y_tick_count)-4.75*v_tick_len), text_location = x_ax_label_anch, color="black")
+    graph.draw_text(axes_labels[0], (x_ax_label_pos, max(0, y_ax_min + y_tick_spacing)-4.75*v_tick_len), text_location = x_ax_label_anch, color="black")
 
-    graph.draw_line(
-        (max(0, scaled_x_min + x_tick_count), ax_y_min), 
-        (max(0, scaled_x_min + x_tick_count), ax_y_max), color="black", width=dot_size*0.75) #y axis
+    graph.draw_line((max(0, x_ax_min), y_ax_min), (max(0, x_ax_min), y_ax_max), color="black", width=1) #y axis
 
     
-    for y in range(int(ax_y_min), int(ax_y_max), int(y_tick_count)):
-        graph.draw_line((max(0, scaled_x_min + x_tick_count)-h_tick_len, y), (max(0, scaled_x_min + x_tick_count)+h_tick_len, y))
+    for y in range(int(y_ax_min), int(y_ax_max), int(y_tick_spacing)):
+        graph.draw_line((max(0, x_ax_min + x_tick_spacing)-h_tick_len, y), (max(0, x_ax_min + x_tick_spacing)+h_tick_len, y))
         if y != 0:
-            graph.draw_text(str(y), (max(0, scaled_x_min + x_tick_count)-2.25*h_tick_len, y), color='black')
+            graph.draw_text(str('%s' % float('%.2g' % (y/scale))), (max(0, x_ax_min + x_tick_spacing)-2.25*h_tick_len, y), color='black')
     
-    graph.draw_text(axes_labels[1], (max(0, scaled_x_min + x_tick_count)+x_shift, y_ax_label_pos), angle=label_angle, text_location = y_ax_label_anch, color="black")
-    return dot_size
+    graph.draw_text(axes_labels[1], (max(0, x_ax_min + x_tick_spacing)+x_shift, y_ax_label_pos), angle=label_angle, text_location = y_ax_label_anch, color="black")
+    return (dot_size_x + dot_size_y) / 2.0
 
 def draw_legend(graph, labels, colors):
     for i, dot_color in enumerate(colors):
@@ -253,7 +270,7 @@ def draw_legend(graph, labels, colors):
         name = labels[i].replace("_", "\n")
         graph.draw_text(name, (25 + i*55, 0.5), font=("Arial", 6), text_location = sg.TEXT_LOCATION_BOTTOM_LEFT, color="black")
 
-def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type):
+def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_type):
     #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
     ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
     for key in range(len(data)):
@@ -273,9 +290,18 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
     if ax_lims[6] > min_y:
         ax_lims[6] = min_y
 
-    conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
+    scale = 1.0
+    axes_labels = []
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        axes_labels.append("x Position (m)")
+        axes_labels.append("y Position (m)")
+    else:
+        axes_labels.append("x Position (pixel)")
+        axes_labels.append("y Position (pixel)")
 
-    dot_size = draw_axes(graph, ax_lims, axes_labels, True)
+    conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
+    dot_size = draw_axes(graph, ax_lims, scale, axes_labels)
     if graph_type == GraphType.LINE_GRAPH: #must be angles over time
         for key in range(len(data)):
             np_data = np.array(list(data[key].values()))
@@ -314,7 +340,7 @@ def create_basic_plot(graph, data, data_labels, legend, axes_labels, graph_type)
     
     draw_legend(legend, data_labels, colors[:len(data)])
 
-def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type):
+def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
     ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
     
     for key in range(len(data)):
@@ -346,34 +372,40 @@ def create_two_plots(graphs, data, data_labels, legend, axes_labels, graph_type)
         if ax_lims[7] > min_y_1:
             ax_lims[7] = min_y_1
     
-    dot_size = draw_axes(graphs[0], ax_lims, axes_labels[0], True)
-    dot_size = draw_axes(graphs[1], ax_lims, axes_labels[1], True)
+    scale = 1.0
+    axes_labels = []
+    if video_pix_per_m > 0:
+        scale = video_pix_per_m
+        axes_labels.append(["time (s)", "Horizontal position (m)"])
+        axes_labels.append(["time (s)", "Vertical position (m)"])
+    else:
+        axes_labels.append(["time (s)", "Horizontal position (pixels)"])
+        axes_labels.append(["time (s)", "Vertical position (pixels)"])
+
+    dot_size = draw_axes(graphs[0], ax_lims, scale, axes_labels[0], 20, 4)
+    dot_size = draw_axes(graphs[1], ax_lims, scale, axes_labels[1], 20, 4)
     conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
-    if graph_type == GraphType.LINE_GRAPH: # must be relative pos over time
         
-        for key in range(len(data)):
-            plot_data = data[key]
-            line_color = colors[key]
-            for plot in range(len(plot_data)):
-                np_data = np.array(list(plot_data[plot].values()))
-                y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
-                if len(y_peaks[0]) > 0:
-                    for peak in y_peaks[0]:
-                        if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < len(np_data[:,1])-1:
-                            val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
-                            plot_data[plot][peak][1] = val
-                    
-                for point in range(len(plot_data[plot])-1):
-                    if np_data[point,2] > conf_thresh and np_data[point+1,2] > conf_thresh:
-                        graphs[plot].draw_line((plot_data[plot][point][0], plot_data[plot][point][1]), (plot_data[plot][point+1][0], plot_data[plot][point+1][1]), color=line_color, width=dot_size)
-    elif graph_type == GraphType.POINT_GRAPH: #not used anumore
-        for key in range(len(data)):
-            plot_data = data[key]
-            line_color = colors[key]
-            for plot in range(len(plot_data)):
-                for point in range(len(plot_data[plot])):
-                    if plot_data[plot][point][2] > mm.GetPlotSpecificInfo("relative position")[0]:
-                        graphs[plot].draw_point((plot_data[plot][point][0], plot_data[plot][point][1]), dot_size, color=line_color)
+    for key in range(len(data)):
+        plot_data = data[key]
+        line_color = colors[key]
+        for plot in range(len(plot_data)):
+            np_data = np.array(list(plot_data[plot].values()))
+            y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
+            if len(y_peaks[0]) > 0:
+                for peak in y_peaks[0]:
+                    if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < len(np_data[:,1])-1:
+                        val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
+                        plot_data[plot][peak][1] = val
+                
+            for point in range(len(plot_data[plot])-1):
+                if np_data[point,2] > conf_thresh and np_data[point+1,2] > conf_thresh:
+                    x1 = plot_data[plot][point][0]
+                    y1 = plot_data[plot][point][1]
+                    x2 = plot_data[plot][point+1][0]
+                    y2 = plot_data[plot][point+1][1]
+                    graphs[plot].draw_line((x1, y1), (x2, y2), color=line_color, width=dot_size)
+    
 
     draw_legend(legend, data_labels, colors[:len(data)])
 
@@ -527,6 +559,7 @@ def display_metrics(data, labels):
         print(total_track_point_text)
 
 if __name__ == '__main__':
+    sg.theme('LightBlue3')
     
     current_layout = get_main_layout()
     window = sg.Window(title="Bilateral Motion Analysis Toolkit (BMAT)", layout=current_layout)
@@ -571,7 +604,8 @@ if __name__ == '__main__':
             current_frame = list(frames.keys())[0]
 
             loc_name = file_loc[file_loc.rfind('/')+1:]
-            window["-SELECTED FILE-"].update(value="Currently selected: " + loc_name, visible=True)
+            window["-SELECTED FILE LABEL-"].update(value="Currently selected:", visible=True)
+            window["-SELECTED FILE-"].update(value=loc_name, visible=True)
             window.TKroot.attributes('-topmost', 1)
             window.TKroot.attributes('-topmost', 0)
 
@@ -595,15 +629,15 @@ if __name__ == '__main__':
                 window['-IMAGE TITLE-'].update(value="No video frames found")
             
             fps = (int)(values["-FPS-"])
-            pix_scale = ''
+            
             if values["-PIX SCALE-"] != '':
                 pix_scale = (float)(values["-PIX SCALE-"])
             else:
                 pix_scale = -1
             cov_w = (int)(values["-CONV WIDTH-"])
             
-            data1, labels1, ax_labels1 = mm.run_script_get_data(real_files, frame_size, "relative position", track_points, fps, pix_scale, cov_w)
-            data2, labels2, ax_labels2 = mm.run_script_get_data(real_files, frame_size, "relative position over time", track_points, fps, pix_scale, cov_w)
+            data1, labels1 = mm.run_script_get_data(real_files, frame_size, "relative position", track_points, fps, cov_w)
+            data2, labels2 = mm.run_script_get_data(real_files, frame_size, "relative position over time", track_points, fps, cov_w)
             display_metrics(data1, labels1)
 
             graph.Erase()
@@ -619,12 +653,18 @@ if __name__ == '__main__':
             window["-OVER TIME PLOT TITLE-"].update(value=title2)
             
             window["-PLOT CANVAS-"].set_size(graph_size)
-            create_basic_plot(graph, data1, labels1, window["-PLOT LEGEND-"], ax_labels1, GraphType.POINT_GRAPH)
+            #graph, data, scale, data_labels, legend, axes_labels, graph_type
+            scale = 1
+            if pix_scale > 0:
+                scale = pix_scale
+                #             graph, data, video_pix_per_m, data_labels, legend, graph_type
+            create_basic_plot(graph, data1, scale, labels1, window["-PLOT LEGEND-"], GraphType.POINT_GRAPH)
 
             window["-OVER TIME PLOT 2-"].update(visible=True)
             window["-OVER TIME PLOT 1-"].set_size((long_graph_size[0], long_graph_size[1]/2-3))
             window["-OVER TIME PLOT 2-"].set_size((long_graph_size[0], long_graph_size[1]/2-3))
-            create_two_plots([long_graph, long_graph2], data2, labels2, window["-PLOT LEGEND-"], ax_labels2, GraphType.LINE_GRAPH)
+            #                        graphs,            data, video_pix_per_m, data_labels, legend, axes_labels
+            create_two_plots([long_graph, long_graph2], data2, scale, labels2, window["-PLOT LEGEND-"])
 
     
         if len(chosen_files) > 0 and len(values["-TRACK POINT LIST-"]) > 0:
