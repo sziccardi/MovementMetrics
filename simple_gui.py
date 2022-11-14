@@ -176,12 +176,16 @@ def get_rounding(number):
 
 #draw_axes(graphs[0], ax_lims, scale, axes_labels[0], 20, 4)
 def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_y = 10):
-    #                    0        1        2        3        4        5        6        7
-    #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
-    x_min = min(ax_lims[4], ax_lims[5])
-    x_max = max(ax_lims[0], ax_lims[1])
-    y_min = min(ax_lims[6], ax_lims[7])
-    y_max = max(ax_lims[2], ax_lims[3])
+    #                    0     1      2      3
+    #ax_lims order = [x_max, y_max, x_min, y_min]
+    x_min = ax_lims[2]
+    x_max = ax_lims[0]
+    y_min = ax_lims[3]
+    y_max = ax_lims[1]
+    print(x_min)
+    print(x_max)
+    print(y_min)
+    print(y_max)
 
     x_range = x_max - x_min
     y_range = y_max - y_min
@@ -271,24 +275,29 @@ def draw_legend(graph, labels, colors):
         graph.draw_text(name, (25 + i*55, 0.5), font=("Arial", 6), text_location = sg.TEXT_LOCATION_BOTTOM_LEFT, color="black")
 
 def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_type):
-    #ax_lims order = [x_max_0, x_max_1, y_max_0, y_max_1, x_min_0, x_min_1, y_min_0, y_min_1]
-    ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
+    conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
+    #ax_lims order = [x_max, y_max, x_min, y_min]
+    ax_lims = [-10000, -10000, 10000, 10000]
+    all_np_data = []
     for key in range(len(data)):
-        vals_plot_0 = list(data[key].values())
+        np_data = np.array(list(data[key].values()))
+        conf_filter = np_data[:,2] > conf_thresh
+        max_x = np.max(np_data[conf_filter,0])
+        max_y = np.max(np_data[conf_filter,1])
+        min_x = np.min(np_data[conf_filter,0])
+        min_y = np.min(np_data[conf_filter,1])
+        if ax_lims[0] < max_x:
+            ax_lims[0] = max_x
+        if ax_lims[1] < max_y:
+            ax_lims[1] = max_y
+        if ax_lims[2] > min_x:
+            ax_lims[2] = min_x
+        if ax_lims[3] > min_y:
+            ax_lims[3] = min_y
+        all_np_data.append(np_data)
 
-    max_x = max([point[0] for point in vals_plot_0])
-    max_y = max([point[1] for point in vals_plot_0])
-    min_x = min([point[0] for point in vals_plot_0])
-    min_y = min([point[1] for point in vals_plot_0])
-    
-    if ax_lims[0] < max_x:
-        ax_lims[0] = max_x
-    if ax_lims[2] < max_y:
-        ax_lims[2] = max_y
-    if ax_lims[4] > min_x:
-        ax_lims[4] = min_x
-    if ax_lims[6] > min_y:
-        ax_lims[6] = min_y
+    print("create_basic_plot")
+    print(ax_lims)
 
     scale = 1.0
     axes_labels = []
@@ -300,11 +309,10 @@ def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_t
         axes_labels.append("x Position (pixel)")
         axes_labels.append("y Position (pixel)")
 
-    conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
     dot_size = draw_axes(graph, ax_lims, scale, axes_labels)
     if graph_type == GraphType.LINE_GRAPH: #must be angles over time
-        for key in range(len(data)):
-            np_data = np.array(list(data[key].values()))
+        for key in range(len(all_np_data)):
+            np_data = all_np_data[key]
             y_peaks = signal.find_peaks(np_data[:,1], threshold=30.0)
             if len(y_peaks[0]) > 0:
                 for peak in y_peaks[0]:
@@ -317,8 +325,8 @@ def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_t
             if data[key][point][2] > mm.GetPlotSpecificInfo("angles over time")[0]:
                 graph.draw_line((data[key][point][0], data[key][point][1]), (data[key][point+1][0], data[key][point+1][1]), width=dot_size, color=line_color)
     elif graph_type == GraphType.POINT_GRAPH: #must be point cloud
-        for key in range(len(data)):
-            np_data = np.array(list(data[key].values()))
+        for key in range(len(all_np_data)):
+            np_data = all_np_data[key]
             x_peaks = signal.find_peaks(np_data[:,0], threshold=100.0)
             if len(x_peaks[0]) > 0:
                 for peak in x_peaks[0]:
@@ -341,7 +349,8 @@ def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_t
     draw_legend(legend, data_labels, colors[:len(data)])
 
 def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
-    ax_lims = [-10000, -10000, -10000, -10000, 10000, 10000, 10000, 10000]
+    ax_lims_0 = [-10000, -10000, 10000, 10000]
+    ax_lims_1 = [-10000, -10000, 10000, 10000]
     
     for key in range(len(data)):
         vals_plot_0 = data[key][0]
@@ -355,22 +364,22 @@ def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
         min_x_1 = min([vals_plot_1[key_point][0] for key_point in vals_plot_1])
         min_y_1 = min([vals_plot_1[key_point][1] for key_point in vals_plot_1])
         
-        if ax_lims[0] < max_x_0:
-            ax_lims[0] = max_x_0
-        if ax_lims[2] < max_y_0:
-            ax_lims[2] = max_y_0
-        if ax_lims[4] > min_x_0:
-            ax_lims[4] = min_x_0
-        if ax_lims[6] > min_y_0:
-            ax_lims[6] = min_y_0
-        if ax_lims[1] < max_x_1:
-            ax_lims[1] = max_x_1
-        if ax_lims[3] < max_y_1:
-            ax_lims[3] = max_y_1
-        if ax_lims[5] > min_x_1:
-            ax_lims[5] = min_x_1
-        if ax_lims[7] > min_y_1:
-            ax_lims[7] = min_y_1
+        if ax_lims_0[0] < max_x_0:
+            ax_lims_0[0] = max_x_0
+        if ax_lims_0[1] < max_y_0:
+            ax_lims_0[1] = max_y_0
+        if ax_lims_0[2] > min_x_0:
+            ax_lims_0[2] = min_x_0
+        if ax_lims_0[3] > min_y_0:
+            ax_lims_0[3] = min_y_0
+        if ax_lims_1[0] < max_x_1:
+            ax_lims_1[0] = max_x_1
+        if ax_lims_1[1] < max_y_1:
+            ax_lims_1[1] = max_y_1
+        if ax_lims_1[2] > min_x_1:
+            ax_lims_1[2] = min_x_1
+        if ax_lims_1[3] > min_y_1:
+            ax_lims_1[3] = min_y_1
     
     scale = 1.0
     axes_labels = []
@@ -382,8 +391,8 @@ def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
         axes_labels.append(["time (s)", "Horizontal position (pixels)"])
         axes_labels.append(["time (s)", "Vertical position (pixels)"])
 
-    dot_size = draw_axes(graphs[0], ax_lims, scale, axes_labels[0], 20, 4)
-    dot_size = draw_axes(graphs[1], ax_lims, scale, axes_labels[1], 20, 4)
+    dot_size = draw_axes(graphs[0], ax_lims_0, scale, axes_labels[0], 20, 4)
+    dot_size = draw_axes(graphs[1], ax_lims_1, scale, axes_labels[1], 20, 4)
     conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
         
     for key in range(len(data)):
@@ -559,7 +568,7 @@ def display_metrics(data, labels):
         print(total_track_point_text)
 
 if __name__ == '__main__':
-    sg.theme('LightBlue3')
+    sg.theme('DarkTeal12')
     
     current_layout = get_main_layout()
     window = sg.Window(title="Bilateral Motion Analysis Toolkit (BMAT)", layout=current_layout)
