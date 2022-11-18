@@ -13,8 +13,8 @@ class PlotType(Enum):
     REL_POS_OVER_TIME = 2
 
 plot_type_dict = dict({"relative position":PlotType.REL_POS, "relative position over time":PlotType.REL_POS_OVER_TIME})
-keypoint_names = ['head','spine_top','shoulder_right','elbow_right','wrist_right','shoulder_left', 'elbow_left','wrist_left']
-keypoint_nums = list(np.arange(1,len(keypoint_names)+1))
+keypoint_names = ['nose', 'left mouth', 'right mouth',  'left shoulder', 'right shoulder',  'left elbow', 'right elbow','left wrist', 'right wrist', 'left pinky', 'right pinky', 'left index finger', 'right index finger', 'left thumb', 'right thumb']
+keypoint_nums = list(np.arange(0,len(keypoint_names)))
 stoi_map = dict(zip(keypoint_names, keypoint_nums))
 itos_map = dict(zip(keypoint_nums, keypoint_names))
 
@@ -25,77 +25,7 @@ box_w = 25
 bin_w = 10.0
 
 # ALL globals
-conf_filter = 0.5
-
-def ReadDataFromList(files, img_size):
-    vals = {}
-    x = []
-    y = []
-    c = []
-    for filename in files:
-        if ".json" in filename:
-            with open(filename, 'r', encoding='utf-8') as f: 
-                #print("read " + filename)
-                lines = f.readlines()
-                json_file = json.loads(lines[0])
-                if len(json_file['people']) > 0:
-                    # when multiple people are in the frame, only read the main one
-                    person_i = 0
-                    dist_from_cent = 2000
-                    max_keypoints = 0
-
-                    data_array = json_file['people'][person_i]['pose_keypoints_2d']
-                    x_pose = data_array[::3]
-                    y_pose = [700 - x for x in data_array[1::3]]
-                    c_pose = data_array[2::3]
-
-                    for person in range(len(json_file['people'])):
-                        filter = np.array(c_pose) < conf_filter
-                        new_num = np.sum(filter)
-                        if min(8,new_num) > max_keypoints:
-                            max_keypoints = min(8,new_num)
-                            person_i = person
-                        else:
-                            x_dif = img_size[0]/2.0 - json_file['people'][person]['pose_keypoints_2d'][0]
-                            y_dif = img_size[1]/2.0 - json_file['people'][person]['pose_keypoints_2d'][1]
-                            new_len = math.sqrt(x_dif*x_dif + y_dif*y_dif)
-                            if new_len < dist_from_cent:
-                                dist_from_cent = new_len
-                                person_i = person
-                    
-                    #flipped left and right to respect participant left/right vs frame left/right
-                    data_array = json_file['people'][person_i]['hand_left_keypoints_2d'] 
-                    x_right_hand = data_array[::3]
-                    y_right_hand = [700 - x for x in data_array[1::3]]
-                    c_right_hand = data_array[2::3]
-
-                    data_array = json_file['people'][person_i]['hand_right_keypoints_2d']
-                    x_left_hand = data_array[::3]
-                    y_left_hand = [700 - x for x in data_array[1::3]]
-                    c_left_hand = data_array[2::3]
-
-                    x = []
-                    x.extend(x_pose)
-                    x.extend(x_right_hand)
-                    x.extend(x_left_hand)
-                    y = []
-                    y.extend(y_pose)
-                    y.extend(y_right_hand)
-                    y.extend(y_left_hand)
-                    c = []
-                    c.extend(c_pose)
-                    c.extend(c_right_hand)
-                    c.extend(c_left_hand)
-                else:
-                    c = [0 for i in range(len(x))]
-
-                end_val = filename.find("_keypoints.json")
-                start_val = filename[:end_val].rfind("_")
-                n = int(filename[start_val+1:end_val])
-                vals[n] = [x,y,c]
-
-    print("read in ", len(vals))
-    return vals
+conf_filter = 0.8
 
 
 #Metric helpers
@@ -153,18 +83,21 @@ def getValueCrossedCounts(data, less_than, lim):
 
 
 #Plotting
-# [frame, x/y/c, keypoint]
+# data[frame, x/y/z/v, keypoint]
 def GetRelativePositionData(data, keypoints):
+    print("GetRelativePositionData")
     data_list = list(data.values())
     np_vals = np.array(data_list)
         
-    int_arg = stoi_map['spine_top'] - 1
-    mid_x = np_vals[:,0,int_arg]
-    mid_y = np_vals[:,1,int_arg]
+    left_should = stoi_map['left shoulder']
+    right_should = stoi_map['right shoulder']
+    
+    mid_x = (np_vals[:,0,left_should] + np_vals[:,0,right_should]) / 2.0
+    mid_y = (np_vals[:,1,left_should] + np_vals[:,1,right_should]) / 2.0
+    mid_z = (np_vals[:,2,left_should] + np_vals[:,2,right_should]) / 2.0
     labels = []
     processed_data = []
-    for point in keypoints:
-        start_iter = (point - 1)
+    for start_iter in keypoints:
             
         selected = np_vals[:,:,start_iter]
         selected[:,0] = (selected[:,0] - mid_x)
@@ -175,47 +108,48 @@ def GetRelativePositionData(data, keypoints):
 
         processed_data.append(dict_processed_data)
         
-        labels.append(itos_map[point])
+        labels.append(itos_map[start_iter])
 
     
     return processed_data, labels
 
 def GetRelativePositionOverTimeData(data, keypoints, fps, vel_blocks):
+    print("GetRelativePositionOverTimeData")
     data_list = list(data.values())
     np_vals = np.array(data_list)
-        
-    int_arg = stoi_map['spine_top'] - 1
-    mid_x = np_vals[:,0,int_arg]
-    mid_y = np_vals[:,1,int_arg]
+    
+    left_should = stoi_map['left shoulder']
+    right_should = stoi_map['right shoulder']
+    mid_x = (np_vals[:,0,left_should] + np_vals[:,0,right_should]) / 2.0
+    mid_y = (np_vals[:,1,left_should] + np_vals[:,1,right_should]) / 2.0
+
     labels = []
-    processed_data = []
-    for point in keypoints:
-        start_iter = (point - 1)
+    processed_data_h = []
+    processed_data_v = []
+    for start_iter in keypoints:
         
         selected = np_vals[:,:,start_iter]
         selected[:,0] = (selected[:,0] - mid_x)
         selected[:,1] = (selected[:,1] - mid_y)
 
-        rel_pos = selected[:,:2]
+        rel_pos = selected[:,:3]
         ts = np.arange(0, len(rel_pos) / float(fps), 1.0 / float(fps))
         my_scale = min(len(ts), len(rel_pos))
-        temp = []
         avged_pos_x = np.convolve(selected[:my_scale,0], np.ones(vel_blocks), 'valid') / vel_blocks
         avged_pos_y = np.convolve(selected[:my_scale,1], np.ones(vel_blocks), 'valid') / vel_blocks
         
-        horiz = np.column_stack((ts[:len(avged_pos_x)], avged_pos_x, selected[:,2]))
+        horiz = np.column_stack((ts[:len(avged_pos_x)], avged_pos_x, selected[:,3]))
         key_list = list(data.keys())
         dict_horiz = {key_list[i]: horiz[i] for i in range(len(key_list))}
-        vert = np.column_stack((ts[:len(avged_pos_y)], avged_pos_y, selected[:,2]))
+        vert = np.column_stack((ts[:len(avged_pos_y)], avged_pos_y, selected[:,3]))
         dict_vert = {key_list[i]: vert[i] for i in range(len(key_list))}
-        temp.append(dict_horiz)
-        temp.append(dict_vert)
+        processed_data_h.append(dict_horiz)
+        processed_data_v.append(dict_vert)
 
-        processed_data.append(temp)
         
-        labels.append(itos_map[point])
+        labels.append(itos_map[start_iter])
     
-    return processed_data, labels
+    return [processed_data_h, processed_data_v], labels
 
 
 def GetPlotSpecificInfo(plot_type):
@@ -224,9 +158,9 @@ def GetPlotSpecificInfo(plot_type):
     if plot_type_dict[plot_type] == PlotType.REL_POS:
         return [conf_filter]
 
-def run_script_get_data(frame_files, img_size, plot_type, keypoints, fps, cov_width):
+def run_script_get_data(data, img_size, plot_type, keypoints, fps, cov_width):
     real_keypoints = [stoi_map[k] for k in keypoints]
-    data = ReadDataFromList(frame_files, img_size)
+    
     print("running ", plot_type)
     processed_data = data_labels = ax_labels = None
     if plot_type_dict[plot_type] == PlotType.REL_POS:

@@ -1,6 +1,6 @@
 import PySimpleGUI as sg
 import os.path
-import json
+import csv
 
 import movement_metrics as mm
 import scipy.signal as signal
@@ -41,8 +41,7 @@ def get_main_layout():
         [sg.Button(button_text='Browse', size=(25,1),enable_events=True,key="-EXISTING VIDEO BUTTON-")],
         [sg.HSep()],
         [sg.Text('Track Points', font=(font, font_size_subheading))],
-        [sg.Listbox(values=['head','shoulder_right','elbow_right','wrist_right','shoulder_left',
-        'elbow_left','wrist_left'], font=(font, font_size_regular), enable_events=True, 
+        [sg.Listbox(values=mm.keypoint_names, font=(font, font_size_regular), enable_events=True, 
             size=(26,7), key="-TRACK POINT LIST-", select_mode='multiple'
         )], 
         [sg.HSep()],
@@ -150,19 +149,19 @@ def round_to_multiple(number, multiple):
     return multiple * round(number / multiple)
 def get_rounding(number):
     if number < 0.01:
-        return 0.01
+        return round_to_multiple(number,0.005)
     elif number < 0.05:
-        return 0.05
+        return round_to_multiple(number,0.01)
     elif number < 0.1:
-        return 0.1
+        return round_to_multiple(number,0.05)
     elif number < 0.5:
-        return 0.5
+        return round_to_multiple(number,0.1)
     elif number < 1:
-        return 1
+        return round_to_multiple(number,0.5)
     elif number < 5:
-        return 5
+        return round_to_multiple(number,1)
     elif number < 10:
-        return 10
+        return round_to_multiple(number,5)
     elif number < 50:
         return round_to_multiple(number,10)
     elif number < 100:
@@ -182,10 +181,6 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
     x_max = ax_lims[0]
     y_min = ax_lims[3]
     y_max = ax_lims[1]
-    print(x_min)
-    print(x_max)
-    print(y_min)
-    print(y_max)
 
     x_range = x_max - x_min
     y_range = y_max - y_min
@@ -201,7 +196,6 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
     y_tick_spacing = round_to_multiple(y_tick_spacing, rounding)
     y_rounded_min = round_to_multiple(y_min, rounding) - y_tick_spacing
     y_rounded_max = round_to_multiple(y_max, rounding) + y_tick_spacing
-
 
     dot_size_x=x_tick_spacing/75.0
     dot_size_y=y_tick_spacing/75.0
@@ -271,7 +265,7 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
 def draw_legend(graph, labels, colors):
     for i, dot_color in enumerate(colors):
         graph.draw_point((15 + i*55, 12.5), 10, color=dot_color)
-        name = labels[i].replace("_", "\n")
+        name = labels[i]
         graph.draw_text(name, (25 + i*55, 0.5), font=("Arial", 6), text_location = sg.TEXT_LOCATION_BOTTOM_LEFT, color="black")
 
 def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_type):
@@ -281,7 +275,7 @@ def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_t
     all_np_data = []
     for key in range(len(data)):
         np_data = np.array(list(data[key].values()))
-        conf_filter = np_data[:,2] > conf_thresh
+        conf_filter = np_data[:,-1] > conf_thresh
         max_x = np.max(np_data[conf_filter,0])
         max_y = np.max(np_data[conf_filter,1])
         min_x = np.min(np_data[conf_filter,0])
@@ -296,8 +290,8 @@ def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_t
             ax_lims[3] = min_y
         all_np_data.append(np_data)
 
+
     print("create_basic_plot")
-    print(ax_lims)
 
     scale = 1.0
     axes_labels = []
@@ -322,7 +316,7 @@ def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_t
 
         line_color = colors[key]
         for point in range(len(data[key])-1):
-            if data[key][point][2] > mm.GetPlotSpecificInfo("angles over time")[0]:
+            if data[key][point][-1] > mm.GetPlotSpecificInfo("angles over time")[0]:
                 graph.draw_line((data[key][point][0], data[key][point][1]), (data[key][point+1][0], data[key][point+1][1]), width=dot_size, color=line_color)
     elif graph_type == GraphType.POINT_GRAPH: #must be point cloud
         for key in range(len(all_np_data)):
@@ -330,20 +324,20 @@ def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_t
             x_peaks = signal.find_peaks(np_data[:,0], threshold=100.0)
             if len(x_peaks[0]) > 0:
                 for peak in x_peaks[0]:
-                    if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
+                    if np_data[peak,-1] > conf_thresh and np_data[peak-1,-1] > conf_thresh and np_data[peak+1,-1] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
                         val = (np_data[peak-1][0] + np_data[peak+1,0])/2.0
                         data[key][peak][0] = val
                 
             y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
             if len(y_peaks[0]) > 0:
                 for peak in y_peaks[0]:
-                    if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
+                    if np_data[peak,-1] > conf_thresh and np_data[peak-1,-1] > conf_thresh and np_data[peak+1,-1] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
                         val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
                         data[key][peak][1] = val
 
 
             for point in range(len(data[key])):
-                if data[key][point][2] > mm.GetPlotSpecificInfo("relative position")[0]:
+                if data[key][point][-1] > mm.GetPlotSpecificInfo("relative position")[0]:
                     graph.draw_point((data[key][point][0], data[key][point][1]), dot_size, color=colors[key])
     
     draw_legend(legend, data_labels, colors[:len(data)])
@@ -352,9 +346,9 @@ def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
     ax_lims_0 = [-10000, -10000, 10000, 10000]
     ax_lims_1 = [-10000, -10000, 10000, 10000]
     
-    for key in range(len(data)):
-        vals_plot_0 = data[key][0]
-        vals_plot_1 = data[key][1]
+    for key in range(len(data_labels)):
+        vals_plot_0 = data[0][key]
+        vals_plot_1 = data[1][key]
         max_x_0 = max([vals_plot_0[key_point][0] for key_point in vals_plot_0])
         max_y_0 = max([vals_plot_0[key_point][1] for key_point in vals_plot_0])
         min_x_0 = min([vals_plot_0[key_point][0] for key_point in vals_plot_0])
@@ -394,29 +388,30 @@ def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
     dot_size = draw_axes(graphs[0], ax_lims_0, scale, axes_labels[0], 20, 4)
     dot_size = draw_axes(graphs[1], ax_lims_1, scale, axes_labels[1], 20, 4)
     conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
-        
-    for key in range(len(data)):
-        plot_data = data[key]
-        line_color = colors[key]
-        for plot in range(len(plot_data)):
-            np_data = np.array(list(plot_data[plot].values()))
+    
+    
+    for plot in range(len(data)):
+        plot_data = data[plot]
+        for key in range(len(plot_data)):
+            line_color = colors[key]
+            np_data = np.array(list(plot_data[key].values()))
             y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
             if len(y_peaks[0]) > 0:
                 for peak in y_peaks[0]:
-                    if np_data[peak,2] > conf_thresh and np_data[peak-1,2] > conf_thresh and np_data[peak+1,2] > conf_thresh and peak > 0 and peak < len(np_data[:,1])-1:
+                    if np_data[peak,-1] > conf_thresh and np_data[peak-1,-1] > conf_thresh and np_data[peak+1,-1] > conf_thresh and peak > 0 and peak < len(np_data[:,1])-1:
                         val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
-                        plot_data[plot][peak][1] = val
-                
-            for point in range(len(plot_data[plot])-1):
-                if np_data[point,2] > conf_thresh and np_data[point+1,2] > conf_thresh:
-                    x1 = plot_data[plot][point][0]
-                    y1 = plot_data[plot][point][1]
-                    x2 = plot_data[plot][point+1][0]
-                    y2 = plot_data[plot][point+1][1]
+                        plot_data[key][peak][1] = val
+            
+            for point in range(len(plot_data[key])-1):
+                if np_data[point,-1] > conf_thresh and np_data[point+1,-1] > conf_thresh:
+                    x1 = plot_data[key][point][0]
+                    y1 = plot_data[key][point][1]
+                    x2 = plot_data[key][point+1][0]
+                    y2 = plot_data[key][point+1][1]
                     graphs[plot].draw_line((x1, y1), (x2, y2), color=line_color, width=dot_size)
     
 
-    draw_legend(legend, data_labels, colors[:len(data)])
+    draw_legend(legend, data_labels, colors[:len(data[0])])
 
 
 def read_frame_files(file_loc):
@@ -435,75 +430,19 @@ def read_frame_files(file_loc):
     
     return frames_dict
 
-def read_pose_files(file_loc):
-    try:
-        file_list = os.listdir(file_loc+'/pose_info')
-    except:
-        file_list = []
-    
-    chosen_files = [val for val in file_list if val.lower().endswith((".json"))]
-    chosen_files = sorted(chosen_files)
-    return chosen_files
+def read_pose_data(filename):
+    vals = dict()
+    with open(filename) as file_obj:
+        
+        filereader = csv.reader(file_obj,quoting=csv.QUOTE_NONNUMERIC)
+        
+        for i, row in enumerate(filereader):
+            x_pose = [val * image_size[0] for val in row[::4]]
+            y_pose = [val * image_size[1] for val in row[1::4]]
+            z_pose = [val for val in row[2::4]]
+            v_pose = row[3::4]
 
-def read_pose_data(files):
-    vals =[]
-    x = []
-    y = []
-    c = []
-    for filename in files:
-        if ".json" in filename:
-            with open(filename, 'r', encoding='utf-8') as f: 
-                lines = f.readlines()
-                json_file = json.loads(lines[0])
-                if len(json_file['people']) > 0:
-                    # when multiple people are in the frame, only read the main one
-                    person_i = 0
-                    dist_from_cent = 0
-                    for person in range(len(json_file['people'])):
-                        # x distance of the right shoulder and the left shoulder
-                        # in theory the person in frame focus has the largest shoulder width
-                        x_dif = frame_size[0]/2.0 - json_file['people'][person]['pose_keypoints_2d'][0]
-                        y_dif = frame_size[1]/2.0 - json_file['people'][person]['pose_keypoints_2d'][1]
-                        if len(json_file['people'][person]['pose_keypoints_2d']) > 1:
-                            x_dif = frame_size[0]/2.0 - json_file['people'][person]['pose_keypoints_2d'][0]
-                            y_dif = frame_size[1]/2.0 - json_file['people'][person]['pose_keypoints_2d'][1]
-                            new_len = math.sqrt(x_dif*x_dif + y_dif*y_dif)
-                            if new_len < dist_from_cent:
-                                dist_from_cent = new_len
-                                person_i = person
-
-                    data_array = json_file['people'][person_i]['pose_keypoints_2d']
-                    x_pose = data_array[::3]
-                    y_pose = [700 - x for x in data_array[1::3]]
-                    c_pose = data_array[2::3]
-
-                    #flipped left and right to respect participant left/right vs frame left/right
-                    data_array = json_file['people'][person_i]['hand_left_keypoints_2d'] 
-                    x_right_hand = data_array[::3]
-                    y_right_hand = [700 - x for x in data_array[1::3]]
-                    c_right_hand = data_array[2::3]
-
-                    data_array = json_file['people'][person_i]['hand_right_keypoints_2d']
-                    x_left_hand = data_array[::3]
-                    y_left_hand = [700 - x for x in data_array[1::3]]
-                    c_left_hand = data_array[2::3]
-
-                    x = []
-                    x.extend(x_pose)
-                    x.extend(x_right_hand)
-                    x.extend(x_left_hand)
-                    y = []
-                    y.extend(y_pose)
-                    y.extend(y_right_hand)
-                    y.extend(y_left_hand)
-                    c = []
-                    c.extend(c_pose)
-                    c.extend(c_right_hand)
-                    c.extend(c_left_hand)
-                else:
-                    c = [0 for i in range(len(x))]
-
-                vals.append([x,y,c])
+            vals[i] = [x_pose,y_pose,z_pose,v_pose]
 
     return vals
 
@@ -534,9 +473,10 @@ def display_frame(i):
 
 
 def display_metrics(data, labels):
+    print("DISPLAY METRICS")
     total_track_point_text = ""
     fps = (float)(values["-FPS-"])
-
+    
     for i, name in enumerate(labels):
         data_list = list(data[i].values())
         np_data = np.array(data_list)
@@ -547,8 +487,8 @@ def display_metrics(data, labels):
         total_track_point_text = total_track_point_text + " - raised above shoulders " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
         
         conf = mm.GetPlotSpecificInfo("relative position")[0]
-        data_filter = np_data[:,2] > conf
-
+        data_filter = np_data[:,-1] > conf
+        
         data_x_mean = mm.getMean(np_data[data_filter,0])
         data_y_mean = mm.getMean(np_data[data_filter,1])
         data_x_var = mm.getSTD(np_data[data_filter,0])
@@ -556,16 +496,16 @@ def display_metrics(data, labels):
         total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
         total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
         
-        filter = np_data[:,2] > conf
+        filter = np_data[:,-1] > conf
         included = sum(filter)
-        num_skipped = np_data[:,2].shape[0] - included
+        num_skipped = np_data[:,-1].shape[0] - included
         selected = np_data[filter]
-        avg_conf = np.mean(selected[:,2])
+        avg_conf = np.mean(selected[:,-1])
         total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
         total_track_point_text = total_track_point_text + "Average confidence: "+str(round(avg_conf,2)) + "\n"
 
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
-        print(total_track_point_text)
+        #print(total_track_point_text)
 
 if __name__ == '__main__':
     sg.theme('DarkTeal12')
@@ -574,8 +514,8 @@ if __name__ == '__main__':
     window = sg.Window(title="Bilateral Motion Analysis Toolkit (BMAT)", layout=current_layout)
     
     #mocap file select variables
-    chosen_file = ''
-    chosen_files = []
+    pose_file = ''
+    pose_files = []
 
     #mocap video frames
     current_frame = 0
@@ -602,10 +542,9 @@ if __name__ == '__main__':
             break
         
         if event == "-EXISTING VIDEO BUTTON-":
-            file_loc, chosen_file = display_file_select(chosen_file)
-            chosen_files.clear()
+            file_loc, pose_file = display_file_select(pose_file)
             frames.clear()
-            chosen_files = read_pose_files(file_loc)
+            pose_file = file_loc+'/pose_info.csv'
             loc_name = file_loc[file_loc.rfind('/')+1:]
             frames = read_frame_files(file_loc)
             if len(frames) == 0:
@@ -622,8 +561,7 @@ if __name__ == '__main__':
         if event == "-RUN SCRIPT-":
             window['-COMPUTED METRICS-'].Widget.config(wrap='word')
             
-            real_files = [os.path.join(file_loc+'/pose_info', f) for f in chosen_files]
-            real_data = read_pose_data(real_files)
+            pose_data = read_pose_data(pose_file)
             
             track_points = values["-TRACK POINT LIST-"]
 
@@ -645,8 +583,8 @@ if __name__ == '__main__':
                 pix_scale = -1
             cov_w = (int)(values["-CONV WIDTH-"])
             
-            data1, labels1 = mm.run_script_get_data(real_files, frame_size, "relative position", track_points, fps, cov_w)
-            data2, labels2 = mm.run_script_get_data(real_files, frame_size, "relative position over time", track_points, fps, cov_w)
+            data1, labels1 = mm.run_script_get_data(pose_data, frame_size, "relative position", track_points, fps, cov_w)
+            data2, labels2 = mm.run_script_get_data(pose_data, frame_size, "relative position over time", track_points, fps, cov_w)
             display_metrics(data1, labels1)
 
             graph.Erase()
@@ -676,7 +614,7 @@ if __name__ == '__main__':
             create_two_plots([long_graph, long_graph2], data2, scale, labels2, window["-PLOT LEGEND-"])
 
     
-        if len(chosen_files) > 0 and len(values["-TRACK POINT LIST-"]) > 0:
+        if len(frames) > 0 and len(values["-TRACK POINT LIST-"]) > 0:
             window["-RUN SCRIPT-"].update(visible=True)
         else:
             window["-RUN SCRIPT-"].update(visible=False)
@@ -711,77 +649,69 @@ if __name__ == '__main__':
             plot_specfic_data2 = data2
             
             if prior_rect[0] == "-OVER TIME PLOT 1-":
-                plot_specfic_data2 = data2[0]
+                plot_specfic_data2 = plot_specfic_data2[0]
             elif prior_rect[0] == "-OVER TIME PLOT 2-":
-                plot_specfic_data2 = data2[1]
-            
-            max_points = 0
-            
-            if plot_specfic_data1 is not None:
+                plot_specfic_data2 = plot_specfic_data2[1]
+                
+            conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
+            if prior_rect[0] == "-FRAME HIGHLIGHT BAR-":
+                min_frame = min_x / image_size[0]
+                min_frame = int(min_frame*len(frames))
+                print("min frame ", min_frame)
+
+                max_frame = max_x / image_size[0]
+                max_frame = int(max_frame*len(frames))
+                print("max frame ", max_frame)
+
+                highlight = list(frames.keys())[min_frame:max_frame]
+
+            elif plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
+                
+                frame_list = list(frames.keys())
+                for key in range(len(plot_specfic_data2)):
+                    for point in range(len(plot_specfic_data2[key])):
+                        conf = plot_specfic_data2[key][point][-1] > conf_thresh
+                        within_x = plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x
+                        within_y = plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y
+                        if conf and within_x and within_y:
+                            print(plot_specfic_data2[key][point][-1])
+                            highlight.append(frame_list[point])
+            elif plot_specfic_data1 is not None:
+                frame_list = list(frames.keys())
                 for key in range(len(plot_specfic_data1)):
-                    if len(plot_specfic_data1[key]) > max_points:
-                        max_points = len(plot_specfic_data1[key])
+                    for point in range(len(plot_specfic_data1[key])):
+                        conf = plot_specfic_data1[key][point][-1] > conf_thresh
+                        within_x = plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x
+                        within_y = plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y
+                        
+                        if conf and within_x and within_y:
+                            print(plot_specfic_data1[key][point][-1])
+                            highlight.append(frame_list[point])
 
-                if plot_specfic_data2 is not None:
-                    for key in range(len(plot_specfic_data2)):
-                        if len(plot_specfic_data2[key]) > max_points:
-                            max_points = len(plot_specfic_data2[key])
-
-                
-                conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
-                if prior_rect[0] == "-FRAME HIGHLIGHT BAR-":
-                    min_frame = min_x / image_size[0]
-                    min_frame = int(min_frame*len(frames))
-                    print("min frame ", min_frame)
-
-                    max_frame = max_x / image_size[0]
-                    max_frame = int(max_frame*len(frames))
-                    print("max frame ", max_frame)
-
-                    highlight = list(frames.keys())[min_frame:max_frame]
-                elif plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
-                    frame_list = list(frames.keys())
-                    for key in range(len(plot_specfic_data2)):
-                        for point in range(len(plot_specfic_data2[key])):
-                            conf = plot_specfic_data2[key][point][2] > conf_thresh
-                            within_x = plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x
-                            within_y = plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y
-                            if conf and within_x and within_y:
-                                highlight.append(frame_list[point])
-                elif plot_specfic_data1 is not None:
-                    frame_list = list(frames.keys())
-                    for key in range(len(plot_specfic_data1)):
-                        for point in range(len(plot_specfic_data1[key])):
-                            conf = plot_specfic_data1[key][point][2] > conf_thresh
-                            within_x = plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x
-                            within_y = plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y
-                            if conf and within_x and within_y:
-                               highlight.append(frame_list[point])
-
-                print(f"grabbed rectangle from {start_point} to {end_point}")
-                start_point, end_point = None, None  # enable grabbing a new rect
-                dragging = False
-                
-                if len(highlight) > 0:
-                    current_frame = highlight[0]
-                    print("CURRENT FRAME:", current_frame)
-                    window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
-                    current_frame_mark = display_frame(current_frame)
-                    window["-SCRUB BAR-"].update(value=current_frame)
-                    window["-SELECTED FRAMES-"].update(value="Selected keyframe 1 / "+str(len(highlight)))
-                    
-                    for mark_i in highlight_marks:
-                        window["-FRAME HIGHLIGHT BAR-"].delete_figure(mark_i)
-                    highlight_marks.clear()
-                    window["-FRAME HIGHLIGHT BAR-"].Erase()
-                    for frame_i in highlight:
-                        frame_loc = frame_i / len(frames)
-                        frame_loc = frame_loc * image_size[0]
-                        id = window["-FRAME HIGHLIGHT BAR-"].draw_rectangle((frame_loc, 7), (frame_loc+1, 0), fill_color='red', line_color="red")
-                        highlight_marks.append(id)
-                else:
-                    window["-SELECTED FRAMES-"].update(value="No keyframes selected")
+            print(f"grabbed rectangle from {start_point} to {end_point}")
+            start_point, end_point = None, None  # enable grabbing a new rect
+            dragging = False
             
+            if len(highlight) > 0:
+                current_frame = highlight[0]
+                print("CURRENT FRAME:", current_frame)
+                window["-FRAME HIGHLIGHT BAR-"].delete_figure(current_frame_mark)
+                current_frame_mark = display_frame(current_frame)
+                window["-SCRUB BAR-"].update(value=current_frame)
+                window["-SELECTED FRAMES-"].update(value="Selected keyframe 1 / "+str(len(highlight)))
+                
+                for mark_i in highlight_marks:
+                    window["-FRAME HIGHLIGHT BAR-"].delete_figure(mark_i)
+                highlight_marks.clear()
+                window["-FRAME HIGHLIGHT BAR-"].Erase()
+                for frame_i in highlight:
+                    frame_loc = frame_i / len(frames)
+                    frame_loc = frame_loc * image_size[0]
+                    id = window["-FRAME HIGHLIGHT BAR-"].draw_rectangle((frame_loc, 7), (frame_loc+1, 0), fill_color='red', line_color="red")
+                    highlight_marks.append(id)
+            else:
+                window["-SELECTED FRAMES-"].update(value="No keyframes selected")
+        
             
         if event == "-LEFT FRAME-":
             try:
