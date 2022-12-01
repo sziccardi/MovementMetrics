@@ -6,7 +6,7 @@ import movement_metrics as mm
 import scipy.signal as signal
 import numpy as np
 import scipy.signal as signal
-import math
+from colour import Color
 
 from PIL import Image, ImageTk
 import io
@@ -23,12 +23,14 @@ font_size_heading = 16
 font_size_subheading = 12
 font_size_regular = 10
 pix_scale = ''
-colors = ["MidnightBlue", "Orange2", "Cyan4","Maroon4","Chartreuse3","Gold","SteelBlue4"]
+#colors = ["MidnightBlue", "Orange2", "Cyan4","Maroon4","Chartreuse3","Gold","SteelBlue4"]
+colors = ["#191a6c", "#f39706", "#008a8a", "#8d1b60", "#66cd02", "#fed700", "#396487"]
 window = None
 
 class GraphType(Enum):
     LINE_GRAPH = 0
     POINT_GRAPH = 1
+    HISTOGRAM = 3
 
 
 def get_main_layout():
@@ -45,17 +47,20 @@ def get_main_layout():
             size=(26,7), key="-TRACK POINT LIST-", select_mode='multiple'
         )], 
         [sg.HSep()],
+        [sg.Text('Available Plot Types')],
+        [ sg.Listbox(values=["relative position", "relative angles"],enable_events=True, size=(26,2), key="-PLOT LIST-")],
+        [sg.HSep()],
         [sg.Text('Script settings', font=(font, font_size_heading, 'bold'))],
         [sg.HSep()],
         [sg.HSep()],
-        [sg.Text("Camera frame rate", font=(font, font_size_subheading))],
+        # [sg.Text("Camera frame rate", font=(font, font_size_regular))],
         [sg.InputText("30", font=(font, font_size_regular), size=(5,1), key="-FPS-"), sg.Text("FPS", font=(font, font_size_regular))],
         [sg.HSep()],
-        [sg.Text("Pixels to Meters", font=(font, font_size_subheading))],
-        [sg.Text("*If blank, plot units are pixels*", font=(font, font_size_subheading))],
+        [sg.Text("Pixels to Meters", font=(font, font_size_regular))],
+        # [sg.Text("*If blank, plot units are pixels*", font=(font, font_size_subheading))],
         [sg.InputText(size=(8,1), key="-PIX SCALE-", font=(font, font_size_regular)), sg.Text("Pixels", font=(font, font_size_regular))],
         [sg.HSep()],
-        [sg.Text("Smoothing amount", font=(font, font_size_subheading))],
+        [sg.Text("Smoothing amount", font=(font, font_size_regular))],
         [sg.InputText("1", font=(font, font_size_regular), size=(5,1), key="-CONV WIDTH-"), sg.Text("Frames", font=(font, font_size_regular))],
         [sg.HSep()],
         [sg.Button(button_text='PLOT', font=(font, font_size_subheading), size=(25,1),enable_events=True,key="-RUN SCRIPT-", visible=False)],
@@ -173,14 +178,14 @@ def get_rounding(number):
     elif number < 5000:
         return round_to_multiple(number,1000)
 
-#draw_axes(graphs[0], ax_lims, scale, axes_labels[0], 20, 4)
+
 def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_y = 10):
     #                    0     1      2      3
     #ax_lims order = [x_max, y_max, x_min, y_min]
-    x_min = ax_lims[2]
-    x_max = ax_lims[0]
-    y_min = ax_lims[3]
-    y_max = ax_lims[1]
+    x_min = ax_lims[2] / scale
+    x_max = ax_lims[0] / scale
+    y_min = ax_lims[3] / scale
+    y_max = ax_lims[1] / scale
 
     x_range = x_max - x_min
     y_range = y_max - y_min
@@ -200,6 +205,7 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
     dot_size_x=x_tick_spacing/75.0
     dot_size_y=y_tick_spacing/75.0
 
+    print("setting coordinates to ", (x_rounded_min, y_rounded_min),", ", (x_rounded_max, y_rounded_max))
     graph.change_coordinates((x_rounded_min, y_rounded_min),(x_rounded_max, y_rounded_max))
     
     #draw axes
@@ -247,7 +253,7 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
     for x in range(int(x_ax_min), int(x_ax_max), int(x_tick_spacing)):
         graph.draw_line((x, max(0, y_ax_min + y_tick_spacing)-v_tick_len), (x, max(0, y_ax_min + y_tick_spacing)+v_tick_len))  #Draw a scale
         if x != 0:
-            graph.draw_text(str('%s' % float('%.2g' % (x/scale))), (x, max(0, y_ax_min + y_tick_spacing)-2.5*v_tick_len), color='black')  #Draw the value of the scale
+            graph.draw_text(str('%s' % float('%.2g' % (x))), (x, max(0, y_ax_min + y_tick_spacing)-2.5*v_tick_len), color='black')  #Draw the value of the scale
     
     graph.draw_text(axes_labels[0], (x_ax_label_pos, max(0, y_ax_min + y_tick_spacing)-4.75*v_tick_len), text_location = x_ax_label_anch, color="black")
 
@@ -257,7 +263,7 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
     for y in range(int(y_ax_min), int(y_ax_max), int(y_tick_spacing)):
         graph.draw_line((max(0, x_ax_min + x_tick_spacing)-h_tick_len, y), (max(0, x_ax_min + x_tick_spacing)+h_tick_len, y))
         if y != 0:
-            graph.draw_text(str('%s' % float('%.2g' % (y/scale))), (max(0, x_ax_min + x_tick_spacing)-2.25*h_tick_len, y), color='black')
+            graph.draw_text(str('%s' % float('%.2g' % (y))), (max(0, x_ax_min + x_tick_spacing)-2.25*h_tick_len, y), color='black')
     
     graph.draw_text(axes_labels[1], (max(0, x_ax_min + x_tick_spacing)+x_shift, y_ax_label_pos), angle=label_angle, text_location = y_ax_label_anch, color="black")
     return (dot_size_x + dot_size_y) / 2.0
@@ -271,75 +277,127 @@ def draw_legend(graph, labels, colors):
 def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_type):
     conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
     #ax_lims order = [x_max, y_max, x_min, y_min]
-    ax_lims = [-10000, -10000, 10000, 10000]
-    all_np_data = []
-    for key in range(len(data)):
-        np_data = np.array(list(data[key].values()))
-        conf_filter = np_data[:,-1] > conf_thresh
-        max_x = np.max(np_data[conf_filter,0])
-        max_y = np.max(np_data[conf_filter,1])
-        min_x = np.min(np_data[conf_filter,0])
-        min_y = np.min(np_data[conf_filter,1])
-        if ax_lims[0] < max_x:
-            ax_lims[0] = max_x
-        if ax_lims[1] < max_y:
-            ax_lims[1] = max_y
-        if ax_lims[2] > min_x:
-            ax_lims[2] = min_x
-        if ax_lims[3] > min_y:
-            ax_lims[3] = min_y
-        all_np_data.append(np_data)
-
-
     print("create_basic_plot")
+    if graph_type == GraphType.HISTOGRAM:
+        bin_w = mm.GetPlotSpecificInfo("relative angle histogram")[1]
+        ax_lims = [180, -10000, 0, 0]
+        #TODO: figure out data structure, key then box or box then key
+        for boxes in data:
+           if max(boxes) > ax_lims[1]:
+            ax_lims[1] = max(boxes)
 
-    scale = 1.0
-    axes_labels = []
-    if video_pix_per_m > 0:
-        scale = video_pix_per_m
-        axes_labels.append("x Position (m)")
-        axes_labels.append("y Position (m)")
-    else:
-        axes_labels.append("x Position (pixel)")
-        axes_labels.append("y Position (pixel)")
+        axes_labels = []
+        
+        axes_labels.append("Joint Angle (deg)")
+        axes_labels.append("Frequency of Occurance")
 
-    dot_size = draw_axes(graph, ax_lims, scale, axes_labels)
-    if graph_type == GraphType.LINE_GRAPH: #must be angles over time
-        for key in range(len(all_np_data)):
-            np_data = all_np_data[key]
-            y_peaks = signal.find_peaks(np_data[:,1], threshold=30.0)
-            if len(y_peaks[0]) > 0:
-                for peak in y_peaks[0]:
-                    if peak > 0 and peak < np_data.shape[0]-1:
-                        val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
-                        data[key][peak][1] = val
+        scale = 1.0
+        if video_pix_per_m > 0:
+            scale = video_pix_per_m
+            
+        dot_size = draw_axes(graph, ax_lims, scale, axes_labels, int(180.0/bin_w))
 
-        line_color = colors[key]
-        for point in range(len(data[key])-1):
-            if data[key][point][-1] > mm.GetPlotSpecificInfo("angles over time")[0]:
-                graph.draw_line((data[key][point][0], data[key][point][1]), (data[key][point+1][0], data[key][point+1][1]), width=dot_size, color=line_color)
-    elif graph_type == GraphType.POINT_GRAPH: #must be point cloud
-        for key in range(len(all_np_data)):
-            np_data = all_np_data[key]
-            x_peaks = signal.find_peaks(np_data[:,0], threshold=100.0)
-            if len(x_peaks[0]) > 0:
-                for peak in x_peaks[0]:
-                    if np_data[peak,-1] > conf_thresh and np_data[peak-1,-1] > conf_thresh and np_data[peak+1,-1] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
-                        val = (np_data[peak-1][0] + np_data[peak+1,0])/2.0
-                        data[key][peak][0] = val
+        np_data = np.array(data)
+        for bin_i in range(np_data.shape[1]):
+            keys = [i for i in range(np_data.shape[0])]
+            bin_data = np_data[:,bin_i]
+            sorted_keys = [x for _, x in sorted(zip(bin_data, keys))]
+            
+            start_point = bin_i*bin_w
+            # ordered colors smallest to largest height
+            sorted_colors = [Color(colors[key]).rgb for key in reversed(sorted_keys)]
+            for i,key in enumerate(sorted_keys):
                 
-            y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
-            if len(y_peaks[0]) > 0:
-                for peak in y_peaks[0]:
-                    if np_data[peak,-1] > conf_thresh and np_data[peak-1,-1] > conf_thresh and np_data[peak+1,-1] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
-                        val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
-                        data[key][peak][1] = val
+                #smallest rectangle has all the colors, largest has only 1
+                num_colors = len(sorted_keys) - i
+                my_color = (0.0,0.0,0.0)
+                for j in range(num_colors):
+                    curr_color = sorted_colors[j]
+                    my_color = (my_color[0] + (1.0/num_colors)*curr_color[0], my_color[1] + (1.0/num_colors)*curr_color[1], my_color[2] + (1.0/num_colors)*curr_color[2])
+                rect_bottom = 0
+                if i > 0:
+                    prev_key = sorted_keys[i-1]
+                    rect_bottom = np_data[prev_key][bin_i]
+                rect_top = np_data[key][bin_i]
+                
+                my_actual_color = Color(rgb=(my_color[0]*0.5+0.5, my_color[1]*0.5+0.5, my_color[2]*0.5+0.5))
+                graph.draw_rectangle((start_point, rect_top), (start_point + bin_w, rect_bottom), fill_color=my_actual_color.hex, line_color=my_actual_color.hex)
+    else:
+        ax_lims = [-10000, -10000, 10000, 10000]
+        all_np_data = []
+        print(len(data))
+        for key in range(len(data)):
+            np_data = np.array(list(data[key].values()))
+            conf_filter = np_data[:,-1] > conf_thresh
+            max_x = np.max(np_data[conf_filter,0])
+            max_y = np.max(np_data[conf_filter,1])
+            min_x = np.min(np_data[conf_filter,0])
+            min_y = np.min(np_data[conf_filter,1])
+            if ax_lims[0] < max_x:
+                ax_lims[0] = max_x
+            if ax_lims[1] < max_y:
+                ax_lims[1] = max_y
+            if ax_lims[2] > min_x:
+                ax_lims[2] = min_x
+            if ax_lims[3] > min_y:
+                ax_lims[3] = min_y
+            print(np_data.shape)
+            all_np_data.append(np_data)
+
+        scale = 1.0
+        axes_labels = []
+        if video_pix_per_m > 0:
+            scale = video_pix_per_m
+            axes_labels.append("x Position (m)")
+            axes_labels.append("y Position (m)")
+        else:
+            axes_labels.append("x Position (pixel)")
+            axes_labels.append("y Position (pixel)")
+
+        dot_size = draw_axes(graph, ax_lims, scale, axes_labels)
+        if graph_type == GraphType.LINE_GRAPH: #must be angles over time
+            print("finding peaks")
+            for key in range(len(all_np_data)):
+                print(key)
+                np_data = all_np_data[key]
+                y_peaks = signal.find_peaks(np_data[:,1], threshold=30.0)
+                if len(y_peaks[0]) > 0:
+                    for peak in y_peaks[0]:
+                        if peak > 0 and peak < np_data.shape[0]-1:
+                            val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
+                            np_data[peak,1] = val
+
+            print("drawing lines")
+            for key in range(len(all_np_data)):
+                line_color = colors[key]
+                print(key)
+                np_data = all_np_data[key]
+                for point in range(all_np_data[key].shape[0]-1):
+                    if np_data[point,-1] > conf_thresh and np_data[point+1,-1] > conf_thresh:
+                        graph.draw_line((np_data[point,0] / scale, np_data[point,1] / scale), (np_data[point+1,0] / scale, np_data[point+1,1]), width=dot_size, color=line_color)
+        elif graph_type == GraphType.POINT_GRAPH: #must be point cloud
+            for key in range(len(all_np_data)):
+                np_data = all_np_data[key]
+                x_peaks = signal.find_peaks(np_data[:,0], threshold=100.0)
+                if len(x_peaks[0]) > 0:
+                    for peak in x_peaks[0]:
+                        if np_data[peak,-1] > conf_thresh and np_data[peak-1,-1] > conf_thresh and np_data[peak+1,-1] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
+                            val = (np_data[peak-1,0] + np_data[peak+1,0])/2.0
+                            np_data[peak,0] = val
+                    
+                y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
+                if len(y_peaks[0]) > 0:
+                    for peak in y_peaks[0]:
+                        if np_data[peak,-1] > conf_thresh and np_data[peak-1,-1] > conf_thresh and np_data[peak+1,-1] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
+                            val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
+                            np_data[peak,1] = val
 
 
-            for point in range(len(data[key])):
-                if data[key][point][-1] > mm.GetPlotSpecificInfo("relative position")[0]:
-                    graph.draw_point((data[key][point][0], data[key][point][1]), dot_size, color=colors[key])
+                for point in range(len(data[key])):
+                    if np_data[point,-1] > conf_thresh:
+                        graph.draw_point((np_data[point,0] / scale, np_data[point,1] / scale), dot_size, color=colors[key])
     
+
     draw_legend(legend, data_labels, colors[:len(data)])
 
 def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
@@ -349,14 +407,14 @@ def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
     for key in range(len(data_labels)):
         vals_plot_0 = data[0][key]
         vals_plot_1 = data[1][key]
-        max_x_0 = max([vals_plot_0[key_point][0] for key_point in vals_plot_0])
-        max_y_0 = max([vals_plot_0[key_point][1] for key_point in vals_plot_0])
-        min_x_0 = min([vals_plot_0[key_point][0] for key_point in vals_plot_0])
-        min_y_0 = min([vals_plot_0[key_point][1] for key_point in vals_plot_0])
-        max_x_1 = max([vals_plot_1[key_point][0] for key_point in vals_plot_1])
-        max_y_1 = max([vals_plot_1[key_point][1] for key_point in vals_plot_1])
-        min_x_1 = min([vals_plot_1[key_point][0] for key_point in vals_plot_1])
-        min_y_1 = min([vals_plot_1[key_point][1] for key_point in vals_plot_1])
+        max_x_0 = max([vals_plot_0[key_point][0] for key_point in vals_plot_0]) / video_pix_per_m
+        max_y_0 = max([vals_plot_0[key_point][1] for key_point in vals_plot_0]) / video_pix_per_m
+        min_x_0 = min([vals_plot_0[key_point][0] for key_point in vals_plot_0]) / video_pix_per_m
+        min_y_0 = min([vals_plot_0[key_point][1] for key_point in vals_plot_0]) / video_pix_per_m
+        max_x_1 = max([vals_plot_1[key_point][0] for key_point in vals_plot_1]) / video_pix_per_m
+        max_y_1 = max([vals_plot_1[key_point][1] for key_point in vals_plot_1]) / video_pix_per_m
+        min_x_1 = min([vals_plot_1[key_point][0] for key_point in vals_plot_1]) / video_pix_per_m
+        min_y_1 = min([vals_plot_1[key_point][1] for key_point in vals_plot_1]) / video_pix_per_m
         
         if ax_lims_0[0] < max_x_0:
             ax_lims_0[0] = max_x_0
@@ -472,37 +530,60 @@ def display_frame(i):
     
 
 
-def display_metrics(data, labels):
+def display_metrics(data, labels, scale = 1, plot_type="relative position"):
     print("DISPLAY METRICS")
     total_track_point_text = ""
     fps = (float)(values["-FPS-"])
+
+    if scale < 0:
+        scale = 1
     
     for i, name in enumerate(labels):
-        data_list = list(data[i].values())
-        np_data = np.array(data_list)
-        temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[:,0], ("right" in name))
-        total_track_point_text = total_track_point_text + "\n" + name + " : \n - crossed body midline " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
-        
-        temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[:,1], True)
-        total_track_point_text = total_track_point_text + " - raised above shoulders " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
-        
-        conf = mm.GetPlotSpecificInfo("relative position")[0]
-        data_filter = np_data[:,-1] > conf
-        
-        data_x_mean = mm.getMean(np_data[data_filter,0])
-        data_y_mean = mm.getMean(np_data[data_filter,1])
-        data_x_var = mm.getSTD(np_data[data_filter,0])
-        data_y_var = mm.getSTD(np_data[data_filter,1])
-        total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
-        total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
-        
-        filter = np_data[:,-1] > conf
-        included = sum(filter)
-        num_skipped = np_data[:,-1].shape[0] - included
-        selected = np_data[filter]
-        avg_conf = np.mean(selected[:,-1])
-        total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
-        total_track_point_text = total_track_point_text + "Average confidence: "+str(round(avg_conf,2)) + "\n"
+        #data_list = list(data[i].values())
+        if "relative position" in plot_type:
+            dict_data = data[i]
+            np_data = np.array(list(dict_data.values()))
+            conf = mm.GetPlotSpecificInfo("relative position")[0]
+            data_filter = np_data[:,-1] > conf
+
+            temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[data_filter,0], ("right" in name))
+            total_track_point_text = total_track_point_text + "\n" + name + " : \n - crossed body midline " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
+            
+            temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[data_filter,1], True)
+            total_track_point_text = total_track_point_text + " - raised above shoulders " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
+            
+            
+            data_x_mean = mm.getMean(np_data[data_filter,0]) / scale
+            data_y_mean = mm.getMean(np_data[data_filter,1]) / scale
+            data_x_var = mm.getSTD(np_data[data_filter,0]) / scale
+            data_y_var = mm.getSTD(np_data[data_filter,1]) / scale
+            total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
+            total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
+            
+            included = sum(data_filter)
+            num_skipped = np_data[:,-1].shape[0] - included
+            selected = np_data[data_filter]
+            avg_conf = np.mean(selected[:,-1])
+            total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
+            total_track_point_text = total_track_point_text + "Average confidence: "+str(round(avg_conf,2)) + "\n"
+        elif "angle" in plot_type:
+            np_data = np.array(list(data[0][i].values()))
+            info = mm.GetPlotSpecificInfo("relative angle over time")
+            conf_thresh = info[0]
+            data_filter = np_data[:,-1] > conf_thresh
+            ext_thresh = info[1]
+            cont_thresh = info[2]
+            temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[data_filter,1], False, ext_thresh)
+            total_track_point_text = total_track_point_text + "\n" + name + " : \n - fully extended " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent fully extended\n"
+            
+            temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[data_filter,1], True, cont_thresh)
+            total_track_point_text = total_track_point_text + " - fully tucked  " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent tucked\n"
+            
+            data_mean = mm.getMean(np_data[data_filter,1])
+            data_var = mm.getSTD(np_data[data_filter,1])
+            
+            total_track_point_text = total_track_point_text + " - average angle is " + str(round(data_mean,2)) + "\n"
+            total_track_point_text = total_track_point_text + " - with std of "+ str(round(data_var,2)) + "\n"
 
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
         #print(total_track_point_text)
@@ -534,6 +615,7 @@ if __name__ == '__main__':
 
     #event loop
     file_loc = ""
+    data1 = labels1 = data2 = labels2 = title1 = title2 = None
     while current_layout:
         event, values = window.read()
         current_process = None
@@ -559,6 +641,7 @@ if __name__ == '__main__':
 
         #lets run plotting!
         if event == "-RUN SCRIPT-":
+            print("RUN SCRIPT")
             window['-COMPUTED METRICS-'].Widget.config(wrap='word')
             
             pose_data = read_pose_data(pose_file)
@@ -583,9 +666,29 @@ if __name__ == '__main__':
                 pix_scale = -1
             cov_w = (int)(values["-CONV WIDTH-"])
             
-            data1, labels1 = mm.run_script_get_data(pose_data, frame_size, "relative position", track_points, fps, cov_w)
-            data2, labels2 = mm.run_script_get_data(pose_data, frame_size, "relative position over time", track_points, fps, cov_w)
-            display_metrics(data1, labels1)
+            plot_type = values["-PLOT LIST-"]
+            
+            if plot_type[0] == "relative angles":
+                print("RUN SCRIPT RELATIVE ANGLES")
+                unallowed = ['nose', 'left mouth', 'right mouth','left pinky', 'right pinky', 'left index finger', 'right index finger', 'left thumb', 'right thumb']
+                cleaned_track_points = [x for x in track_points if x not in unallowed]
+
+                if len(cleaned_track_points) > 0:
+                    data1, labels1 = mm.run_script_get_data(pose_data, frame_size, "relative angle histogram", cleaned_track_points, fps, cov_w)
+                    data2, labels2 = mm.run_script_get_data(pose_data, frame_size, "relative angle over time", cleaned_track_points, fps, cov_w)
+                    display_metrics(data2, labels2, pix_scale, plot_type[0])
+
+                title1 = "RELATIVE ANGLE HISTOGRAM"
+                title2 = "RELATIVE ANGLES OVER TIME"
+            elif plot_type[0] == "relative position":
+                print("RUN SCRIPT RELATIVE POSITIONS")
+                data1, labels1 = mm.run_script_get_data(pose_data, frame_size, "relative position", track_points, fps, cov_w)
+                data2, labels2 = mm.run_script_get_data(pose_data, frame_size, "relative position over time", track_points, fps, cov_w)
+
+                display_metrics(data1, labels1, pix_scale, plot_type[0])
+
+                title1 = "RELATIVE POSITION POINT CLOUD"
+                title2 = "RELATIVE POSITIONS OVER TIME"
 
             graph.Erase()
             
@@ -593,28 +696,37 @@ if __name__ == '__main__':
             long_graph2.Erase()
             window["-PLOT LEGEND-"].Erase()
             
-            title1 = "RELATIVE POSITION POINT CLOUD"
-            title2 = "RELATIVE POSITIONS OVER TIME"
             
             window["-GENERAL PLOT TITLE-"].update(value=title1)
             window["-OVER TIME PLOT TITLE-"].update(value=title2)
             
             window["-PLOT CANVAS-"].set_size(graph_size)
-            #graph, data, scale, data_labels, legend, axes_labels, graph_type
+            
             scale = 1
             if pix_scale > 0:
                 scale = pix_scale
-                #             graph, data, video_pix_per_m, data_labels, legend, graph_type
-            create_basic_plot(graph, data1, scale, labels1, window["-PLOT LEGEND-"], GraphType.POINT_GRAPH)
+                
+            #PLOT 1
+            print(plot_type)
+            if plot_type[0] == "relative angles":
+                create_basic_plot(graph, data1, scale, labels1, window["-PLOT LEGEND-"], GraphType.HISTOGRAM)
+            elif plot_type[0] == "relative position":
+                create_basic_plot(graph, data1, scale, labels1, window["-PLOT LEGEND-"], GraphType.POINT_GRAPH)
 
-            window["-OVER TIME PLOT 2-"].update(visible=True)
-            window["-OVER TIME PLOT 1-"].set_size((long_graph_size[0], long_graph_size[1]/2-3))
-            window["-OVER TIME PLOT 2-"].set_size((long_graph_size[0], long_graph_size[1]/2-3))
-            #                        graphs,            data, video_pix_per_m, data_labels, legend, axes_labels
-            create_two_plots([long_graph, long_graph2], data2, scale, labels2, window["-PLOT LEGEND-"])
+            #PLOT 2
+            if plot_type[0] == "relative angles":
+                window["-OVER TIME PLOT 2-"].update(visible=False)
+                window["-OVER TIME PLOT 1-"].set_size((long_graph_size[0], long_graph_size[1]))
+                create_basic_plot(long_graph, data2[0], scale, labels2, window["-PLOT LEGEND-"], GraphType.LINE_GRAPH)
+            elif plot_type[0] == "relative position":
+                window["-OVER TIME PLOT 2-"].update(visible=True)
+                window["-OVER TIME PLOT 1-"].set_size((long_graph_size[0], long_graph_size[1]/2-3))
+                window["-OVER TIME PLOT 2-"].set_size((long_graph_size[0], long_graph_size[1]/2-3))
+                #                        graphs,            data, video_pix_per_m, data_labels, legend, axes_labels
+                create_two_plots([long_graph, long_graph2], data2, scale, labels2, window["-PLOT LEGEND-"])
 
     
-        if len(frames) > 0 and len(values["-TRACK POINT LIST-"]) > 0:
+        if len(frames) > 0 and len(values["-TRACK POINT LIST-"]) > 0 and len(values["-PLOT LIST-"]) > 0:
             window["-RUN SCRIPT-"].update(visible=True)
         else:
             window["-RUN SCRIPT-"].update(visible=False)
@@ -636,7 +748,7 @@ if __name__ == '__main__':
         elif event.endswith('+UP'):  # The drawing has ended because mouse up
             highlight.clear()
             highlight = []
-
+            
             if start_point is not None and end_point is not None:
 
                 min_x = min(start_point[0], end_point[0])
@@ -668,25 +780,40 @@ if __name__ == '__main__':
             elif plot_specfic_data2 is not None and prior_rect[0] == "-OVER TIME PLOT 1-" or prior_rect[0] == "-OVER TIME PLOT 2-":
                 
                 frame_list = list(frames.keys())
+                
                 for key in range(len(plot_specfic_data2)):
+                    np_data = np.array(list(plot_specfic_data2[key].values()))
                     for point in range(len(plot_specfic_data2[key])):
-                        conf = plot_specfic_data2[key][point][-1] > conf_thresh
-                        within_x = plot_specfic_data2[key][point][0] > min_x and plot_specfic_data2[key][point][0] < max_x
-                        within_y = plot_specfic_data2[key][point][1] > min_y and plot_specfic_data2[key][point][1] < max_y
+                        conf = np_data[point][-1] > conf_thresh
+                        within_x = np_data[point,0] > min_x and np_data[point,0] < max_x
+                        within_y = np_data[point,1] > min_y and np_data[point,1] < max_y
                         if conf and within_x and within_y:
-                            print(plot_specfic_data2[key][point][-1])
                             highlight.append(frame_list[point])
-            elif plot_specfic_data1 is not None:
+            elif plot_specfic_data1 is not None and plot_type[0] == "relative positions":
                 frame_list = list(frames.keys())
                 for key in range(len(plot_specfic_data1)):
+                    np_data = np.array(list(plot_specfic_data1[key].values()))
                     for point in range(len(plot_specfic_data1[key])):
-                        conf = plot_specfic_data1[key][point][-1] > conf_thresh
-                        within_x = plot_specfic_data1[key][point][0] > min_x and plot_specfic_data1[key][point][0] < max_x
-                        within_y = plot_specfic_data1[key][point][1] > min_y and plot_specfic_data1[key][point][1] < max_y
+                        conf = np_data[point,-1] > conf_thresh
+                        within_x = np_data[point,0] > min_x and np_data[point,0] < max_x
+                        within_y = np_data[point,1] > min_y and np_data[point,1] < max_y
                         
                         if conf and within_x and within_y:
-                            print(plot_specfic_data1[key][point][-1])
                             highlight.append(frame_list[point])
+            elif plot_specfic_data1 is not None:
+                bin_w = mm.GetPlotSpecificInfo("angle histogram")[1]
+                np_data = np.array(plot_specfic_data1)
+                for key in range(np_data.shape[0]):
+
+                    min_x_i = round_to_multiple(min_x, bin_w)
+                    max_x_i = round_to_multiple(max_x, bin_w)
+
+                    for bin_i in range(min_x_i, max_x_i):
+                        rect_top = np_data[key][bin_i]
+                        within = rect_top > min_y 
+
+
+
 
             print(f"grabbed rectangle from {start_point} to {end_point}")
             start_point, end_point = None, None  # enable grabbing a new rect
