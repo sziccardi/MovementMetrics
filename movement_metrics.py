@@ -144,6 +144,7 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, vel_blocks):
         avged_pos_y = np.convolve(selected[:my_scale,1], np.ones(vel_blocks), 'valid') / vel_blocks
         
         horiz = np.column_stack((ts[:len(avged_pos_x)], avged_pos_x, selected[:,3]))
+        print("horiz shape", horiz.shape)
         key_list = list(data.keys())
         dict_horiz = {key_list[i]: horiz[i] for i in range(len(key_list))}
         vert = np.column_stack((ts[:len(avged_pos_y)], avged_pos_y, selected[:,3]))
@@ -264,6 +265,7 @@ def run_script_get_data(data, img_size, plot_type, keypoints, fps, cov_width):
 
     if processed_data == None or data_labels == None:
         print("WARNING: Could not process data as provided.")
+    
     
     return processed_data, data_labels
 

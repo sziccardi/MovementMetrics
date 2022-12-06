@@ -15,7 +15,7 @@ def process_img(image, idx, solution, frame_loc):
 
     if not results.pose_landmarks or not results.left_hand_landmarks or not results.right_hand_landmarks:
         print("missing landmarks in frame #", idx)
-        cv2.imwrite(frame_loc+'/frames/frame_'+ str(idx).zfill(7) + '.png', image)
+        cv2.imwrite(frame_loc+'/video_frames/frame_'+ str(idx).zfill(7) + '.png', image)
         return
 
     frame_points = []
@@ -85,7 +85,7 @@ def process_img(image, idx, solution, frame_loc):
         mp_holistic.HAND_CONNECTIONS,
         mp_drawing_styles.get_default_hand_landmarks_style(),
         mp_drawing_styles.get_default_hand_connections_style())
-    cv2.imwrite(frame_loc+'/frames/frame_'+ str(idx).zfill(7) + '.png', annotated_image)
+    cv2.imwrite(frame_loc+'/video_frames/frame_'+ str(idx).zfill(7) + '.png', annotated_image)
 
     return frame_points
 
