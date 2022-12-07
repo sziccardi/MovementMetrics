@@ -165,7 +165,7 @@ if __name__ == '__main__':
                     
                     idx = idx + 1
                 cap.release()
-                print("processed ", idx, " frames")
+                print("Processed ", idx, " frames")
         elif file_loc is not None:
             #For webcam input:
             with open(images_loc+'/processed/pose_info.csv', 'w', newline='\n') as csvfile:
@@ -189,7 +189,9 @@ if __name__ == '__main__':
                     cap.release()
 
                     idx = idx + 1
-                print("processed ", idx, " frames")
+                print("Processed ", idx, " frames")
+        else:
+            print("WARNING: No valid input actions found.")
     
     print("Started at ", st)
     ct = datetime.datetime.now()
