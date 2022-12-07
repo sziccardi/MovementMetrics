@@ -447,7 +447,6 @@ def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
     dot_size = draw_axes(graphs[1], ax_lims_1, scale, axes_labels[1], 20, 4)
     conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
     
-    
     for plot in range(len(data)):
         plot_data = data[plot]
         for key in range(len(plot_data)):
@@ -460,12 +459,13 @@ def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
                         val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
                         plot_data[key][peak][1] = val
             
-            for point in range(len(plot_data[key])-1):
-                if np_data[point,-1] > conf_thresh and np_data[point+1,-1] > conf_thresh:
+            keys = list(plot_data[key].keys())
+            for i, point in enumerate(keys):
+                if (i < len(plot_data[key]) - 2) and (np_data[point,-1] > conf_thresh) and (np_data[point+1,-1] > conf_thresh):
                     x1 = plot_data[key][point][0]
                     y1 = plot_data[key][point][1]
-                    x2 = plot_data[key][point+1][0]
-                    y2 = plot_data[key][point+1][1]
+                    x2 = plot_data[key][keys[i+1]][0]
+                    y2 = plot_data[key][keys[i+1]][1]
                     graphs[plot].draw_line((x1, y1), (x2, y2), color=line_color, width=dot_size)
     
 
@@ -495,12 +495,13 @@ def read_pose_data(filename):
         filereader = csv.reader(file_obj,quoting=csv.QUOTE_NONNUMERIC)
         
         for i, row in enumerate(filereader):
-            x_pose = [val * image_size[0] for val in row[::4]]
-            y_pose = [val * image_size[1] for val in row[1::4]]
-            z_pose = [val for val in row[2::4]]
-            v_pose = row[3::4]
+            if i > 0:
+                x_pose = [val * image_size[0] for val in row[::4]]
+                y_pose = [val * image_size[1] for val in row[1::4]]
+                z_pose = [val for val in row[2::4]]
+                v_pose = row[3::4]
 
-            vals[i] = [x_pose,y_pose,z_pose,v_pose]
+                vals[i] = [x_pose,y_pose,z_pose,v_pose]
 
     return vals
 
