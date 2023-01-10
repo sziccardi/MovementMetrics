@@ -488,6 +488,7 @@ def read_frame_files(file_loc):
     
     return frames_dict
 
+# NOSE MOUTH_LEFT MOUTH_RIGHT LEFT_SHOULDER RIGHT_SHOULDER LEFT_ELBOW RIGHT_ELBOW LEFT_WRIST LEFT_THUMB_BASE 
 def read_pose_data(filename):
     vals = dict()
     with open(filename) as file_obj:
@@ -500,9 +501,9 @@ def read_pose_data(filename):
                 y_pose = [val * image_size[1] for val in row[1::4]]
                 z_pose = [val for val in row[2::4]]
                 v_pose = row[3::4]
-
                 vals[i] = [x_pose,y_pose,z_pose,v_pose]
 
+    
     return vals
 
 
@@ -542,9 +543,11 @@ def display_metrics(data, labels, scale = 1, plot_type="relative position"):
     for i, name in enumerate(labels):
         #data_list = list(data[i].values())
         if "relative position" in plot_type:
+            print(len(data))
             dict_data = data[i]
             np_data = np.array(list(dict_data.values()))
             conf = mm.GetPlotSpecificInfo("relative position")[0]
+            print(np_data[:,-1])
             data_filter = np_data[:,-1] > conf
 
             temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[data_filter,0], ("right" in name))
@@ -553,13 +556,13 @@ def display_metrics(data, labels, scale = 1, plot_type="relative position"):
             temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[data_filter,1], True)
             total_track_point_text = total_track_point_text + " - raised above shoulders " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
             
-            
-            data_x_mean = mm.getMean(np_data[data_filter,0]) / scale
-            data_y_mean = mm.getMean(np_data[data_filter,1]) / scale
-            data_x_var = mm.getSTD(np_data[data_filter,0]) / scale
-            data_y_var = mm.getSTD(np_data[data_filter,1]) / scale
-            total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
-            total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
+            if sum(data_filter) > 0:
+                data_x_mean = mm.getMean(np_data[data_filter,0]) / scale
+                data_y_mean = mm.getMean(np_data[data_filter,1]) / scale
+                data_x_var = mm.getSTD(np_data[data_filter,0]) / scale
+                data_y_var = mm.getSTD(np_data[data_filter,1]) / scale
+                total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
+                total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
             
             included = sum(data_filter)
             num_skipped = np_data[:,-1].shape[0] - included
@@ -671,7 +674,7 @@ if __name__ == '__main__':
             
             if plot_type[0] == "relative angles":
                 print("RUN SCRIPT RELATIVE ANGLES")
-                unallowed = ['nose', 'left mouth', 'right mouth','left pinky', 'right pinky', 'left index finger', 'right index finger', 'left thumb', 'right thumb']
+                unallowed = ['nose', 'left mouth', 'right mouth',  'left thumb base', 'left thumb tip', 'left index finger base', 'left index finger tip', 'left middle finger base', 'left middle finger tip', 'left ring finger base','left ring finger tip', 'left pinky finger base', 'left pinky finger tip','right wrist', 'right thumb base', 'right thumb tip', 'right index finger base', 'right index finger tip', 'right middle finger base', 'right middle finger tip', 'right ring finger base', 'right ring finger tip', 'right pinky finger base', 'right pinky finger tip']
                 cleaned_track_points = [x for x in track_points if x not in unallowed]
 
                 if len(cleaned_track_points) > 0:
@@ -685,7 +688,7 @@ if __name__ == '__main__':
                 print("RUN SCRIPT RELATIVE POSITIONS")
                 data1, labels1 = mm.run_script_get_data(pose_data, frame_size, "relative position", track_points, fps, cov_w)
                 data2, labels2 = mm.run_script_get_data(pose_data, frame_size, "relative position over time", track_points, fps, cov_w)
-
+                print("before display_metrics: ", data1[0])
                 display_metrics(data1, labels1, pix_scale, plot_type[0])
 
                 title1 = "RELATIVE POSITION POINT CLOUD"

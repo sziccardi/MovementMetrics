@@ -32,7 +32,7 @@ def process_img(image, idx, solution, frame_loc):
     frame_points.append(py)
     frame_points.append(pz)
     frame_points.append(pv)
-    for i in range(9,15):
+    for i in range(9,17):
         px = results.pose_landmarks.landmark[i].x
         py = results.pose_landmarks.landmark[i].y
         pz = results.pose_landmarks.landmark[i].z
@@ -44,7 +44,8 @@ def process_img(image, idx, solution, frame_loc):
     
     # x and y are normalized to [0.0, 1.0] by the image width and height respectively. 
     # z represents the landmark depth with the depth at the wrist being the origin, and the smaller the value the closer the landmark is to the camera. The magnitude of z uses roughly the same scale as x.
-    
+    # WRIST THUMB_BASE THUMB_1 THUMB_2 THUMB_TIP INDEX_BASE INDEX_1 INDEX_2 INDEX_TIP MIDDLE_BASE MIDDLE_1 MIDDLE_2 MIDDLE_TIP RING_BASE RING_1 RING_2 RING_TIP PINK_BASE PINKY_1 PINKY_2 PINKY_TIP
+
     for i in range(len(results.left_hand_landmarks.landmark)):
         px = results.left_hand_landmarks.landmark[i].x
         py = results.left_hand_landmarks.landmark[i].y
@@ -142,7 +143,7 @@ if __name__ == '__main__':
             if file_loc is not None:
                 save_loc = file_loc
             #For video file input:
-            with open(save_loc+'/processed/pose_info.csv', 'w', newline='\n') as csvfile:
+            with open(save_loc+'/pose_info.csv', 'w', newline='\n') as csvfile:
                 posewriter = csv.writer(csvfile, delimiter=',')
                 posewriter.writerow(header)
 
@@ -156,7 +157,7 @@ if __name__ == '__main__':
                         # If loading a video, use 'break' instead of 'continue'.
                         break
 
-                    poses = process_img(image, idx, holistic, save_loc+'/processed')
+                    poses = process_img(image, idx, holistic, save_loc)
                     if poses is not None:
                         posewriter.writerow(poses)
                     
