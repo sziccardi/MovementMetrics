@@ -151,32 +151,54 @@ def display_file_select(chosen_file):
     return file_loc, chosen_file
 
 def round_to_multiple(number, multiple):
-    return multiple * round(number / multiple)
+    try:
+        return multiple * round(number / multiple)
+    except:
+        print("WARNING: can't round to multiple because")
+        reason = False
+        if not number:
+            print("number is not a number")
+            reason = True
+        if not multiple:
+            if reason:
+                print("and multiple is not a number")
+            else:
+                print("multiple is not a number")
+            reason = True
+        if not reason:
+            print("of an unknown reason")
 def get_rounding(number):
-    if number < 0.01:
-        return round_to_multiple(number,0.005)
-    elif number < 0.05:
-        return round_to_multiple(number,0.01)
-    elif number < 0.1:
-        return round_to_multiple(number,0.05)
-    elif number < 0.5:
-        return round_to_multiple(number,0.1)
-    elif number < 1:
-        return round_to_multiple(number,0.5)
-    elif number < 5:
-        return round_to_multiple(number,1)
-    elif number < 10:
-        return round_to_multiple(number,5)
-    elif number < 50:
-        return round_to_multiple(number,10)
-    elif number < 100:
-        return round_to_multiple(number,25)
-    elif number < 500:
-        return round_to_multiple(number,100)
-    elif number < 1000:
-        return round_to_multiple(number,250)
-    elif number < 5000:
-        return round_to_multiple(number,1000)
+    try:
+        if number < 0.01:
+            return round_to_multiple(number,0.005)
+        elif number < 0.05:
+            return round_to_multiple(number,0.01)
+        elif number < 0.1:
+            return round_to_multiple(number,0.05)
+        elif number < 0.5:
+            return round_to_multiple(number,0.1)
+        elif number < 1:
+            return round_to_multiple(number,0.5)
+        elif number < 5:
+            return round_to_multiple(number,1)
+        elif number < 10:
+            return round_to_multiple(number,5)
+        elif number < 50:
+            return round_to_multiple(number,10)
+        elif number < 100:
+            return round_to_multiple(number,25)
+        elif number < 500:
+            return round_to_multiple(number,100)
+        elif number < 1000:
+            return round_to_multiple(number,250)
+        elif number < 5000:
+            return round_to_multiple(number,1000)
+    except:
+        print("WARNING: can't round to multiple because")
+        if not number:
+            print("number is not a number")
+        else:
+            print("of an unknown reason")
 
 
 def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_y = 10):
@@ -192,81 +214,89 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
     
     x_tick_spacing = x_range / float(tick_count_x)
     rounding = get_rounding(x_tick_spacing)
-    x_tick_spacing = round_to_multiple(x_tick_spacing, rounding)
-    x_rounded_min = round_to_multiple(x_min, rounding) - x_tick_spacing
-    x_rounded_max = round_to_multiple(x_max, rounding) + x_tick_spacing
+    if rounding:
+        x_tick_spacing = round_to_multiple(x_tick_spacing, rounding)
+        x_rounded_min = round_to_multiple(x_min, rounding) - x_tick_spacing
+        x_rounded_max = round_to_multiple(x_max, rounding) + x_tick_spacing
 
-    y_tick_spacing = y_range / float(tick_count_y)
-    rounding = get_rounding(y_tick_spacing)
-    y_tick_spacing = round_to_multiple(y_tick_spacing, rounding)
-    y_rounded_min = round_to_multiple(y_min, rounding) - y_tick_spacing
-    y_rounded_max = round_to_multiple(y_max, rounding) + y_tick_spacing
+        y_tick_spacing = y_range / float(tick_count_y)
+        rounding = get_rounding(y_tick_spacing)
+        if rounding:
+            y_tick_spacing = round_to_multiple(y_tick_spacing, rounding)
+            y_rounded_min = round_to_multiple(y_min, rounding) - y_tick_spacing
+            y_rounded_max = round_to_multiple(y_max, rounding) + y_tick_spacing
 
-    dot_size_x=x_tick_spacing/75.0
-    dot_size_y=y_tick_spacing/75.0
+            dot_size_x=x_tick_spacing/75.0
+            dot_size_y=y_tick_spacing/75.0
 
-    print("setting coordinates to ", (x_rounded_min, y_rounded_min),", ", (x_rounded_max, y_rounded_max))
-    graph.change_coordinates((x_rounded_min, y_rounded_min),(x_rounded_max, y_rounded_max))
+            if x_rounded_min and x_rounded_max and y_rounded_max and y_rounded_min:
+                print("setting coordinates to ", (x_rounded_min, y_rounded_min),", ", (x_rounded_max, y_rounded_max))
+                graph.change_coordinates((x_rounded_min, y_rounded_min),(x_rounded_max, y_rounded_max))
+
+                #draw axes
+                x_ax_label_pos = y_ax_label_pos = 0
+                x_ax_label_anch = y_ax_label_anch = "center"
+
+                x_ax_min = min(x_tick_spacing, x_rounded_min)
+                x_ax_max = max(-1*x_tick_spacing, x_rounded_max)
+
+                y_ax_min = min(y_tick_spacing, y_rounded_min)
+                y_ax_max = max(-1*y_tick_spacing, y_rounded_max)
+
+
+                label_angle = 0
+                if x_rounded_min > 0:
+                    x_ax_label_pos = x_range/2 + x_ax_min
+                else:
+                    if abs(x_rounded_min) > abs(x_rounded_max):
+                        x_ax_label_pos = x_ax_min + x_range/75
+                        x_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
+                    else:
+                        x_ax_label_pos = x_ax_max - x_range/75
+                        x_ax_label_anch = sg.TEXT_LOCATION_TOP_RIGHT
+
+                if y_rounded_min > 0:
+                    y_ax_label_pos = y_range/2 + y_ax_min
+                    label_angle = 90
+                else:
+                    if abs(y_rounded_min) > abs(y_rounded_max):
+                        y_ax_label_pos = y_ax_min + y_range/75
+                        y_ax_label_anch = sg.TEXT_LOCATION_BOTTOM_LEFT
+                    else:
+                        y_ax_label_pos = y_ax_max - y_range/75
+                        y_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
+
+                h_tick_len = x_range/60.0
+                v_tick_len = y_range/60.0
+                x_shift = 3.5*h_tick_len
+                if label_angle != 0:
+                    x_shift = -4.5*h_tick_len
+
+
+                graph.draw_line((x_ax_min, max(0, y_ax_min)), (x_ax_max, max(0, y_ax_min)), color="black", width=1) #x axis
+                    
+                for x in range(int(x_ax_min), int(x_ax_max), int(x_tick_spacing)):
+                    graph.draw_line((x, max(0, y_ax_min + y_tick_spacing)-v_tick_len), (x, max(0, y_ax_min + y_tick_spacing)+v_tick_len))  #Draw a scale
+                    if x != 0:
+                        graph.draw_text(str('%s' % float('%.2g' % (x))), (x, max(0, y_ax_min + y_tick_spacing)-2.5*v_tick_len), color='black')  #Draw the value of the scale
+                
+                graph.draw_text(axes_labels[0], (x_ax_label_pos, max(0, y_ax_min + y_tick_spacing)-4.75*v_tick_len), text_location = x_ax_label_anch, color="black")
+
+                graph.draw_line((max(0, x_ax_min), y_ax_min), (max(0, x_ax_min), y_ax_max), color="black", width=1) #y axis
+
+                
+                for y in range(int(y_ax_min), int(y_ax_max), int(y_tick_spacing)):
+                    graph.draw_line((max(0, x_ax_min + x_tick_spacing)-h_tick_len, y), (max(0, x_ax_min + x_tick_spacing)+h_tick_len, y))
+                    if y != 0:
+                        graph.draw_text(str('%s' % float('%.2g' % (y))), (max(0, x_ax_min + x_tick_spacing)-2.25*h_tick_len, y), color='black')
+                
+                graph.draw_text(axes_labels[1], (max(0, x_ax_min + x_tick_spacing)+x_shift, y_ax_label_pos), angle=label_angle, text_location = y_ax_label_anch, color="black")
+                return (dot_size_x + dot_size_y) / 2.0
     
-    #draw axes
-    x_ax_label_pos = y_ax_label_pos = 0
-    x_ax_label_anch = y_ax_label_anch = "center"
-
-    x_ax_min = min(x_tick_spacing, x_rounded_min)
-    x_ax_max = max(-1*x_tick_spacing, x_rounded_max)
-
-    y_ax_min = min(y_tick_spacing, y_rounded_min)
-    y_ax_max = max(-1*y_tick_spacing, y_rounded_max)
-
-
-    label_angle = 0
-    if x_rounded_min > 0:
-        x_ax_label_pos = x_range/2 + x_ax_min
-    else:
-        if abs(x_rounded_min) > abs(x_rounded_max):
-            x_ax_label_pos = x_ax_min + x_range/75
-            x_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
-        else:
-            x_ax_label_pos = x_ax_max - x_range/75
-            x_ax_label_anch = sg.TEXT_LOCATION_TOP_RIGHT
-
-    if y_rounded_min > 0:
-        y_ax_label_pos = y_range/2 + y_ax_min
-        label_angle = 90
-    else:
-        if abs(y_rounded_min) > abs(y_rounded_max):
-            y_ax_label_pos = y_ax_min + y_range/75
-            y_ax_label_anch = sg.TEXT_LOCATION_BOTTOM_LEFT
-        else:
-            y_ax_label_pos = y_ax_max - y_range/75
-            y_ax_label_anch = sg.TEXT_LOCATION_TOP_LEFT
-
-    h_tick_len = x_range/60.0
-    v_tick_len = y_range/60.0
-    x_shift = 3.5*h_tick_len
-    if label_angle != 0:
-        x_shift = -4.5*h_tick_len
-
-
-    graph.draw_line((x_ax_min, max(0, y_ax_min)), (x_ax_max, max(0, y_ax_min)), color="black", width=1) #x axis
-        
-    for x in range(int(x_ax_min), int(x_ax_max), int(x_tick_spacing)):
-        graph.draw_line((x, max(0, y_ax_min + y_tick_spacing)-v_tick_len), (x, max(0, y_ax_min + y_tick_spacing)+v_tick_len))  #Draw a scale
-        if x != 0:
-            graph.draw_text(str('%s' % float('%.2g' % (x))), (x, max(0, y_ax_min + y_tick_spacing)-2.5*v_tick_len), color='black')  #Draw the value of the scale
+    print("WARNING: couldn't create axes")
+    return None
     
-    graph.draw_text(axes_labels[0], (x_ax_label_pos, max(0, y_ax_min + y_tick_spacing)-4.75*v_tick_len), text_location = x_ax_label_anch, color="black")
-
-    graph.draw_line((max(0, x_ax_min), y_ax_min), (max(0, x_ax_min), y_ax_max), color="black", width=1) #y axis
-
     
-    for y in range(int(y_ax_min), int(y_ax_max), int(y_tick_spacing)):
-        graph.draw_line((max(0, x_ax_min + x_tick_spacing)-h_tick_len, y), (max(0, x_ax_min + x_tick_spacing)+h_tick_len, y))
-        if y != 0:
-            graph.draw_text(str('%s' % float('%.2g' % (y))), (max(0, x_ax_min + x_tick_spacing)-2.25*h_tick_len, y), color='black')
-    
-    graph.draw_text(axes_labels[1], (max(0, x_ax_min + x_tick_spacing)+x_shift, y_ax_label_pos), angle=label_angle, text_location = y_ax_label_anch, color="black")
-    return (dot_size_x + dot_size_y) / 2.0
 
 def draw_legend(graph, labels, colors):
     for i, dot_color in enumerate(colors):
@@ -296,39 +326,42 @@ def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_t
             scale = video_pix_per_m
             
         dot_size = draw_axes(graph, ax_lims, scale, axes_labels, int(180.0/bin_w))
-
-        np_data = np.array(data)
-        for bin_i in range(np_data.shape[1]):
-            keys = [i for i in range(np_data.shape[0])]
-            bin_data = np_data[:,bin_i]
-            sorted_keys = [x for _, x in sorted(zip(bin_data, keys))]
-            
-            start_point = bin_i*bin_w
-            # ordered colors smallest to largest height
-            sorted_colors = [Color(colors[key]).rgb for key in reversed(sorted_keys)]
-            for i,key in enumerate(sorted_keys):
+        if dot_size:
+            np_data = np.array(data)
+            for bin_i in range(np_data.shape[1]):
+                keys = [i for i in range(np_data.shape[0])]
+                bin_data = np_data[:,bin_i]
+                sorted_keys = [x for _, x in sorted(zip(bin_data, keys))]
                 
-                #smallest rectangle has all the colors, largest has only 1
-                num_colors = len(sorted_keys) - i
-                my_color = (0.0,0.0,0.0)
-                for j in range(num_colors):
-                    curr_color = sorted_colors[j]
-                    my_color = (my_color[0] + (1.0/num_colors)*curr_color[0], my_color[1] + (1.0/num_colors)*curr_color[1], my_color[2] + (1.0/num_colors)*curr_color[2])
-                rect_bottom = 0
-                if i > 0:
-                    prev_key = sorted_keys[i-1]
-                    rect_bottom = np_data[prev_key][bin_i]
-                rect_top = np_data[key][bin_i]
-                
-                my_actual_color = Color(rgb=(my_color[0]*0.5+0.5, my_color[1]*0.5+0.5, my_color[2]*0.5+0.5))
-                graph.draw_rectangle((start_point, rect_top), (start_point + bin_w, rect_bottom), fill_color=my_actual_color.hex, line_color=my_actual_color.hex)
+                start_point = bin_i*bin_w
+                # ordered colors smallest to largest height
+                sorted_colors = [Color(colors[key]).rgb for key in reversed(sorted_keys)]
+                for i,key in enumerate(sorted_keys):
+                    
+                    #smallest rectangle has all the colors, largest has only 1
+                    num_colors = len(sorted_keys) - i
+                    my_color = (0.0,0.0,0.0)
+                    for j in range(num_colors):
+                        curr_color = sorted_colors[j]
+                        my_color = (my_color[0] + (1.0/num_colors)*curr_color[0], my_color[1] + (1.0/num_colors)*curr_color[1], my_color[2] + (1.0/num_colors)*curr_color[2])
+                    rect_bottom = 0
+                    if i > 0:
+                        prev_key = sorted_keys[i-1]
+                        rect_bottom = np_data[prev_key][bin_i]
+                    rect_top = np_data[key][bin_i]
+                    
+                    my_actual_color = Color(rgb=(my_color[0]*0.5+0.5, my_color[1]*0.5+0.5, my_color[2]*0.5+0.5))
+                    graph.draw_rectangle((start_point, rect_top), (start_point + bin_w, rect_bottom), fill_color=my_actual_color.hex, line_color=my_actual_color.hex)
+        else:
+            print("WARNING: couldn't create histogram")
     else:
         ax_lims = [-10000, -10000, 10000, 10000]
         all_np_data = []
-        print(len(data))
         for key in range(len(data)):
             np_data = np.array(list(data[key].values()))
             conf_filter = np_data[:,-1] > conf_thresh
+            print("\nDEBUG: conf filter sum ", sum(conf_filter))
+            print(np_data[:50,-1], "\n")
             max_x = np.max(np_data[conf_filter,0])
             max_y = np.max(np_data[conf_filter,1])
             min_x = np.min(np_data[conf_filter,0])
@@ -341,7 +374,6 @@ def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_t
                 ax_lims[2] = min_x
             if ax_lims[3] > min_y:
                 ax_lims[3] = min_y
-            print(np_data.shape)
             all_np_data.append(np_data)
 
         scale = 1.0
@@ -355,47 +387,52 @@ def create_basic_plot(graph, data, video_pix_per_m, data_labels, legend, graph_t
             axes_labels.append("y Position (pixel)")
 
         dot_size = draw_axes(graph, ax_lims, scale, axes_labels)
+        
         if graph_type == GraphType.LINE_GRAPH: #must be angles over time
-            print("finding peaks")
-            for key in range(len(all_np_data)):
-                print(key)
-                np_data = all_np_data[key]
-                y_peaks = signal.find_peaks(np_data[:,1], threshold=30.0)
-                if len(y_peaks[0]) > 0:
-                    for peak in y_peaks[0]:
-                        if peak > 0 and peak < np_data.shape[0]-1:
-                            val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
-                            np_data[peak,1] = val
+            if dot_size:
+                print("finding peaks")
+                for key in range(len(all_np_data)):
+                    np_data = all_np_data[key]
+                    y_peaks = signal.find_peaks(np_data[:,1], threshold=30.0)
+                    if len(y_peaks[0]) > 0:
+                        for peak in y_peaks[0]:
+                            if peak > 0 and peak < np_data.shape[0]-1:
+                                val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
+                                np_data[peak,1] = val
 
-            print("drawing lines")
-            for key in range(len(all_np_data)):
-                line_color = colors[key]
-                print(key)
-                np_data = all_np_data[key]
-                for point in range(all_np_data[key].shape[0]-1):
-                    if np_data[point,-1] > conf_thresh and np_data[point+1,-1] > conf_thresh:
-                        graph.draw_line((np_data[point,0] / scale, np_data[point,1] / scale), (np_data[point+1,0] / scale, np_data[point+1,1]), width=dot_size, color=line_color)
+                print("drawing lines")
+                for key in range(len(all_np_data)):
+                    line_color = colors[key]
+                    np_data = all_np_data[key]
+                    for point in range(all_np_data[key].shape[0]-1):
+                        if np_data[point,-1] > conf_thresh and np_data[point+1,-1] > conf_thresh:
+                            graph.draw_line((np_data[point,0] / scale, np_data[point,1] / scale), (np_data[point+1,0] / scale, np_data[point+1,1]), width=dot_size, color=line_color)
+            else:
+                print("WARNING: couldn't create line graph")
         elif graph_type == GraphType.POINT_GRAPH: #must be point cloud
-            for key in range(len(all_np_data)):
-                np_data = all_np_data[key]
-                x_peaks = signal.find_peaks(np_data[:,0], threshold=100.0)
-                if len(x_peaks[0]) > 0:
-                    for peak in x_peaks[0]:
-                        if np_data[peak,-1] > conf_thresh and np_data[peak-1,-1] > conf_thresh and np_data[peak+1,-1] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
-                            val = (np_data[peak-1,0] + np_data[peak+1,0])/2.0
-                            np_data[peak,0] = val
-                    
-                y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
-                if len(y_peaks[0]) > 0:
-                    for peak in y_peaks[0]:
-                        if np_data[peak,-1] > conf_thresh and np_data[peak-1,-1] > conf_thresh and np_data[peak+1,-1] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
-                            val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
-                            np_data[peak,1] = val
+            if dot_size:
+                for key in range(len(all_np_data)):
+                    np_data = all_np_data[key]
+                    x_peaks = signal.find_peaks(np_data[:,0], threshold=100.0)
+                    if len(x_peaks[0]) > 0:
+                        for peak in x_peaks[0]:
+                            if np_data[peak,-1] > conf_thresh and np_data[peak-1,-1] > conf_thresh and np_data[peak+1,-1] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
+                                val = (np_data[peak-1,0] + np_data[peak+1,0])/2.0
+                                np_data[peak,0] = val
+                        
+                    y_peaks = signal.find_peaks(np_data[:,1], threshold=100.0)
+                    if len(y_peaks[0]) > 0:
+                        for peak in y_peaks[0]:
+                            if np_data[peak,-1] > conf_thresh and np_data[peak-1,-1] > conf_thresh and np_data[peak+1,-1] > conf_thresh and peak > 0 and peak < np_data.shape[0]-1:
+                                val = (np_data[peak-1,1] + np_data[peak+1,1])/2.0
+                                np_data[peak,1] = val
 
 
-                for point in range(len(data[key])):
-                    if np_data[point,-1] > conf_thresh:
-                        graph.draw_point((np_data[point,0] / scale, np_data[point,1] / scale), dot_size, color=colors[key])
+                    for point in range(len(data[key])):
+                        if np_data[point,-1] > conf_thresh:
+                            graph.draw_point((np_data[point,0] / scale, np_data[point,1] / scale), dot_size, color=colors[key])
+            else:
+                print("WARNING: couldn't draw scatter plot")
     
 
     draw_legend(legend, data_labels, colors[:len(data)])
@@ -543,33 +580,46 @@ def display_metrics(data, labels, scale = 1, plot_type="relative position"):
     for i, name in enumerate(labels):
         #data_list = list(data[i].values())
         if "relative position" in plot_type:
-            print(len(data))
             dict_data = data[i]
             np_data = np.array(list(dict_data.values()))
             conf = mm.GetPlotSpecificInfo("relative position")[0]
-            print(np_data[:,-1])
             data_filter = np_data[:,-1] > conf
 
             temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[data_filter,0], ("right" in name))
-            total_track_point_text = total_track_point_text + "\n" + name + " : \n - crossed body midline " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
+            try:
+                total_track_point_text = total_track_point_text + "\n" + name + " : \n - crossed body midline " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent crossed\n"
+            except:
+                print("WARNING: couldn't display midline cross counts")
             
             temp_total_count, temp_num_count = mm.getAxesCrossedCounts(np_data[data_filter,1], True)
-            total_track_point_text = total_track_point_text + " - raised above shoulders " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
+            try:
+                total_track_point_text = total_track_point_text + " - raised above shoulders " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent raised\n"
+            except:
+                print("WARNING: couldn't display shoulder cross counts")
             
             if sum(data_filter) > 0:
                 data_x_mean = mm.getMean(np_data[data_filter,0]) / scale
                 data_y_mean = mm.getMean(np_data[data_filter,1]) / scale
                 data_x_var = mm.getSTD(np_data[data_filter,0]) / scale
                 data_y_var = mm.getSTD(np_data[data_filter,1]) / scale
-                total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
-                total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
+                try:
+                    total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
+                    total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
+                except:
+                    print("WARNING: couldn't display means or variances ")
             
             included = sum(data_filter)
             num_skipped = np_data[:,-1].shape[0] - included
             selected = np_data[data_filter]
             avg_conf = np.mean(selected[:,-1])
-            total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
-            total_track_point_text = total_track_point_text + "Average confidence: "+str(round(avg_conf,2)) + "\n"
+            try:
+                total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
+            except:
+                print("WARNING: couldn't display skipped frame count")
+            try:
+                total_track_point_text = total_track_point_text + "Average confidence: "+str(round(avg_conf,2)) + "\n"
+            except:
+                print("WARNING: couldn't display average confidence value")
         elif "angle" in plot_type:
             np_data = np.array(list(data[0][i].values()))
             info = mm.GetPlotSpecificInfo("relative angle over time")
@@ -578,16 +628,23 @@ def display_metrics(data, labels, scale = 1, plot_type="relative position"):
             ext_thresh = info[1]
             cont_thresh = info[2]
             temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[data_filter,1], False, ext_thresh)
-            total_track_point_text = total_track_point_text + "\n" + name + " : \n - fully extended " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent fully extended\n"
-            
+            try:
+                total_track_point_text = total_track_point_text + "\n" + name + " : \n - fully extended " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent fully extended\n"
+            except:
+                print("WARNING: couldn't display extension count")        
             temp_total_count, temp_num_count = mm.getValueCrossedCounts(np_data[data_filter,1], True, cont_thresh)
-            total_track_point_text = total_track_point_text + " - fully tucked  " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent tucked\n"
-            
+            try:
+                total_track_point_text = total_track_point_text + " - fully tucked  " + str(temp_num_count) + " times\n - " + str(round(temp_total_count / fps,2)) + " sec spent tucked\n"
+            except:
+                print("WARNING: couldn't display tucked count")        
             data_mean = mm.getMean(np_data[data_filter,1])
             data_var = mm.getSTD(np_data[data_filter,1])
+            try:
+                total_track_point_text = total_track_point_text + " - average angle is " + str(round(data_mean,2)) + "\n"
             
-            total_track_point_text = total_track_point_text + " - average angle is " + str(round(data_mean,2)) + "\n"
-            total_track_point_text = total_track_point_text + " - with std of "+ str(round(data_var,2)) + "\n"
+                total_track_point_text = total_track_point_text + " - with std of "+ str(round(data_var,2)) + "\n"
+            except:
+                print("WARNING: couldn't display mean or variance")
 
         window['-COMPUTED METRICS-'].update(value=total_track_point_text)
         #print(total_track_point_text)
@@ -674,7 +731,7 @@ if __name__ == '__main__':
             
             if plot_type[0] == "relative angles":
                 print("RUN SCRIPT RELATIVE ANGLES")
-                unallowed = ['nose', 'left mouth', 'right mouth',  'left thumb base', 'left thumb tip', 'left index finger base', 'left index finger tip', 'left middle finger base', 'left middle finger tip', 'left ring finger base','left ring finger tip', 'left pinky finger base', 'left pinky finger tip','right wrist', 'right thumb base', 'right thumb tip', 'right index finger base', 'right index finger tip', 'right middle finger base', 'right middle finger tip', 'right ring finger base', 'right ring finger tip', 'right pinky finger base', 'right pinky finger tip']
+                unallowed = ['nose', 'left mouth', 'right mouth',  'left thumb base', 'left thumb tip', 'left index finger base', 'left index finger tip', 'left middle finger base', 'left middle finger tip', 'left ring finger base','left ring finger tip', 'left pinky finger base', 'left pinky finger tip', 'right thumb base', 'right thumb tip', 'right index finger base', 'right index finger tip', 'right middle finger base', 'right middle finger tip', 'right ring finger base', 'right ring finger tip', 'right pinky finger base', 'right pinky finger tip']
                 cleaned_track_points = [x for x in track_points if x not in unallowed]
 
                 if len(cleaned_track_points) > 0:
@@ -688,7 +745,7 @@ if __name__ == '__main__':
                 print("RUN SCRIPT RELATIVE POSITIONS")
                 data1, labels1 = mm.run_script_get_data(pose_data, frame_size, "relative position", track_points, fps, cov_w)
                 data2, labels2 = mm.run_script_get_data(pose_data, frame_size, "relative position over time", track_points, fps, cov_w)
-                print("before display_metrics: ", data1[0])
+                
                 display_metrics(data1, labels1, pix_scale, plot_type[0])
 
                 title1 = "RELATIVE POSITION POINT CLOUD"

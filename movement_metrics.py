@@ -17,7 +17,7 @@ class PlotType(Enum):
 
 
 plot_type_dict = dict({"relative position":PlotType.REL_POS, "relative position over time":PlotType.REL_POS_OVER_TIME, "relative angle histogram":PlotType.REL_ANG_HIST, "relative angle over time":PlotType.REL_ANG_OVER_TIME})
-keypoint_names = ['nose', 'left mouth', 'right mouth',  'left shoulder', 'right shoulder',  'left elbow', 'right elbow','left wrist v1', 'right wrist v1', 'left wrist v2', 'left thumb base', 'left thumb 1', 'left thumb 2', 'left thumb tip', 'left index finger base', 'left index finger 1', 'left index finger 2', 'left index finger tip', 'left middle finger base', 'left middle finger 1', 'left middle finger 2', 'left middle finger tip', 'left ring finger base', 'left ring finger 1', 'left ring finger 2', 'left ring finger tip', 'left pinky finger base', 'left pinky finger 1', 'left pinky finger 2', 'left pinky finger tip','right wrist v2', 'right thumb base', 'right thumb 1', 'right thumb 2', 'right thumb tip', 'right index finger base', 'right index finger 1', 'right index finger 2', 'right index finger tip', 'right middle finger base', 'right middle finger 1', 'right middle finger 2', 'right middle finger tip', 'right ring finger base', 'right ring finger 1', 'right ring finger 2', 'right ring finger tip', 'right pinky finger base', 'right pinky finger 1', 'right pinky finger 2', 'right pinky finger tip']
+keypoint_names = ['nose', 'left mouth', 'right mouth',  'left shoulder', 'left elbow', 'left wrist', 'left thumb base', 'left thumb 1', 'left thumb 2', 'left thumb tip', 'left index finger base', 'left index finger 1', 'left index finger 2', 'left index finger tip', 'left middle finger base', 'left middle finger 1', 'left middle finger 2', 'left middle finger tip', 'left ring finger base', 'left ring finger 1', 'left ring finger 2', 'left ring finger tip', 'left pinky finger base', 'left pinky finger 1', 'left pinky finger 2', 'left pinky finger tip','right shoulder', 'right elbow','right wrist', 'right thumb base', 'right thumb 1', 'right thumb 2', 'right thumb tip', 'right index finger base', 'right index finger 1', 'right index finger 2', 'right index finger tip', 'right middle finger base', 'right middle finger 1', 'right middle finger 2', 'right middle finger tip', 'right ring finger base', 'right ring finger 1', 'right ring finger 2', 'right ring finger tip', 'right pinky finger base', 'right pinky finger 1', 'right pinky finger 2', 'right pinky finger tip']
 
 keypoint_nums = list(np.arange(0,len(keypoint_names)))
 stoi_map = dict(zip(keypoint_names, keypoint_nums))
@@ -34,26 +34,87 @@ conf_filter = 0.8
 
 #Metric helpers
 def getMin(data):
-    return min(data)
+    try:
+        return min(data)
+    except:
+        print("WARNING: Couldn't return minimum of the data")
+        if len(data) == 0:
+            print("because there isn't any data to search through")
+        return None
 
 def getMax(data):
-    return max(data)
+    try:
+        return max(data)
+    except:
+        print("WARNING: Couldn't return maximum of the data because")
+        if len(data) == 0:
+            print("there isn't any data to search through")
+        else:
+            print("an unknown reason")
+        return None
 
 def getMean(data):
-    return mean(data)
+    try:
+        return mean(data)
+    except:
+        print("WARNING: Couldn't return mean of the data because")
+        if len(data) == 0:
+            print("there isn't any data to search through")
+        else:
+            print("an unknown reason")
+        return None
 
 def getVariance(data):
-    return np.var(data)
+    try:
+        return np.var(data)
+    except:
+        print("WARNING: Couldn't return variance of the data because")
+        if len(data) == 0:
+            print("there isn't any data to search through")
+        else:
+            print("an unknown reason")
+        return None
 
 def getCoVariance(data1, data2):
-    return np.cov(data1, data2)
+    try:
+        return np.cov(data1, data2)
+    except:
+        print("WARNING: Couldn't return minimum of the data because")
+        reason = False
+        if len(data1) == 0:
+            print("there isn't any data in first set to search through")
+            reason = True
+        if len(data2) == 0:
+            print("there isn't any data in second set to search through")
+            reason = True
+        if not reason:
+            print("an unknown reason")
+        return None
+    
 
 def getSTD(data):
-    return np.std(data)
+    try:
+        return np.std(data)
+    except:
+        print("WARNING: Couldn't return the standard deviation of the data because")
+        if len(data) == 0:
+            print("there isn't any data to search through")
+        else:
+            print("an unknown reason")
+        return None
 
 
 def getPeaks(data, my_threshold):
-    return signal.find_peaks(data, threshold=my_threshold)
+    try:
+        return signal.find_peaks(data, threshold=my_threshold)
+    except:
+        print("WARNING: Couldn't return peaks in the data because")
+        if len(data) == 0:
+            print("there isn't any data to search through")
+        else:
+            print("an unknown reason")
+        return None
+    
 
 
 def getAxesCrossedCounts(data, start_less):
@@ -104,20 +165,18 @@ def GetRelativePositionData(data, keypoints):
     processed_data = []
     key_list = list(data.keys())
     for start_iter in keypoints:
-        print(np_vals.shape)    
+        
         selected = np_vals[:,:,start_iter]
         selected[:,0] = (selected[:,0] - mid_x)
         selected[:,1] = (selected[:,1] - mid_y)
         stacked = np.column_stack((selected[:,0], selected[:,1], selected[:,3]))
-        print(selected[:,3])
+        
         dict_processed_data = {key_list[i]: stacked[i] for i in range(len(key_list))}
 
         processed_data.append(dict_processed_data)
         
         labels.append(itos_map[start_iter])
 
-    print(len(processed_data))
-    print(len(labels))
     return processed_data, labels
 
 def GetRelativePositionOverTimeData(data, keypoints, fps, vel_blocks):
@@ -144,9 +203,7 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, vel_blocks):
         my_scale = min(len(ts), len(rel_pos))
         avged_pos_x = np.convolve(selected[:my_scale,0], np.ones(vel_blocks), 'valid') / vel_blocks
         avged_pos_y = np.convolve(selected[:my_scale,1], np.ones(vel_blocks), 'valid') / vel_blocks
-        print(avged_pos_x)
         horiz = np.column_stack((ts[:len(avged_pos_x)], avged_pos_x, selected[:,3]))
-        print("horiz shape", horiz.shape)
         key_list = list(data.keys())
         dict_horiz = {key_list[i]: horiz[i] for i in range(len(key_list))}
         vert = np.column_stack((ts[:len(avged_pos_y)], avged_pos_y, selected[:,3]))
@@ -180,22 +237,16 @@ def GetAngleOverTimeData(data, keypoints, video_fps, vel_blocks):
         if start_iter == (stoi_map['left shoulder']):
             p1_i = stoi_map['right shoulder']
             p3_i = stoi_map['left elbow']
-        elif start_iter == (stoi_map['left elbow']):
-            p1_i = stoi_map['left shoulder']
-            p3_i = stoi_map['left wrist']
-        elif start_iter == (stoi_map['left wrist']):
-            p1_i = stoi_map['left elbow']
-            p3_i = stoi_map['left index finger']
+        
         elif start_iter == (stoi_map['right shoulder']):
             p1_i = stoi_map['left shoulder']
             p3_i = stoi_map['right elbow']
-        elif start_iter == (stoi_map['right elbow']):
-            p1_i = stoi_map['right shoulder']
-            p3_i = stoi_map['right wrist']
-        elif start_iter == (stoi_map['right wrist']):
-            p1_i = stoi_map['right elbow']
-            p3_i = stoi_map['right index finger']
-
+        else:
+            p1_i = start_iter-1
+            p3_i = start_iter+1
+        
+        print(itos_map[start_iter], " angle is defined by ", itos_map[p1_i], ", ", itos_map[p2_i], ", and ", itos_map[p3_i])
+        
         if p1_i and p2_i and p3_i:
             a_vec = np_vals[:,:,p2_i] - np_vals[:,:,p1_i]
             b_vec = np_vals[:,:,p3_i] - np_vals[:,:,p2_i]
@@ -252,7 +303,7 @@ def GetPlotSpecificInfo(plot_type):
 
 def run_script_get_data(data, img_size, plot_type, keypoints, fps, cov_width):
     real_keypoints = [stoi_map[k] for k in keypoints]
-    
+    print("I have ", len(keypoint_names), " available keypoints")
     print("running ", plot_type)
     processed_data = data_labels = ax_labels = None
     if plot_type_dict[plot_type] == PlotType.REL_POS:
@@ -269,8 +320,6 @@ def run_script_get_data(data, img_size, plot_type, keypoints, fps, cov_width):
         print("WARNING: Could not process data as provided.")
     else:
         print("run_script_get_data")
-        print(type(processed_data))
-        print(len(processed_data))
     
     
     return processed_data, data_labels

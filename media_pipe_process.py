@@ -32,7 +32,12 @@ def process_img(image, idx, solution, frame_loc):
     frame_points.append(py)
     frame_points.append(pz)
     frame_points.append(pv)
-    for i in range(9,17):
+    #print("num frame points = ", len(frame_points)/4, " and should be 1")
+    
+    left_order = [9, 10, 11, 13, 15]
+    right_order = [12, 14, 16]
+    
+    for i in left_order:
         px = results.pose_landmarks.landmark[i].x
         py = results.pose_landmarks.landmark[i].y
         pz = results.pose_landmarks.landmark[i].z
@@ -42,30 +47,48 @@ def process_img(image, idx, solution, frame_loc):
         frame_points.append(pz)
         frame_points.append(pv)
     
+    #print("num frame points = ", len(frame_points)/4, " and should be ", len(left_order)+1)
     # x and y are normalized to [0.0, 1.0] by the image width and height respectively. 
     # z represents the landmark depth with the depth at the wrist being the origin, and the smaller the value the closer the landmark is to the camera. The magnitude of z uses roughly the same scale as x.
     # WRIST THUMB_BASE THUMB_1 THUMB_2 THUMB_TIP INDEX_BASE INDEX_1 INDEX_2 INDEX_TIP MIDDLE_BASE MIDDLE_1 MIDDLE_2 MIDDLE_TIP RING_BASE RING_1 RING_2 RING_TIP PINK_BASE PINKY_1 PINKY_2 PINKY_TIP
 
-    for i in range(len(results.left_hand_landmarks.landmark)):
-        px = results.left_hand_landmarks.landmark[i].x
-        py = results.left_hand_landmarks.landmark[i].y
-        pz = results.left_hand_landmarks.landmark[i].z
-        pv = results.left_hand_landmarks.landmark[i].visibility
+    for i in range(1, len(results.left_hand_landmarks.landmark)):
+        if i > 0:
+            px = results.left_hand_landmarks.landmark[i].x
+            py = results.left_hand_landmarks.landmark[i].y
+            pz = results.left_hand_landmarks.landmark[i].z
+            pv = results.left_hand_landmarks.landmark[i].visibility
+            frame_points.append(px)
+            frame_points.append(py)
+            frame_points.append(pz)
+            frame_points.append(pv)
+    
+    #print("num frame points = ", len(frame_points)/4, " and should be ",len(left_order)+1+(len(results.left_hand_landmarks.landmark)-1))
+
+    for i in right_order:
+        px = results.pose_landmarks.landmark[i].x
+        py = results.pose_landmarks.landmark[i].y
+        pz = results.pose_landmarks.landmark[i].z
+        pv = results.pose_landmarks.landmark[i].visibility
         frame_points.append(px)
         frame_points.append(py)
         frame_points.append(pz)
         frame_points.append(pv)
     
-    for i in range(len(results.right_hand_landmarks.landmark)):
-        px = results.right_hand_landmarks.landmark[i].x
-        py = results.right_hand_landmarks.landmark[i].y
-        pz = results.right_hand_landmarks.landmark[i].z
-        pv = results.right_hand_landmarks.landmark[i].visibility
-        frame_points.append(px)
-        frame_points.append(py)
-        frame_points.append(pz)
-        frame_points.append(pv)
+    #print("num frame points = ", len(frame_points)/4, " and should be ",len(left_order)+1+(len(results.left_hand_landmarks.landmark)-1)+len(right_order))
+
+    for i in range(1, len(results.right_hand_landmarks.landmark)):
+        if 1 > 0:
+            px = results.right_hand_landmarks.landmark[i].x
+            py = results.right_hand_landmarks.landmark[i].y
+            pz = results.right_hand_landmarks.landmark[i].z
+            pv = results.right_hand_landmarks.landmark[i].visibility
+            frame_points.append(px)
+            frame_points.append(py)
+            frame_points.append(pz)
+            frame_points.append(pv)
     
+    #print("num frame points = ", len(frame_points)/4, " and should be ",len(left_order)+1+(len(results.left_hand_landmarks.landmark)-1)+(len(results.right_hand_landmarks.landmark)-1)+len(right_order))
     annotated_image = image.copy()
     
     # Draw pose landmarks on the image.
@@ -126,7 +149,7 @@ if __name__ == '__main__':
                 save_loc = file_loc
             with open(save_loc+'/processed/pose_info.csv', 'w', newline='\n') as csvfile:
                 posewriter = csv.writer(csvfile, delimiter=',')
-                posewriter.writerow(header)
+                #posewriter.writerow(header)
                 for idx, file in enumerate(os.listdir(images_loc)):
                     if ".png" in file:
                         image = cv2.imread(images_loc+"/"+file)
@@ -145,7 +168,7 @@ if __name__ == '__main__':
             #For video file input:
             with open(save_loc+'/pose_info.csv', 'w', newline='\n') as csvfile:
                 posewriter = csv.writer(csvfile, delimiter=',')
-                posewriter.writerow(header)
+                #posewriter.writerow(header)
 
                 cap = cv2.VideoCapture(video_file)
                 
@@ -171,7 +194,7 @@ if __name__ == '__main__':
             #For webcam input:
             with open(images_loc+'/processed/pose_info.csv', 'w', newline='\n') as csvfile:
                 posewriter = csv.writer(csvfile, delimiter=',')
-                posewriter.writerow(header)
+                #posewriter.writerow(header)
 
                 cap = cv2.VideoCapture(0)
                 idx = 0
