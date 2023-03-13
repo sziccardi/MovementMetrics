@@ -147,7 +147,12 @@ def display_file_select(chosen_file):
     return file_loc, chosen_file
 
 def round_to_multiple(number, multiple):
-    return multiple * round(number / multiple)
+    val = multiple * round(number / multiple)
+    if val == 0:
+        val = multiple * (number / multiple)
+        
+    return val
+
 def get_rounding(number):
     if number < 0.01:
         return 0.01
@@ -190,18 +195,21 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
     x_range = x_max - x_min
     y_range = y_max - y_min
     
-    x_tick_spacing = x_range / float(tick_count_x)
+    x_tick_spacing = float(x_range) / float(tick_count_x)
+    
     rounding = get_rounding(x_tick_spacing)
-    x_tick_spacing = round_to_multiple(x_tick_spacing, rounding)
+    new_x_tick_spacing = round_to_multiple(x_tick_spacing, rounding)
+    
+    x_tick_spacing = new_x_tick_spacing
     x_rounded_min = round_to_multiple(x_min, rounding) - x_tick_spacing
     x_rounded_max = round_to_multiple(x_max, rounding) + x_tick_spacing
 
     y_tick_spacing = y_range / float(tick_count_y)
     rounding = get_rounding(y_tick_spacing)
     y_tick_spacing = round_to_multiple(y_tick_spacing, rounding)
+    
     y_rounded_min = round_to_multiple(y_min, rounding) - y_tick_spacing
     y_rounded_max = round_to_multiple(y_max, rounding) + y_tick_spacing
-
 
     dot_size_x=x_tick_spacing/75.0
     dot_size_y=y_tick_spacing/75.0
@@ -214,9 +222,11 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
 
     x_ax_min = min(x_tick_spacing, x_rounded_min)
     x_ax_max = max(-1*x_tick_spacing, x_rounded_max)
+    print("x_ax ", x_ax_min, " -> ", x_ax_max)
 
     y_ax_min = min(y_tick_spacing, y_rounded_min)
     y_ax_max = max(-1*y_tick_spacing, y_rounded_max)
+    print("y_ax ", y_ax_min, " -> ", y_ax_max)
 
 
     label_angle = 0
