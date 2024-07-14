@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 import os.path
 import csv
+import pandas as pd
 
 import movement_metrics as mm
 import scipy.signal as signal
@@ -26,6 +27,8 @@ pix_scale = ''
 #colors = ["MidnightBlue", "Orange2", "Cyan4","Maroon4","Chartreuse3","Gold","SteelBlue4"]
 colors = ["#191a6c", "#f39706", "#008a8a", "#8d1b60", "#66cd02", "#fed700", "#396487"]
 window = None
+
+file_loc = None
 
 class GraphType(Enum):
     LINE_GRAPH = 0
@@ -211,20 +214,29 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
 
     x_range = x_max - x_min
     y_range = y_max - y_min
-    
+    print("X RANGE: ", x_range)
+    print("X TICK COUNT: ", tick_count_x)
     x_tick_spacing = x_range / float(tick_count_x)
     rounding = get_rounding(x_tick_spacing)
+    print("X ROUNDING: ", rounding)
     if rounding:
         x_tick_spacing = round_to_multiple(x_tick_spacing, rounding)
         x_rounded_min = round_to_multiple(x_min, rounding) - x_tick_spacing
         x_rounded_max = round_to_multiple(x_max, rounding) + x_tick_spacing
+        print("X ROUNDED MIN: ", x_rounded_min)
+        print("X ROUNDED MAX: ", x_rounded_max)
 
+        print("Y RANGE: ", y_range)
+        print("Y TICK COUNT: ", tick_count_y)
         y_tick_spacing = y_range / float(tick_count_y)
         rounding = get_rounding(y_tick_spacing)
+        print("Y ROUNDING: ", rounding)
         if rounding:
             y_tick_spacing = round_to_multiple(y_tick_spacing, rounding)
             y_rounded_min = round_to_multiple(y_min, rounding) - y_tick_spacing
             y_rounded_max = round_to_multiple(y_max, rounding) + y_tick_spacing
+            print("Y ROUNDED MIN: ", y_rounded_min)
+            print("Y ROUNDED MAX: ", y_rounded_max)
 
             dot_size_x=x_tick_spacing/75.0
             dot_size_y=y_tick_spacing/75.0
@@ -275,20 +287,21 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
 
                 graph.draw_line((x_ax_min, max(0, y_ax_min)), (x_ax_max, max(0, y_ax_min)), color="black", width=1) #x axis
                     
-                for x in range(int(x_ax_min), int(x_ax_max), int(x_tick_spacing)):
-                    graph.draw_line((x, max(0, y_ax_min + y_tick_spacing)-v_tick_len), (x, max(0, y_ax_min + y_tick_spacing)+v_tick_len))  #Draw a scale
+                for x in range(tick_count_x):
+
+                    graph.draw_line((x_ax_min + x * x_tick_spacing, max(0, y_ax_min + y_tick_spacing)-v_tick_len), (x_ax_min + x * x_tick_spacing, max(0, y_ax_min + y_tick_spacing)+v_tick_len))  #Draw a scale
                     if x != 0:
-                        graph.draw_text(str('%s' % float('%.2g' % (x))), (x, max(0, y_ax_min + y_tick_spacing)-2.5*v_tick_len), color='black')  #Draw the value of the scale
+                        graph.draw_text(str('%s' % float('%.2g' % (x_ax_min + x * x_tick_spacing))), (x_ax_min + x * x_tick_spacing, max(0, y_ax_min + y_tick_spacing)-2.5*v_tick_len), color='black')  #Draw the value of the scale
                 
                 graph.draw_text(axes_labels[0], (x_ax_label_pos, max(0, y_ax_min + y_tick_spacing)-4.75*v_tick_len), text_location = x_ax_label_anch, color="black")
 
                 graph.draw_line((max(0, x_ax_min), y_ax_min), (max(0, x_ax_min), y_ax_max), color="black", width=1) #y axis
 
                 
-                for y in range(int(y_ax_min), int(y_ax_max), int(y_tick_spacing)):
-                    graph.draw_line((max(0, x_ax_min + x_tick_spacing)-h_tick_len, y), (max(0, x_ax_min + x_tick_spacing)+h_tick_len, y))
+                for y in range(tick_count_y):
+                    graph.draw_line((max(0, x_ax_min + x_tick_spacing)-h_tick_len, y_ax_min+y*y_tick_spacing), (max(0, x_ax_min + x_tick_spacing)+h_tick_len, y_ax_min+y*y_tick_spacing))
                     if y != 0:
-                        graph.draw_text(str('%s' % float('%.2g' % (y))), (max(0, x_ax_min + x_tick_spacing)-2.25*h_tick_len, y), color='black')
+                        graph.draw_text(str('%s' % float('%.2g' % (y_ax_min+y*y_tick_spacing))), (max(0, x_ax_min + x_tick_spacing)-2.25*h_tick_len, y_ax_min+y*y_tick_spacing), color='black')
                 
                 graph.draw_text(axes_labels[1], (max(0, x_ax_min + x_tick_spacing)+x_shift, y_ax_label_pos), angle=label_angle, text_location = y_ax_label_anch, color="black")
                 return (dot_size_x + dot_size_y) / 2.0
@@ -514,32 +527,44 @@ def read_frame_files(file_loc):
         file_list = os.listdir(file_loc+'/video_frames')
     except:
         file_list = []
-    file_list = [val for val in file_list if val.lower().endswith((".jpg")) or val.lower().endswith((".png"))]
-    frames = [(file_loc+'/video_frames/'+val) for val in file_list]
-    frames.sort()
+    #file_list = [val for val in file_list if val.lower().endswith((".jpg")) or val.lower().endswith((".png"))]
+    print("FOUND ", len(file_list), " FRAMES")
     file_list.sort()
+    # frames = [(file_loc+'/video_frames/'+val) for val in file_list]
     
-    keys= [ int(filename[filename.find('_')+1:filename.find('_')+1+filename[filename.find('_')+1:].find('.')]) -1 for filename in file_list]
-    
-    frames_dict = {keys[i]: frames[i] for i in range(len(keys))}
+    beg_file = file_list[0]
+    beg_i = int(beg_file[beg_file.rfind('_')+1:beg_file.rfind('.')])
+    end_file = file_list[-1]
+    end_i = int(end_file[end_file.rfind('_')+1:end_file.rfind('.')])
+
+    keys= [i for i in range(beg_i, end_i, 1)]
+    frames_dict = dict(zip(keys, file_list))
+    # frames_dict = {keys[i]: (file_loc+'/video_frames/'+file_list[i]) for i in range(len(keys))}
     
     return frames_dict
 
 # NOSE MOUTH_LEFT MOUTH_RIGHT LEFT_SHOULDER RIGHT_SHOULDER LEFT_ELBOW RIGHT_ELBOW LEFT_WRIST LEFT_THUMB_BASE 
-def read_pose_data(filename):
-    vals = dict()
-    with open(filename) as file_obj:
-        
-        filereader = csv.reader(file_obj,quoting=csv.QUOTE_NONNUMERIC)
-        
-        for i, row in enumerate(filereader):
-            if i > 0:
-                x_pose = [val * image_size[0] for val in row[::4]]
-                y_pose = [val * image_size[1] for val in row[1::4]]
-                z_pose = [val for val in row[2::4]]
-                v_pose = row[3::4]
-                vals[i] = [x_pose,y_pose,z_pose,v_pose]
+# nose_x	nose_y	nose_z	nose_v	left_eye_(inner)_x	left_eye_(inner)_y	left_eye_(inner)_z	left_eye_(inner)_v	left_eye_x	left_eye_y	left_eye_z	left_eye_v	left_eye_(outer)_x	left_eye_(outer)_y	left_eye_(outer)_z	left_eye_(outer)_v	right_eye_(inner)_x	right_eye_(inner)_y	right_eye_(inner)_z	right_eye_(inner)_v	right_eye_x	right_eye_y	right_eye_z	right_eye_v	right_eye_(outer)_x	right_eye_(outer)_y	right_eye_(outer)_z	right_eye_(outer)_v	left_ear_x	left_ear_y	left_ear_z	left_ear_v	right_ear_x	right_ear_y	right_ear_z	right_ear_v	mouth_(left)_x	mouth_(left)_y	mouth_(left)_z	mouth_(left)_v	mouth_(right)_x	mouth_(right)_y	mouth_(right)_z	mouth_(right)_v	left_shoulder_x	left_shoulder_y	left_shoulder_z	left_shoulder_v	right_shoulder_x	right_shoulder_y	right_shoulder_z	right_shoulder_v	left_elbow_x	left_elbow_y	left_elbow_z	left_elbow_v	right_elbow_x	right_elbow_y	right_elbow_z	right_elbow_v	left_wrist_x	left_wrist_y	left_wrist_z	left_wrist_v	right_wrist_x	right_wrist_y	right_wrist_z	right_wrist_v	left_pinky_x	left_pinky_y	left_pinky_z	left_pinky_v	right_pinky_x	right_pinky_y	right_pinky_z	right_pinky_v	left_index_x	left_index_y	left_index_z	left_index_v	right_index_x	right_index_y	right_index_z	right_index_v	left_thumb_x	left_thumb_y	left_thumb_z	left_thumb_v	right_thumb_x	right_thumb_y	right_thumb_z	right_thumb_v	left_hip_x	left_hip_y	left_hip_z	left_hip_v	right_hip_x	right_hip_y	right_hip_z	right_hip_v	left_knee_x	left_knee_y	left_knee_z	left_knee_v	right_knee_x	right_knee_y	right_knee_z	right_knee_v	left_ankle_x	left_ankle_y	left_ankle_z	left_ankle_v	right_ankle_x	right_ankle_y	right_ankle_z	right_ankle_v	left_heel_x	left_heel_y	left_heel_z	left_heel_v	right_heel_x	right_heel_y	right_heel_z	right_heel_v	left_foot_index_x	left_foot_index_y	left_foot_index_z	left_foot_index_v	right_foot_index_x	right_foot_index_y	right_foot_index_z	right_foot_index_v
 
+def read_pose_data(filename):
+    
+    read_data = pd.read_csv(filename)
+    x_cols = [x for x in read_data.columns if '_x' in x]
+    y_cols = [y for y in read_data.columns if '_y' in y]
+    z_cols = [z for z in read_data.columns if '_z' in z]
+    v_cols = [v for v in read_data.columns if '_v' in v]
+    
+    x_poses = read_data[x_cols]
+    y_poses = read_data[y_cols]
+    z_poses = read_data[z_cols]
+    v_poses = read_data[v_cols]
+
+    np_x = x_poses.to_numpy()
+    np_y = y_poses.to_numpy()
+    np_z = z_poses.to_numpy()
+    np_v = v_poses.to_numpy()
+
+    vals = np.stack([np_x, np_y, np_z, np_v], axis=1)
     
     return vals
 
@@ -558,8 +583,8 @@ def get_img_data(f, maxsize=image_size, first=False):
 
 def display_frame(i):
     if i is not None:
-        window['-FRAME IMAGE-'].update(data=get_img_data(frames[i], first=False))
-        img_name = frames[i][file_loc.rfind('/')+1:]
+        window['-FRAME IMAGE-'].update(data=get_img_data(file_loc+'/video_frames/'+frames[i], first=False))
+        img_name = frames[i]
         window['-IMAGE TITLE-'].update(value=img_name)
 
         frame_loc = i / len(frames)
@@ -687,8 +712,9 @@ if __name__ == '__main__':
         if event == "-EXISTING VIDEO BUTTON-":
             file_loc, pose_file = display_file_select(pose_file)
             frames.clear()
-            pose_file = file_loc+'/pose_info.csv'
+            pose_file = file_loc+'/mediapipe_pose_info.csv'
             loc_name = file_loc[file_loc.rfind('/')+1:]
+            print("trying to read frames")
             frames = read_frame_files(file_loc)
             if len(frames) == 0:
                 print("WARNING: No video frames found for the selected folder.")
@@ -712,8 +738,8 @@ if __name__ == '__main__':
             if len(frames) > 0:
                 window["-SCRUB BAR-"].update(visible=True, range=(0, len(frames)-1))
 
-                window['-FRAME IMAGE-'].update(data=get_img_data(frames[current_frame], first=True))
-                img_name = frames[current_frame][file_loc.rfind('/')+1:]
+                window['-FRAME IMAGE-'].update(data=get_img_data(file_loc+'/video_frames/'+frames[current_frame], first=True))
+                img_name = frames[current_frame]
                 window['-IMAGE TITLE-'].update(value=img_name)
             else:
                 window['-FRAME IMAGE-'].update(filename="placeholder.png", size=image_size)

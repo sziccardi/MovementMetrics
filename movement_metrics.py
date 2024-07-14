@@ -17,7 +17,8 @@ class PlotType(Enum):
 
 
 plot_type_dict = dict({"relative position":PlotType.REL_POS, "relative position over time":PlotType.REL_POS_OVER_TIME, "relative angle histogram":PlotType.REL_ANG_HIST, "relative angle over time":PlotType.REL_ANG_OVER_TIME})
-keypoint_names = ['nose', 'left mouth', 'right mouth',  'left shoulder', 'left elbow', 'left wrist', 'left thumb base', 'left thumb 1', 'left thumb 2', 'left thumb tip', 'left index finger base', 'left index finger 1', 'left index finger 2', 'left index finger tip', 'left middle finger base', 'left middle finger 1', 'left middle finger 2', 'left middle finger tip', 'left ring finger base', 'left ring finger 1', 'left ring finger 2', 'left ring finger tip', 'left pinky finger base', 'left pinky finger 1', 'left pinky finger 2', 'left pinky finger tip','right shoulder', 'right elbow','right wrist', 'right thumb base', 'right thumb 1', 'right thumb 2', 'right thumb tip', 'right index finger base', 'right index finger 1', 'right index finger 2', 'right index finger tip', 'right middle finger base', 'right middle finger 1', 'right middle finger 2', 'right middle finger tip', 'right ring finger base', 'right ring finger 1', 'right ring finger 2', 'right ring finger tip', 'right pinky finger base', 'right pinky finger 1', 'right pinky finger 2', 'right pinky finger tip']
+keypoint_names = ['nose', 'inner left eye',	'center left eye', 'outer left eye', 'inner right eye', 'center right eye', 'outer right eye', 'left ear', 'left corner mouth', 'right corner mouth', 'left shoulder', 'right shoulder', 'left elbow', 'right elbow', 'left wrist', 'right wrist', 'left pinky finger', 'right pinky finger', 'left index finger', 'right index finger', 'left thumb', 'right thumb', 'left hip', 'right hip', 'left knee', 'right knee', 'left ankle', 'right ankle', 'left heel', 'right heel', 'left big toe', 'right big toe']
+# keypoint_names = ['nose', 'left mouth', 'right mouth',  'left shoulder', 'left elbow', 'left wrist', 'left thumb base', 'left thumb 1', 'left thumb 2', 'left thumb tip', 'left index finger base', 'left index finger 1', 'left index finger 2', 'left index finger tip', 'left middle finger base', 'left middle finger 1', 'left middle finger 2', 'left middle finger tip', 'left ring finger base', 'left ring finger 1', 'left ring finger 2', 'left ring finger tip', 'left pinky finger base', 'left pinky finger 1', 'left pinky finger 2', 'left pinky finger tip','right shoulder', 'right elbow','right wrist', 'right thumb base', 'right thumb 1', 'right thumb 2', 'right thumb tip', 'right index finger base', 'right index finger 1', 'right index finger 2', 'right index finger tip', 'right middle finger base', 'right middle finger 1', 'right middle finger 2', 'right middle finger tip', 'right ring finger base', 'right ring finger 1', 'right ring finger 2', 'right ring finger tip', 'right pinky finger base', 'right pinky finger 1', 'right pinky finger 2', 'right pinky finger tip']
 
 keypoint_nums = list(np.arange(0,len(keypoint_names)))
 stoi_map = dict(zip(keypoint_names, keypoint_nums))
@@ -152,8 +153,8 @@ def getValueCrossedCounts(data, less_than, lim):
 # data[frame, x/y/z/v, keypoint]
 def GetRelativePositionData(data, keypoints):
     print("GetRelativePositionData")
-    data_list = list(data.values())
-    np_vals = np.array(data_list)
+    # data_list = list(data)
+    np_vals = data
         
     left_should = stoi_map['left shoulder']
     right_should = stoi_map['right shoulder']
@@ -163,7 +164,7 @@ def GetRelativePositionData(data, keypoints):
     mid_z = (np_vals[:,2,left_should] + np_vals[:,2,right_should]) / 2.0
     labels = []
     processed_data = []
-    key_list = list(data.keys())
+    key_list = [i for i in range(np_vals.shape[0])]
     for start_iter in keypoints:
         
         selected = np_vals[:,:,start_iter]
@@ -181,8 +182,8 @@ def GetRelativePositionData(data, keypoints):
 
 def GetRelativePositionOverTimeData(data, keypoints, fps, vel_blocks):
     print("GetRelativePositionOverTimeData")
-    data_list = list(data.values())
-    np_vals = np.array(data_list)
+    # data_list = list(data.values())
+    np_vals = data #np.array(data_list)
     
     left_should = stoi_map['left shoulder']
     right_should = stoi_map['right shoulder']
@@ -204,7 +205,7 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, vel_blocks):
         avged_pos_x = np.convolve(selected[:my_scale,0], np.ones(vel_blocks), 'valid') / vel_blocks
         avged_pos_y = np.convolve(selected[:my_scale,1], np.ones(vel_blocks), 'valid') / vel_blocks
         horiz = np.column_stack((ts[:len(avged_pos_x)], avged_pos_x, selected[:,3]))
-        key_list = list(data.keys())
+        key_list = [i for i in range(np_vals.shape[0])]
         dict_horiz = {key_list[i]: horiz[i] for i in range(len(key_list))}
         vert = np.column_stack((ts[:len(avged_pos_y)], avged_pos_y, selected[:,3]))
         dict_vert = {key_list[i]: vert[i] for i in range(len(key_list))}
