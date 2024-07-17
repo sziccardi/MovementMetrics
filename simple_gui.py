@@ -219,7 +219,7 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
     x_tick_spacing = x_range / float(tick_count_x)
     rounding = get_rounding(x_tick_spacing)
     print("X ROUNDING: ", rounding)
-    if rounding:
+    if rounding is not None:
         x_tick_spacing = round_to_multiple(x_tick_spacing, rounding)
         x_rounded_min = round_to_multiple(x_min, rounding) - x_tick_spacing
         x_rounded_max = round_to_multiple(x_max, rounding) + x_tick_spacing
@@ -231,7 +231,7 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
         y_tick_spacing = y_range / float(tick_count_y)
         rounding = get_rounding(y_tick_spacing)
         print("Y ROUNDING: ", rounding)
-        if rounding:
+        if rounding is not None:
             y_tick_spacing = round_to_multiple(y_tick_spacing, rounding)
             y_rounded_min = round_to_multiple(y_min, rounding) - y_tick_spacing
             y_rounded_max = round_to_multiple(y_max, rounding) + y_tick_spacing
@@ -241,7 +241,7 @@ def draw_axes(graph, ax_lims, scale, axes_labels, tick_count_x = 10, tick_count_
             dot_size_x=x_tick_spacing/75.0
             dot_size_y=y_tick_spacing/75.0
 
-            if x_rounded_min and x_rounded_max and y_rounded_max and y_rounded_min:
+            if x_rounded_min is not None and x_rounded_max is not None and y_rounded_max is not None and y_rounded_min is not None:
                 print("setting coordinates to ", (x_rounded_min, y_rounded_min),", ", (x_rounded_max, y_rounded_max))
                 graph.change_coordinates((x_rounded_min, y_rounded_min),(x_rounded_max, y_rounded_max))
 
@@ -574,6 +574,7 @@ def get_img_data(f, maxsize=image_size, first=False):
     global frame_size
     frame_size = img.size
     img.thumbnail(maxsize)
+    img = img.rotate(180, Image.NEAREST, expand = 1)
     if first:                     # tkinter is inactive the first time
         bio = io.BytesIO()
         img.save(bio, format="PNG")
@@ -712,7 +713,7 @@ if __name__ == '__main__':
         if event == "-EXISTING VIDEO BUTTON-":
             file_loc, pose_file = display_file_select(pose_file)
             frames.clear()
-            pose_file = file_loc+'/mediapipe_pose_info.csv'
+            pose_file = file_loc+'/pose_info.csv'
             loc_name = file_loc[file_loc.rfind('/')+1:]
             print("trying to read frames")
             frames = read_frame_files(file_loc)
@@ -876,7 +877,7 @@ if __name__ == '__main__':
                         within_y = np_data[point,1] > min_y and np_data[point,1] < max_y
                         if conf and within_x and within_y:
                             highlight.append(frame_list[point])
-            elif plot_specfic_data1 is not None and plot_type[0] == "relative positions":
+            elif plot_specfic_data1 is not None and plot_type[0] == "relative position":
                 frame_list = list(frames.keys())
                 for key in range(len(plot_specfic_data1)):
                     np_data = np.array(list(plot_specfic_data1[key].values()))
