@@ -457,6 +457,7 @@ def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
     for key in range(len(data_labels)):
         vals_plot_0 = data[0][key]
         vals_plot_1 = data[1][key]
+
         max_x_0 = max([vals_plot_0[key_point][0] for key_point in vals_plot_0]) / video_pix_per_m
         max_y_0 = max([vals_plot_0[key_point][1] for key_point in vals_plot_0]) / video_pix_per_m
         min_x_0 = min([vals_plot_0[key_point][0] for key_point in vals_plot_0]) / video_pix_per_m
@@ -493,6 +494,9 @@ def create_two_plots(graphs, data, video_pix_per_m, data_labels, legend):
         axes_labels.append(["time (s)", "Horizontal position (pixels)"])
         axes_labels.append(["time (s)", "Vertical position (pixels)"])
 
+    print("DRAWING 2 GRAPHS!!!!")
+    print("AX 0 LIMITS: ", ax_lims_0)
+    print("AX 1 LIMITS: ", ax_lims_1)
     dot_size = draw_axes(graphs[0], ax_lims_0, scale, axes_labels[0], 20, 4)
     dot_size = draw_axes(graphs[1], ax_lims_1, scale, axes_labels[1], 20, 4)
     conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
@@ -854,6 +858,7 @@ if __name__ == '__main__':
                 plot_specfic_data2 = plot_specfic_data2[1]
                 
             conf_thresh = mm.GetPlotSpecificInfo("relative position")[0]
+            
             if prior_rect[0] == "-FRAME HIGHLIGHT BAR-":
                 min_frame = min_x / image_size[0]
                 min_frame = int(min_frame*len(frames))
@@ -889,7 +894,7 @@ if __name__ == '__main__':
                         if conf and within_x and within_y:
                             highlight.append(frame_list[point])
             elif plot_specfic_data1 is not None:
-                bin_w = mm.GetPlotSpecificInfo("angle histogram")[1]
+                bin_w = mm.GetPlotSpecificInfo("relative angle histogram")[1]
                 np_data = np.array(plot_specfic_data1)
                 for key in range(np_data.shape[0]):
 

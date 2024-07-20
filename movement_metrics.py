@@ -199,6 +199,9 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, vel_blocks):
         selected = np_vals[:,:,start_iter]
         selected[:,0] = (selected[:,0] - mid_x)
         selected[:,1] = (selected[:,1] - mid_y)
+        print("TESTING TESTING TESTING")
+        print(min(selected[:,1]))
+        print(max(selected[:,1]))
 
         rel_pos = selected[:,:3]
         ts = np.arange(0, len(rel_pos) / float(fps), 1.0 / float(fps))
@@ -212,10 +215,8 @@ def GetRelativePositionOverTimeData(data, keypoints, fps, vel_blocks):
         dict_vert = {key_list[i]: vert[i] for i in range(len(key_list))}
         processed_data_h.append(dict_horiz)
         processed_data_v.append(dict_vert)
-
         
         labels.append(itos_map[start_iter])
-    
     return [processed_data_h, processed_data_v], labels
 
 def GetAngleOverTimeData(data, keypoints, video_fps, vel_blocks):
