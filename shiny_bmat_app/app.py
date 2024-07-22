@@ -44,7 +44,7 @@ app_ui = ui.page_sidebar(
         ui.output_text("video_name"),
         ),
      ui.card(ui.card_header("Metrics"),
-             ui.output_text("display_metrics"))
+             ui.output_text_verbatim("display_metrics"))
     ),
     ui.card(ui.card_header("Point cloud"),
             ui.output_plot("point_cloud")),
@@ -79,79 +79,77 @@ def server(input, output, session):
 
         plot_type = input.plot_type()
 
-        print(plot_type)
-
         for i, name in enumerate(labels):
-            print(name)
-            #data_list = list(data[i].values())
-            # if plot_type == "plot_pos":
+            
+            if plot_type == "plot_pos":
                 
-            #     # Clear less confident values
-            #     # np_data = np.array(list(dict_data.values()))
-            #     # conf = mm.GetPlotSpecificInfo("relative position")[0]
-            #     # data_filter = np_data[:,-1] > conf
+                # Clear less confident values
+                # np_data = np.array(list(dict_data.values()))
+                # conf = mm.GetPlotSpecificInfo("relative position")[0]
+                # data_filter = np_data[:,-1] > conf
 
-            #     # Compute crosses
-            #     y_df = df[name+"_y_norm"]
-            #     y_df_shifted = y_df.shift(periods=1)
-            #     y_df_shifted = y_df_shifted[1:]
-            #     y_df = y_df[1:]
+                # Compute crosses
+                y_df = df[name+"_y_norm"]
+                y_df_shifted = y_df.shift(periods=1)
+                y_df_shifted = y_df_shifted[1:]
+                y_df = y_df[1:]
 
-            #     x_ax_crosses_count = sum(y_df_shifted < 0 & y_df > 0) + sum(y_df_shifted > 0 & y_df < 0)
-            #     x_ax_crosses_time = 0
-            #     if name in ["nose", "left_eye(inner)", "left_eye", "left_eye(outer)", "right_eye(inner)", "right_eye", "right_eye(outer)", "right_ear", "left_ear", "mouth(right)", "mouth(left)", "left_shoulder", "right_shoulder"]:
-            #         x_ax_crosses_time = sum(x_df < 0) / fps
-            #     else:
-            #         x_ax_crosses_time = sum(x_df > 0) / fps
+                x_ax_crosses_count = sum((y_df_shifted < 0) & (y_df > 0)) + sum((y_df_shifted > 0) & (y_df < 0))
+                x_ax_crosses_time = 0
+                if name in ["nose", "left_eye(inner)", "left_eye", "left_eye(outer)", "right_eye(inner)", "right_eye", "right_eye(outer)", "right_ear", "left_ear", "mouth(right)", "mouth(left)", "left_shoulder", "right_shoulder"]:
+                    x_ax_crosses_time = sum(y_df < 0) / fps
+                else:
+                    x_ax_crosses_time = sum(y_df > 0) / fps
             
 
-            #     x_df = df[name+"_x_norm"]
-            #     x_df_shifted = x_df.shift(periods=1)
-            #     x_df_shifted = x_df_shifted[1:]
-            #     x_df = x_df[1:]
+                x_df = df[name+"_x_norm"]
+                x_df_shifted = x_df.shift(periods=1)
+                x_df_shifted = x_df_shifted[1:]
+                x_df = x_df[1:]
 
-            #     y_ax_crosses_count = sum(x_df_shifted < 0 & x_df > 0) + sum(x_df_shifted > 0 & x_df < 0)
-            #     y_ax_crosses_time = 0
-            #     if 'left' in name:
-            #         y_ax_crosses_time = sum(y_df < 0) / fps
-            #     elif 'right' in name:
-            #         y_ax_crosses_time = sum(y_df > 0) / fps
+                y_ax_crosses_count = sum((x_df_shifted > 0) & (x_df < 0)) + sum((x_df_shifted < 0) & (x_df > 0))
+                y_ax_crosses_time = 0
+                if 'left' in name:
+                    y_ax_crosses_time = sum(x_df > 0) / fps
+                elif 'right' in name:
+                    y_ax_crosses_time = sum(x_df < 0) / fps
                 
-            #     try:
-            #         total_track_point_text = total_track_point_text + "\n" + name + " : \n - crossed body midline " + str(y_ax_crosses_count) + " times\n - " + str(round(y_ax_crosses_time,2)) + " sec spent crossed\n"
-            #     except:
-            #         print("WARNING: couldn't display midline cross counts")
+                try:
+                    
+                    total_track_point_text = total_track_point_text + "\n" + name + " : " +  "\n - crossed body midline " + str(int(y_ax_crosses_count/2.0)) + " times\n - " + str(round(y_ax_crosses_time,2)) + " sec spent crossed\n"
+                except:
+                    print("WARNING: couldn't display midline cross counts")
                 
                 
-            #     try:
-            #         total_track_point_text = total_track_point_text + " - raised above shoulders " + str(x_ax_crosses_count) + " times\n - " + str(round(x_ax_crosses_time,2)) + " sec spent raised\n"
-            #     except:
-            #         print("WARNING: couldn't display shoulder cross counts")
+                try:
+                    total_track_point_text = total_track_point_text + " - raised above shoulders " + str(int(x_ax_crosses_count/2.0)) + " times\n - " + str(round(x_ax_crosses_time,2)) + " sec spent raised\n"
+                except:
+                    print("WARNING: couldn't display shoulder cross counts")
                 
-            #     # Compute averages and spread
-            #     data_x_mean = df[name+'_x'].mean()
-            #     data_y_mean = df[name+'_y'].mean()
-            #     data_x_var = df[name+'_x'].std()
-            #     data_y_var = df[name+'_y'].std()
-            #     try:
-            #         total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
-            #         total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
-            #     except:
-            #         print("WARNING: couldn't display means or variances ")
+                # Compute averages and spread
+                data_x_mean = df[name+'_x'].mean()
+                data_y_mean = df[name+'_y'].mean()
+                data_x_var = df[name+'_x'].std()
+                data_y_var = df[name+'_y'].std()
+                try:
+                    total_track_point_text = total_track_point_text + " - average position ( " + str(round(data_x_mean,2)) + ", " + str(round(data_y_mean,2)) + " )\n"
+                    total_track_point_text = total_track_point_text + " - with std of ( "+ str(round(data_x_var,2)) + ", " + str(round(data_y_var,2)) + " )\n"
+                except:
+                    print("WARNING: couldn't display means or variances ")
                 
 
-            #     # included = sum(data_filter)
-            #     # num_skipped = np_data[:,-1].shape[0] - included
-            #     # selected = np_data[data_filter]
-            #     # avg_conf = np.mean(selected[:,-1])
-            #     # try:
-            #     #     total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
-            #     # except:
-            #     #     print("WARNING: couldn't display skipped frame count")
-            #     # try:
-            #     #     total_track_point_text = total_track_point_text + "Average confidence: "+str(round(avg_conf,2)) + "\n"
-            #     # except:
-            #     #     print("WARNING: couldn't display average confidence value")
+                # included = sum(data_filter)
+                # num_skipped = np_data[:,-1].shape[0] - included
+                # selected = np_data[data_filter]
+                # avg_conf = np.mean(selected[:,-1])
+                # try:
+                #     total_track_point_text = total_track_point_text + "# frames skipped: "+str(num_skipped) + "\n"
+                # except:
+                #     print("WARNING: couldn't display skipped frame count")
+                # try:
+                #     total_track_point_text = total_track_point_text + "Average confidence: "+str(round(avg_conf,2)) + "\n"
+                # except:
+                #     print("WARNING: couldn't display average confidence value")
             # elif "angle" in plot_type:
             #     np_data = np.array(list(data[0][i].values()))
             #     info = mm.GetPlotSpecificInfo("relative angle over time")
