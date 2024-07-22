@@ -3,8 +3,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
+
 from warnings import simplefilter
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+
+from pathlib import Path
+here = Path(__file__).parent
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
@@ -42,6 +46,8 @@ app_ui = ui.page_sidebar(
     ui.layout_columns(
      ui.card(
         ui.output_text("video_name"),
+        ui.output_image("display_frame"),
+        ui.input_slider("frame_select", "", min=0, max=1, value=0, step=1),
         ),
      ui.card(ui.card_header("Metrics"),
              ui.output_text_verbatim("display_metrics"))
@@ -66,7 +72,23 @@ def server(input, output, session):
             return ""
         else:
             return file[0]["name"]
-        
+
+    @render.image
+    def display_frame():
+        file = input.videofile()
+        if file is None:
+            return {"src": here/"TEMP.png", "width": "100%"} 
+        else:
+            
+            ui.update_slider(
+                "frame_select",
+                value=max(min(input.frame_select(), input.max()), input.min()),
+                min=input.min(),
+                max=input.max(),
+            )
+            {"src": here/"TEMP.png", "width": "100%"} 
+
+
     @render.text
     def display_metrics():
         df = load_data()
