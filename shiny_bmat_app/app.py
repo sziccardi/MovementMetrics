@@ -3,13 +3,24 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
+import cv2
+import av
+import PIL
+from pathlib import Path
 from warnings import simplefilter
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
+here = Path(__file__).parent
+
+current_frame_num = -1
+current_video_name = ""
+current_videocap = None
+current_video_fps = 0
+
 app_ui = ui.page_sidebar(
     ui.sidebar(
-        ui.input_file("csvfile", "Choose Pose CSV File", accept=[".csv"], multiple=False),
-        ui.input_file("videofile", "and Associated Video File", accept=[".mp4"], multiple=False),
+        #ui.input_file("csvfile", "Choose Pose CSV File", accept=[".csv"], multiple=False),
+        ui.input_file("videofile", "Video to Analyze", accept=[".mp4"], multiple=False),
         ui.input_selectize(
         "track_points",
         "Choose track points to plot:",
@@ -42,6 +53,11 @@ app_ui = ui.page_sidebar(
     ui.layout_columns(
      ui.card(
         ui.output_text("video_name"),
+        ui.output_plot("video_frame"),
+        ui.panel_conditional(
+            "output.video_name != ''",
+            ui.input_slider("frame_selector", "Frame", -1, 0, -1)
+        ),
         ),
      ui.card(ui.card_header("Metrics"),
              ui.output_text("display_metrics"))
@@ -63,10 +79,73 @@ def server(input, output, session):
     def video_name():
         file = input.videofile()
         if file is None:
-            return ""
+            return ''
         else:
             return file[0]["name"]
         
+    @render.plot
+    def video_frame():
+        file = input.videofile()
+        global current_frame_num
+        fig, ax = plt.subplots()
+        if current_videocap is not None:
+            f = input.frame_selector()
+            if current_frame_num != f:
+                current_videocap.seek(f / current_video_fps)
+                frame = next(current_videocap.decode(video=0))
+                plt.axis('off')
+                plt.imshow(frame)
+                
+        else:
+            print("VIDEO CAP DOESNT EXIST")
+            img = cv2.imread(str(here / "placeholder-image.jpg"))
+            plt.axis('off')
+            plt.imshow(img)
+        return fig
+    
+    def load_video():
+        global current_video_name
+        global current_videocap
+        global current_video_fps
+        if input.videofile() is not None and current_video_name != input.videofile()[0]['name']:
+            if current_videocap is not None:
+                current_videocap.close()
+
+            vid_path = input.videofile()[0]["datapath"]
+            
+            current_videocap = av.open(vid_path)
+            
+            num_frames = current_videocap.streams.video[0].frames
+            ui.update_slider("frame_selector", min=0, max=num_frames)
+            current_video_name = input.videofile()[0]['name']
+            current_video_fps = current_videocap.streams.video[0].average_rate
+
+
+    @reactive.effect
+    def videofile():
+        load_video()
+    
+    def load_data():
+        file = input.csvfile()
+        if file is None:
+            return pd.DataFrame()
+        
+        df = pd.read_csv(file[0]["datapath"])
+        mid_x = (df["left_shoulder_x"] + df["right_shoulder_x"]) / 2.0
+        mid_y = (df["left_shoulder_y"] + df["right_shoulder_y"]) / 2.0
+
+        for col in df.columns:
+            if "_x" in col:
+                df[col+"_norm"] = df[col] - mid_x
+            elif "_y" in col:
+                df[col+"_norm"] = df[col] - mid_y
+
+        df['frame'] = df.index
+        
+        return df
+    
+
+
     @render.text
     def display_metrics():
         df = load_data()
@@ -180,37 +259,6 @@ def server(input, output, session):
 
         return total_track_point_text
 
-    
-    @reactive.calc
-    def video_file():
-        file = input.videofile()
-        if file is None:
-            return "TEMP.png"
-        else:
-            filepath = file[0]["datapath"]
-            print("returning ", filepath)
-            return filepath
-    
-    
-    def load_data():
-        file = input.csvfile()
-        if file is None:
-            return pd.DataFrame()
-        
-        df = pd.read_csv(file[0]["datapath"])
-        mid_x = (df["left_shoulder_x"] + df["right_shoulder_x"]) / 2.0
-        mid_y = (df["left_shoulder_y"] + df["right_shoulder_y"]) / 2.0
-
-        for col in df.columns:
-            if "_x" in col:
-                df[col+"_norm"] = df[col] - mid_x
-            elif "_y" in col:
-                df[col+"_norm"] = df[col] - mid_y
-
-        df['frame'] = df.index
-        
-        return df
-
 
     @render.plot
     def point_cloud():
@@ -279,18 +327,6 @@ def server(input, output, session):
             ax[0].legend(loc="upper left", fancybox=True, ncol=1, bbox_to_anchor=(1.05, 1.0)) 
         
         return fig
-    
-    
-
-    # @reactive.effect
-    # @reactive.event(input.plot_button)
-    # def _():
-    #     # ready to plot!
-    #     ui.insert_ui(
-    #         ui.tags.video(id="vid"+video_id(),src=video_file(), controls=True),
-    #         selector="#video_name",
-    #         where="afterEnd",
-    #     )
         
 
 
