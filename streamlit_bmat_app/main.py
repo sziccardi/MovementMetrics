@@ -12,6 +12,8 @@ from tempfile import NamedTemporaryFile
 from io import StringIO
 from csv import writer 
 
+vidcap = None
+
 # full page configs
 st.set_page_config(
     page_title="BMAT",
@@ -22,16 +24,16 @@ alt.themes.enable("dark")
 
 # MediaPipe helper functions
 @st.cache_resource
-def mediapipe_process(bytesio):
-
+def mediapipe_process(bytes_to_load):
+    
     output = StringIO()
     csv_writer = writer(output)
     csv_writer.writerow(['time', 'frame', 'keypoint_name', 'x', 'y', 'z'])
 
-    if bytesio is None:
+    if bytes_to_load is None:
         output.seek(0)
         df = pd.read_csv(output)
-        return None, df
+        return df, None
     
 
     print("MEDIAPIPE PROCESS")
@@ -42,7 +44,7 @@ def mediapipe_process(bytesio):
     #tracked_temp_file_to_save = open("./temp.mp4", "wb") #NamedTemporaryFile(suffix=".mp4", delete=False)
 
     with NamedTemporaryFile(suffix="mp4") as temp:
-        temp.write(bytesio.getbuffer())
+        temp.write(bytes_to_load.getbuffer())
         with mp_pose.Pose(
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5) as pose:
@@ -50,6 +52,7 @@ def mediapipe_process(bytesio):
             fps = int(readcap.get(cv2.CAP_PROP_FPS))
             w = int(readcap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(readcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            #num_frames = int(readcap.get(cv2.CAP_PROP_FRAME_COUNT))
             
             writecap = cv2.VideoWriter("./temp.mp4", 0x00000021, fps, (w, h)) 
             
@@ -87,13 +90,15 @@ def mediapipe_process(bytesio):
                 frame_num += 1
 
             readcap.release()
-            readcap.release()
+            writecap.release()
 
     output.seek(0)
     df = pd.read_csv(output)
     
-    file = open("./temp.mp4", "rb")
-    return file, df
+    #file = open("./temp.mp4", "rb")
+    st.session_state['frame_num'] = 0
+    wrotecap = cv2.VideoCapture("./temp.mp4")
+    return df, wrotecap
 
 
 # sidebar
@@ -103,7 +108,7 @@ with st.sidebar:
     uploaded_vid = st.file_uploader("Choose a video...", type=['mp4','mov', 'avi'])
     
     # process uploaded video
-    tracked_file, my_df = mediapipe_process(uploaded_vid)
+    my_df, vidcap = mediapipe_process(uploaded_vid)
 
     # process trackpoints
     trackpoint_choices=["NOSE", "LEFT_WRIST", "LEFT_ELBOW", "LEFT_SHOULDER", "RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"]
@@ -113,11 +118,24 @@ with st.sidebar:
     plot_choices = ['relative position', 'relative angle']
     selected_plot_type = st.selectbox('Select a plot type', plot_choices)
 
+def get_frame(frame_num, cap):
+    #cap = cv2.VideoCapture("./temp.mp4")
+    totalFrames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    
+    if frame_num is not None and frame_num >= 0 and frame_num <= totalFrames:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+        ret, frame = cap.read()
+        if (ret):
+            return frame
+        else:
+            print("Failed load from cap")
+    return None
+
 # plotting functions
 def make_pointcloud(df):
     df = df.loc[df['keypoint_name'].isin(selected_trackpoints)]
     fig = px.scatter(df, x='x', y='y', title="Position per Frame", color='keypoint_name')
-
+    
     return fig
 
 def make_overtime(df, vert=True):
@@ -126,8 +144,8 @@ def make_overtime(df, vert=True):
     if vert:
         my_title = "Vertical Position Over Time"
         col = 'y'
-
-    fig = px.line(df, x="time", y=col, title=my_title)
+    df = df.loc[df['keypoint_name'].isin(selected_trackpoints)]
+    fig = px.line(df, x="time", y=col, title=my_title, color='keypoint_name')
 
     return fig
 
@@ -136,13 +154,34 @@ col = st.columns((1,1), gap='medium')
 with col[0]:
     st.markdown('#### Video')
     if uploaded_vid is not None:
-        #video_file = open(old_file, "rb")
-        print("DISPLAYING ", tracked_file.name)
-        video_bytes = tracked_file.read()
-        col[0].video(video_bytes)
+        
+        # video_bytes = tracked_file.read()
+        # col[0].video(video_bytes)
+        if 'frame_num' in st.session_state and int(st.session_state['frame_num']) >= 0 and vidcap is not None:
+            num_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
+            t = st.slider("Frame:", value=int(st.session_state['frame_num']), min_value=0, max_value=int(num_frames), step=1)
+
+            st.session_state['frame_num'] = t
+
+            img = get_frame(int(st.session_state['frame_num']), vidcap)
+            if img is not None:
+                col[0].image(img)
+            
+        else:
+            col[0].image('TEMP.jpg')
         
         if 'video' not in st.session_state:
             st.session_state['video'] = uploaded_vid.name
+    else:
+        st.session_state['frame_num'] = -1
+        col[0].image('TEMP.jpg')
+        if os.path.isfile("./temp.mp4"): 
+            print("REMOVING ", "./temp.mp4")
+            os.remove("./temp.mp4")
+        if vidcap is not None:
+            vidcap.release()
+
+    
 
 with col[1]:
     st.markdown('#### Point Cloud')
@@ -150,3 +189,7 @@ with col[1]:
     st.plotly_chart(point_cloud, use_container_width=True)
 
 st.markdown('#### Over Time')
+over_time_horiz = make_overtime(my_df, False)
+st.plotly_chart(over_time_horiz, use_container_width=True)
+over_time_vert = make_overtime(my_df, True)
+st.plotly_chart(over_time_vert, use_container_width=True)
