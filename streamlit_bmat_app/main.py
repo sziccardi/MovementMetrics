@@ -11,6 +11,10 @@ import os
 from tempfile import NamedTemporaryFile
 from io import StringIO
 from csv import writer 
+from streamlit_scatterplot_selection import st_scatterplot
+from bokeh.plotting import figure
+from bokeh.models import ColumnDataSource, CustomJS
+from streamlit_bokeh3_events import streamlit_bokeh3_events
 
 vidcap = None
 
@@ -94,8 +98,26 @@ def mediapipe_process(bytes_to_load):
 
     output.seek(0)
     df = pd.read_csv(output)
+    thing1 = df.loc[df['keypoint_name'] == "LEFT_SHOULDER"]
+    thing1 = thing1.set_axis([f for f in thing1['frame']])
+    thing1 = thing1[['x', 'y', 'z']]
+
+    thing2 = df.loc[df['keypoint_name'] == "RIGHT_SHOULDER"]
+    thing2 = thing2.set_axis([f for f in thing2['frame']])
+    thing2 = thing2[['x', 'y', 'z']]
+
+    sternum = thing1.add(thing2) / 2.0
     
+    keypoints = df['keypoint_name'].unique()
+    
+    for key in keypoints:
+        keything = df.loc[df['keypoint_name'] == key, ['x', 'y', 'z']]
+        keysternum = sternum.set_axis([f for f in keything.index])
+
+        df.loc[df['keypoint_name'] == key,['x', 'y', 'z']] = (keything - keysternum)
+        df.loc[df['keypoint_name'] == key,'y'] = df.loc[df['keypoint_name'] == key,'y'] * -1.0
     #file = open("./temp.mp4", "rb")
+    
     st.session_state['frame_num'] = 0
     wrotecap = cv2.VideoCapture("./temp.mp4")
     return df, wrotecap
@@ -132,9 +154,26 @@ def get_frame(frame_num, cap):
     return None
 
 # plotting functions
-def make_pointcloud(df):
-    df = df.loc[df['keypoint_name'].isin(selected_trackpoints)]
-    fig = px.scatter(df, x='x', y='y', title="Position per Frame", color='keypoint_name')
+def make_pointcloud(col_data):
+    # fig = px.scatter(df, x='x', y='y', title="Position per Frame", color='keypoint_name')
+    # fig.update_xaxes(fixedrange=True)
+    # fig.update_yaxes(fixedrange=True)
+    print(col_data.column_names)
+    fig = figure(tools="lasso_select,reset", x_axis_label="x pos (px)", y_axis_label="y pos (px)")
+
+    fig.scatter(x='x', y='y', size=2, source=col_data)
+    
+    col_data.selected.js_on_change(
+        "indices",
+        CustomJS(
+            args=dict(source=col_data),
+            code="""
+            document.dispatchEvent(
+                new CustomEvent("PointCloudSelectEvent", {detail: {indices: cb_obj.indices}})
+            )
+        """,
+        ),
+    )
     
     return fig
 
@@ -144,13 +183,62 @@ def make_overtime(df, vert=True):
     if vert:
         my_title = "Vertical Position Over Time"
         col = 'y'
-    df = df.loc[df['keypoint_name'].isin(selected_trackpoints)]
     fig = px.line(df, x="time", y=col, title=my_title, color='keypoint_name')
+    fig.update_xaxes(fixedrange=True)
+    fig.update_yaxes(fixedrange=True)
 
     return fig
 
 # layout
 col = st.columns((1,1), gap='medium')
+
+    
+subset_df = my_df.loc[my_df['keypoint_name'].isin(selected_trackpoints)]
+selected_df = subset_df.copy()
+with col[1]:
+    st.markdown('#### Point Cloud')
+    
+    col_data = ColumnDataSource(subset_df)
+
+    #point_cloud = make_pointcloud(col_data)
+    point_cloud = figure(tools="lasso_select,reset", x_axis_label="x pos (px)", y_axis_label="y pos (px)")
+
+    point_cloud.scatter(x='x', y='y', size=2, source=col_data)
+    
+    col_data.selected.js_on_change(
+        "indices",
+        CustomJS(
+            args=dict(source=col_data),
+            code="""
+            document.dispatchEvent(
+                new CustomEvent("PointCloudSelectEvent", {detail: {indices: cb_obj.indices}})
+            )
+        """,
+        ),
+    )
+
+    event_result = streamlit_bokeh3_events(
+        events="PointCloudSelectEvent",
+        bokeh_plot=point_cloud,
+        key="point_cloud",
+        debounce_time=100,
+        refresh_on_update=True
+    )
+    #st.bokeh_chart(point_cloud)
+
+    
+    #st.bokeh_chart(point_cloud, use_container_width=True)
+
+    # some event was thrown
+    if event_result is not None:
+        # PointCloudSelectEvent was thrown
+        if "PointCloudSelectEvent" in event_result:
+            indices = event_result["PointCloudSelectEvent"].get("indices", [])
+            selected_df = subset_df.iloc[indices]
+            st.session_state['selected_data_indices'] = indices
+            st.session_state['frame_num'] = min(selected_df['frame'])
+            
+
 with col[0]:
     st.markdown('#### Video')
     if uploaded_vid is not None:
@@ -175,21 +263,20 @@ with col[0]:
     else:
         st.session_state['frame_num'] = -1
         col[0].image('TEMP.jpg')
-        if os.path.isfile("./temp.mp4"): 
-            print("REMOVING ", "./temp.mp4")
-            os.remove("./temp.mp4")
+        # if os.path.isfile("./temp.mp4"): 
+        #     print("REMOVING ", "./temp.mp4")
+        #     if vidcap is not None:
+        #         vidcap.release()
+        #     os.remove("./temp.mp4")
         if vidcap is not None:
             vidcap.release()
 
-    
 
-with col[1]:
-    st.markdown('#### Point Cloud')
-    point_cloud = make_pointcloud(my_df)
-    st.plotly_chart(point_cloud, use_container_width=True)
-
-st.markdown('#### Over Time')
-over_time_horiz = make_overtime(my_df, False)
+st.markdown('#### Horizontal Position Over Time')
+over_time_horiz = make_overtime(subset_df, False)
+#st.line_chart(subset_df, x='time', y='x', color='keypoint_name')
 st.plotly_chart(over_time_horiz, use_container_width=True)
-over_time_vert = make_overtime(my_df, True)
+over_time_vert = make_overtime(subset_df, True)
 st.plotly_chart(over_time_vert, use_container_width=True)
+#st.markdown('#### Vertical Position Over Time')
+#st.line_chart(subset_df, x='time', y='y', color='keypoint_name')
