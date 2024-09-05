@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import altair as alt
-import plotly.express as px
+#import altair as alt
+#import plotly.express as px
 import cv2
 import mediapipe as mp
 mp_drawing = mp.solutions.drawing_utils
@@ -12,13 +12,14 @@ import os
 from tempfile import NamedTemporaryFile
 from io import StringIO
 from csv import writer 
-from streamlit_scatterplot_selection import st_scatterplot
+#from streamlit_scatterplot_selection import st_scatterplot
 from streamlit_dimensions import st_dimensions
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, CustomJS
 from bokeh.transform import factor_cmap
 from bokeh.palettes import Category10
 from bokeh.io import curdoc
+from bokeh.layouts import column
 from streamlit_bokeh3_events import streamlit_bokeh3_events
 
 vidcap = None
@@ -29,8 +30,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded")
 
-alt.themes.enable("dark")
-curdoc().theme = "dark_minimal"
+#alt.themes.enable("dark")
+#curdoc().theme = "dark_minimal"
 
 # MediaPipe helper functions
 @st.cache_resource
@@ -205,65 +206,90 @@ def make_pointcloud(col_data, col_width):
     
     return fig
 
-def make_overtime(col_data, col_width, vert=True):
-    my_title = "Horizontal Position Over Time"
-    col = 'x'
-    if vert:
-        my_title = "Vertical Position Over Time"
-        col = 'y'
-    # fig = px.line(df, x="time", y=col, title=my_title, color='keypoint_name')
-    # fig.update_xaxes(fixedrange=True)
-    # fig.update_yaxes(fixedrange=True)
-    keys = np.unique(col_data.data["keypoint_name"])
+def make_overtime(col_data_h, col_width):
+        
+    keys = np.unique(col_data_h.data["keypoint_name"])
     num = len(keys)
     pal = Category10[max(3, num)]
     pal = pal[:num]
     
-    new_x_min = new_x_max = new_y_min = new_y_max = 0
-    if len(col_data.data[col]) > 0: 
-        x_width = np.max(col_data.data['time']) - np.min(col_data.data['time'])
-        x_mid = np.min(col_data.data['time']) + x_width/2.0
+    new_t_min = new_t_max = new_x_min = new_x_max = new_y_min = new_y_max = 0
+    if len(col_data_h.data['x']) > 0: 
+        t_width = np.max(col_data_h.data['time']) - np.min(col_data_h.data['time'])
+        t_mid = np.min(col_data_h.data['time']) + t_width/2.0
+        new_t_width = t_width*1.1
+        new_t_min = t_mid - new_t_width / 2.0 
+        new_t_max = t_mid + new_t_width / 2.0 
+
+        x_width = np.max(col_data_h.data['x']) - np.min(col_data_h.data['x'])
+        x_mid = np.min(col_data_h.data['x']) + y_width/2.0
         new_x_width = x_width*1.1
         new_x_min = x_mid - new_x_width / 2.0 
         new_x_max = x_mid + new_x_width / 2.0 
-        y_width = np.max(col_data.data[col]) - np.min(col_data.data[col])
-        y_mid = np.min(col_data.data[col]) + y_width/2.0
+
+        y_width = np.max(col_data_h.data['y']) - np.min(col_data_h.data['y'])
+        y_mid = np.min(col_data_h.data['y']) + y_width/2.0
         new_y_width = y_width*1.1
         new_y_min = y_mid - new_y_width / 2.0 
         new_y_max = y_mid + new_y_width / 2.0 
     
+    all_t_data=[]
     all_x_data=[]
     all_y_data=[]
     for key in keys:
-        key_data = col_data.data['keypoint_name']
+        key_data = col_data_h.data['keypoint_name']
         inds = np.where(key_data == key)[0]
-        y_data = col_data.data[col][inds]
-        all_y_data.append(y_data)
-        x_data = col_data.data['time'][inds]
+        x_data = col_data_h.data['x'][inds]
         all_x_data.append(x_data)
+        y_data = col_data_h.data['y'][inds]
+        all_y_data.append(y_data)
+        t_data = col_data_h.data['time'][inds]
+        all_t_data.append(t_data)
 
-    data_dict = {'xs':all_x_data, 'ys':all_y_data, 'colors':pal, 'labels':keys}
-    cds = ColumnDataSource(data_dict)
-    fig1 = figure(tools="lasso_select,reset", width=col_width, height=int(col_width/4.0),title=my_title, x_axis_label="Time (s)", y_axis_label="Pos (px)", x_range=(new_x_min, new_x_max), y_range=(new_y_min, new_y_max))
+    data_dict = {'ts':all_t_data, 'xs':all_x_data, 'ys':all_y_data, 'colors':pal, 'labels':keys}
+    horiz_cds = ColumnDataSource(data_dict)
+    vert_cds = ColumnDataSource(data_dict)
 
-    fig1.line(x=[0, 0], y=[fig1.y_range.start, fig1.y_range.end], line_width=3, color='black')
-    fig1.line(x=[fig1.x_range.start, fig1.x_range.end], y=[0, 0], line_width=3, color='black')
-    fig1.multi_line(xs='xs', ys='ys', line_width=2, line_alpha=0.6, color='colors', legend_field='labels', source=cds)
+    figh = figure(tools="lasso_select,reset", width=col_width, height=int(col_width/4.0),title="Horizontal Position Over Time", x_axis_label="Time (s)", y_axis_label="Pos (px)", x_range=(new_t_min, new_t_max), y_range=(new_x_min, new_x_max))
+
+    figh.line(x=[0, 0], y=[figh.x_range.start, figh.x_range.end], line_width=3, color='black')
+    figh.line(x=[figh.y_range.start, figh.y_range.end], y=[0, 0], line_width=3, color='black')
+    figh.multi_line(xs='ts', ys='xs', line_width=2, line_alpha=0.6, color='colors', legend_field='labels', source=horiz_cds)
     
 
-    col_data.selected.js_on_change(
+    horiz_cds.selected.js_on_change(
         "indices",
         CustomJS(
-            args=dict(source=col_data),
+            args=dict(source=horiz_cds),
             code="""
             document.dispatchEvent(
-                new CustomEvent("OverTimeSelectEvent", {detail: {indices: cb_obj.indices}})
+                new CustomEvent("HorizOverTimeSelectEvent", {detail: {indices: cb_obj.indices}})
+            )
+        """,
+        ),
+    )
+
+    figv = figure(tools="lasso_select,reset", width=col_width, height=int(col_width/4.0),title="Vertical Position Over Time", x_axis_label="Time (s)", y_axis_label="Pos (px)", x_range=(new_t_min, new_t_max), y_range=(new_y_min, new_y_max))
+
+    figv.line(x=[0, 0], y=[figv.x_range.start, figv.x_range.end], line_width=3, color='black')
+    figv.line(x=[figv.y_range.start, figv.y_range.end], y=[0, 0], line_width=3, color='black')
+    figv.multi_line(xs='ts', ys='ys', line_width=2, line_alpha=0.6, color='colors', legend_field='labels', source=vert_cds)
+    
+    vert_cds.selected.js_on_change(
+        "indices",
+        CustomJS(
+            args=dict(source=vert_cds),
+            code="""
+            document.dispatchEvent(
+                new CustomEvent("VertOverTimeSelectEvent", {detail: {indices: cb_obj.indices}})
             )
         """,
         ),
     )
     
-    return fig1
+    p = column(figh, figv)
+
+    return p
 
 def get_metrics(df, plot_type):
     metrics_text = ""
@@ -346,8 +372,8 @@ st.markdown('#### Point Cloud')
 selected_df = subset_df.copy()
 
 col_data_pc = ColumnDataSource(subset_df)
-col_data_oth = ColumnDataSource(subset_df)
-col_data_otv = ColumnDataSource(subset_df)
+col_data_ot = ColumnDataSource(subset_df)
+# col_data_otv = ColumnDataSource(subset_df)
 
 size = st_dimensions(key="main")
 if size is None:
@@ -372,40 +398,55 @@ if pc_event_result is not None:
         st.session_state['selected_data_indices'] = indices
         st.session_state['frame_num'] = min(selected_df['frame'])
 
-st.markdown('#### Horizontal Position Over Time')
-over_time_horiz = make_overtime(col_data_oth, int(size['width']), False)
+st.markdown('#### Position Over Time')
+over_time = make_overtime(col_data_ot, int(size['width']))
 #st.line_chart(subset_df, x='time', y='x', color='keypoint_name')
 #st.plotly_chart(over_time_horiz, use_container_width=True)
-oth_event_result = streamlit_bokeh3_events(
-    events="OverTimeSelectEvent",
-    bokeh_plot=over_time_horiz,
-    key="over_time_horiz",
+ot_event_result = streamlit_bokeh3_events(
+    events="HorizOverTimeSelectEvent, VertOverTimeSelectEvent",
+    bokeh_plot=over_time,
+    key="over_time",
     debounce_time=100,
     refresh_on_update=True
 )
-
-st.markdown('#### Vertical Position Over Time')
-over_time_vert = make_overtime(col_data_otv, int(size['width']), True)
-#st.plotly_chart(over_time_vert, use_container_width=True)
-#st.markdown('#### Vertical Position Over Time')
-#st.line_chart(subset_df, x='time', y='y', color='keypoint_name')
-
-otv_event_result = streamlit_bokeh3_events(
-    events="OverTimeVertSelectEvent",
-    bokeh_plot=over_time_vert,
-    key="over_time_vert",
-    debounce_time=100,
-    refresh_on_update=True
-)
-
-# some event was thrown
-if otv_event_result is not None:
+if ot_event_result is not None:
     # PointCloudSelectEvent was thrown
-    if "OverTimeHorizSelectEvent" in pc_event_result:
-        indices = pc_event_result["OverTimeHorizSelectEvent"].get("indices", [])
+    if "HorizOverTimeSelectEvent" in ot_event_result:
+        indices = pc_event_result["HorizOverTimeSelectEvent"].get("indices", [])
         selected_df = subset_df.iloc[indices]
         st.session_state['selected_data_indices'] = indices
         st.session_state['frame_num'] = min(selected_df['frame'])
+        print("GRABBED DATA FROM HORIZ")
+    elif "VertOverTimeSelectEvent" in ot_event_result:
+        indices = pc_event_result["HorizOverTimeSelectEvent"].get("indices", [])
+        selected_df = subset_df.iloc[indices]
+        st.session_state['selected_data_indices'] = indices
+        st.session_state['frame_num'] = min(selected_df['frame'])
+        print("GRABBED DATA FROM VERT")
+
+
+# st.markdown('#### Vertical Position Over Time')
+# over_time_vert = make_overtime(col_data_otv, int(size['width']), True)
+# #st.plotly_chart(over_time_vert, use_container_width=True)
+# #st.markdown('#### Vertical Position Over Time')
+# #st.line_chart(subset_df, x='time', y='y', color='keypoint_name')
+
+# otv_event_result = streamlit_bokeh3_events(
+#     events="OverTimeVertSelectEvent",
+#     bokeh_plot=over_time_vert,
+#     key="over_time_vert",
+#     debounce_time=100,
+#     refresh_on_update=True
+# )
+
+# # some event was thrown
+# if otv_event_result is not None:
+#     # PointCloudSelectEvent was thrown
+#     if "OverTimeHorizSelectEvent" in pc_event_result:
+#         indices = pc_event_result["OverTimeHorizSelectEvent"].get("indices", [])
+#         selected_df = subset_df.iloc[indices]
+#         st.session_state['selected_data_indices'] = indices
+#         st.session_state['frame_num'] = min(selected_df['frame'])
 
 st.markdown('''
 <style>
