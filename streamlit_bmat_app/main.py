@@ -411,9 +411,9 @@ def run():
         
     selected_df = subset_df.copy()
 
-col_data_pc = ColumnDataSource(subset_df)
-col_data_ot = ColumnDataSource(subset_df)
-# col_data_otv = ColumnDataSource(subset_df)
+    col_data_pc = ColumnDataSource(subset_df)
+    col_data_ot = ColumnDataSource(subset_df)
+    # col_data_otv = ColumnDataSource(subset_df)
 
     size = st_dimensions(key="main")
     if size is None:
@@ -438,63 +438,63 @@ col_data_ot = ColumnDataSource(subset_df)
             st.session_state['selected_data_indices'] = indices
             st.session_state['frame_num'] = min(selected_df['frame'])
 
-st.markdown('#### Position Over Time')
-over_time = make_overtime(col_data_ot, int(size['width']))
-#st.line_chart(subset_df, x='time', y='x', color='keypoint_name')
-#st.plotly_chart(over_time_horiz, use_container_width=True)
-ot_event_result = streamlit_bokeh3_events(
-    events="HorizOverTimeSelectEvent, VertOverTimeSelectEvent",
-    bokeh_plot=over_time,
-    key="over_time",
-    debounce_time=100,
-    refresh_on_update=True
-)
-if ot_event_result is not None:
-    # PointCloudSelectEvent was thrown
-    if "HorizOverTimeSelectEvent" in ot_event_result:
-        indices = pc_event_result["HorizOverTimeSelectEvent"].get("indices", [])
-        selected_df = subset_df.iloc[indices]
-        st.session_state['selected_data_indices'] = indices
-        st.session_state['frame_num'] = min(selected_df['frame'])
-        print("GRABBED DATA FROM HORIZ")
-    elif "VertOverTimeSelectEvent" in ot_event_result:
-        indices = pc_event_result["HorizOverTimeSelectEvent"].get("indices", [])
-        selected_df = subset_df.iloc[indices]
-        st.session_state['selected_data_indices'] = indices
-        st.session_state['frame_num'] = min(selected_df['frame'])
-        print("GRABBED DATA FROM VERT")
+    st.markdown('#### Position Over Time')
+    over_time = make_overtime(col_data_ot, int(size['width']))
+    #st.line_chart(subset_df, x='time', y='x', color='keypoint_name')
+    #st.plotly_chart(over_time_horiz, use_container_width=True)
+    ot_event_result = streamlit_bokeh3_events(
+        events="HorizOverTimeSelectEvent, VertOverTimeSelectEvent",
+        bokeh_plot=over_time,
+        key="over_time",
+        debounce_time=100,
+        refresh_on_update=True
+    )
+    if ot_event_result is not None:
+        # PointCloudSelectEvent was thrown
+        if "HorizOverTimeSelectEvent" in ot_event_result:
+            indices = pc_event_result["HorizOverTimeSelectEvent"].get("indices", [])
+            selected_df = subset_df.iloc[indices]
+            st.session_state['selected_data_indices'] = indices
+            st.session_state['frame_num'] = min(selected_df['frame'])
+            print("GRABBED DATA FROM HORIZ")
+        elif "VertOverTimeSelectEvent" in ot_event_result:
+            indices = pc_event_result["HorizOverTimeSelectEvent"].get("indices", [])
+            selected_df = subset_df.iloc[indices]
+            st.session_state['selected_data_indices'] = indices
+            st.session_state['frame_num'] = min(selected_df['frame'])
+            print("GRABBED DATA FROM VERT")
 
 
-# st.markdown('#### Vertical Position Over Time')
-# over_time_vert = make_overtime(col_data_otv, int(size['width']), True)
-# #st.plotly_chart(over_time_vert, use_container_width=True)
-# #st.markdown('#### Vertical Position Over Time')
-# #st.line_chart(subset_df, x='time', y='y', color='keypoint_name')
+    # st.markdown('#### Vertical Position Over Time')
+    # over_time_vert = make_overtime(col_data_otv, int(size['width']), True)
+    # #st.plotly_chart(over_time_vert, use_container_width=True)
+    # #st.markdown('#### Vertical Position Over Time')
+    # #st.line_chart(subset_df, x='time', y='y', color='keypoint_name')
 
-# otv_event_result = streamlit_bokeh3_events(
-#     events="OverTimeVertSelectEvent",
-#     bokeh_plot=over_time_vert,
-#     key="over_time_vert",
-#     debounce_time=100,
-#     refresh_on_update=True
-# )
+    # otv_event_result = streamlit_bokeh3_events(
+    #     events="OverTimeVertSelectEvent",
+    #     bokeh_plot=over_time_vert,
+    #     key="over_time_vert",
+    #     debounce_time=100,
+    #     refresh_on_update=True
+    # )
 
-# # some event was thrown
-# if otv_event_result is not None:
-#     # PointCloudSelectEvent was thrown
-#     if "OverTimeHorizSelectEvent" in pc_event_result:
-#         indices = pc_event_result["OverTimeHorizSelectEvent"].get("indices", [])
-#         selected_df = subset_df.iloc[indices]
-#         st.session_state['selected_data_indices'] = indices
-#         st.session_state['frame_num'] = min(selected_df['frame'])
+    # # some event was thrown
+    # if otv_event_result is not None:
+    #     # PointCloudSelectEvent was thrown
+    #     if "OverTimeHorizSelectEvent" in pc_event_result:
+    #         indices = pc_event_result["OverTimeHorizSelectEvent"].get("indices", [])
+    #         selected_df = subset_df.iloc[indices]
+    #         st.session_state['selected_data_indices'] = indices
+    #         st.session_state['frame_num'] = min(selected_df['frame'])
 
-    # st.markdown('''
-    # <style>
-    # [data-testid="stMarkdownContainer"] ul{
-    #     padding-left:40px;
-    # }
-    # </style>
-    # ''', unsafe_allow_html=True)
+        # st.markdown('''
+        # <style>
+        # [data-testid="stMarkdownContainer"] ul{
+        #     padding-left:40px;
+        # }
+        # </style>
+        # ''', unsafe_allow_html=True)
 
 
 
