@@ -23,15 +23,7 @@ from bokeh.layouts import column
 from streamlit_bokeh3_events import streamlit_bokeh3_events
 
 vidcap = None
-
-# full page configs
-st.set_page_config(
-    page_title="BMAT",
-    layout="wide",
-    initial_sidebar_state="expanded")
-
-#alt.themes.enable("dark")
-#curdoc().theme = "dark_minimal"
+my_df = None
 
 # MediaPipe helper functions
 @st.cache_resource
@@ -130,22 +122,11 @@ def mediapipe_process(bytes_to_load):
     return df, wrotecap
 
 
-# sidebar
-with st.sidebar:
-    st.title('BMAT')
+# def file_selector(folder_path='.'):
+#     filenames = os.listdir(folder_path)
+#     selected_filename = st.selectbox('Select a file or folder', filenames)
+#     return os.path.join(folder_path, selected_filename)
 
-    uploaded_vid = st.file_uploader("Choose a video...", type=['mp4','mov', 'avi'])
-    
-    # process uploaded video
-    my_df, vidcap = mediapipe_process(uploaded_vid)
-
-    # process trackpoints
-    trackpoint_choices=["NOSE", "LEFT_WRIST", "LEFT_ELBOW", "LEFT_SHOULDER", "RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"]
-    selected_trackpoints = st.multiselect('Select Trackpoints', trackpoint_choices)
-
-    # process graph types
-    plot_choices = ['relative position', 'relative angle']
-    selected_plot_type = st.selectbox('Select a plot type', plot_choices)
 
 def get_frame(frame_num, cap):
     #cap = cv2.VideoCapture("./temp.mp4")
@@ -319,84 +300,143 @@ def get_metrics(df, plot_type):
 
     return metrics_text
 
-# layout
-col = st.columns((1,1), gap='medium')
 
-    
-subset_df = my_df.loc[my_df['keypoint_name'].isin(selected_trackpoints)]
-with col[0]:
-    st.markdown('#### Video')
-    if uploaded_vid is not None:
+def run():
+    global my_df
+    global vidcap
+    # full page configs
+    st.set_page_config(
+        page_title="BMAT",
+        layout="wide",
+        initial_sidebar_state="expanded")
+
+    alt.themes.enable("dark")
+    curdoc().theme = "dark_minimal"
+
+    # sidebar
+    with st.sidebar:
+        st.title('BMAT')
+
+        uploaded_vid = st.file_uploader("Choose a video... [required]", type=['.mp4', '.MP4', '.mov', '.MOV'])
+        uploaded_csv = st.file_uploader("Choose a pre-processed file... [optional]", type=['.csv'])
         
-        # video_bytes = tracked_file.read()
-        # col[0].video(video_bytes)
-        if 'frame_num' in st.session_state and int(st.session_state['frame_num']) >= 0 and vidcap is not None:
-            num_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
-            t = st.slider("Frame:", value=int(st.session_state['frame_num']), min_value=0, max_value=int(num_frames), step=1)
+        
+        
+        # process trackpoints
+        trackpoint_choices=["NOSE", "LEFT_WRIST", "LEFT_ELBOW", "LEFT_SHOULDER", "RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"]
+        selected_trackpoints = st.multiselect('Select Trackpoints', trackpoint_choices)
 
-            st.session_state['frame_num'] = t
+        # process graph types
+        plot_choices = ['relative position', 'relative angle']
+        selected_plot_type = st.selectbox('Select a plot type', plot_choices)
 
-            img = get_frame(int(st.session_state['frame_num']), vidcap)
-            if img is not None:
-                col[0].image(img)
+        if st.button('Process!'):
+            if uploaded_csv is None and uploaded_vid is not None:
+                # process uploaded video
+                my_df, vidcap = mediapipe_process(uploaded_vid)
+            elif uploaded_csv is not None and uploaded_vid is not None:
+                my_df = pd.read_csv(uploaded_csv)
+                
+                #csv_writer.writerow(['time', 'frame', 'keypoint_name', 'x', 'y', 'z'])
+                with NamedTemporaryFile(suffix="mp4") as temp:
+                    temp.write(uploaded_vid.getbuffer())
+                    vidcap = cv2.VideoCapture(temp.name)
+                    st.session_state['frame_num'] = 0
+        
+        if 'frame_num' in st.session_state: 
+            if uploaded_csv is not None and uploaded_vid is not None:
+                with NamedTemporaryFile(suffix="mp4") as temp:
+                    temp.write(uploaded_vid.getbuffer())
+                    vidcap = cv2.VideoCapture(temp.name)
+            elif uploaded_vid is not None:
+                vidcap = cv2.VideoCapture("./temp.mp4")
+
+        if my_df is None and uploaded_csv is not None and uploaded_vid is not None:
+            my_df = pd.read_csv(uploaded_csv)
+
+        if my_df is not None:
+            filename = ''
+            if uploaded_vid is not None:
+                i = uploaded_vid.name.rfind('.')
+                filename = 'BMAT_'+uploaded_vid.name[:i]+'.csv'
+            elif uploaded_csv is not None:
+                filename = uploaded_csv.name
+            st.download_button('Download pose data', my_df.to_csv().encode("utf-8"), mime="text/csv", file_name=filename)
+        #st.download_button('Download video data', vidcap., mime="video/mp4", file_name='BMAT_'+filename+".csv")
+
+    # layout
+    col = st.columns((1,1), gap='medium')
+
+    subset_df = pd.DataFrame(columns=['time', 'frame', 'keypoint_name', 'x', 'y', 'z'])
+    if my_df is not None:
+        subset_df = my_df.loc[my_df['keypoint_name'].isin(selected_trackpoints)]
+
+    with col[0]:
+        st.markdown('#### Video')
+        if uploaded_vid is not None:
             
+            if 'frame_num' in st.session_state and int(st.session_state['frame_num']) >= 0 and vidcap is not None:
+                num_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
+                t = st.slider("Frame:", value=int(st.session_state['frame_num']), min_value=0, max_value=int(num_frames), step=1)
+
+                st.session_state['frame_num'] = t
+                img = get_frame(int(st.session_state['frame_num']), vidcap)
+                if img is not None:
+                    col[0].image(img)
+                
+            else:
+                col[0].image('TEMP.jpg')
+            
+            if 'video' not in st.session_state:
+                st.session_state['video'] = uploaded_vid.name
         else:
+            st.session_state['frame_num'] = -1
             col[0].image('TEMP.jpg')
+            # if os.path.isfile("./temp.mp4"): 
+            #     print("REMOVING ", "./temp.mp4")
+            #     if vidcap is not None:
+            #         vidcap.release()
+            #     os.remove("./temp.mp4")
+    if vidcap is not None:
+        vidcap.release()
+        vidcap = None
+    
+    with col[1]:
+        st.markdown('#### Metrics')
+        with st.container(height=500):
+            text = get_metrics(subset_df, selected_plot_type)
+            st.markdown(text)
+
+    st.markdown('#### Point Cloud')
         
-        if 'video' not in st.session_state:
-            st.session_state['video'] = uploaded_vid.name
-    else:
-        st.session_state['frame_num'] = -1
-        col[0].image('TEMP.jpg')
-        # if os.path.isfile("./temp.mp4"): 
-        #     print("REMOVING ", "./temp.mp4")
-        #     if vidcap is not None:
-        #         vidcap.release()
-        #     os.remove("./temp.mp4")
-        if vidcap is not None:
-            vidcap.release()
-
-with col[1]:
-    st.markdown('#### Metrics')
-    with st.container(height=500):
-        text = get_metrics(subset_df, selected_plot_type)
-        st.markdown(text)
-
-    
-            
-
-
-
-st.markdown('#### Point Cloud')
-    
-selected_df = subset_df.copy()
+    selected_df = subset_df.copy()
 
 col_data_pc = ColumnDataSource(subset_df)
 col_data_ot = ColumnDataSource(subset_df)
 # col_data_otv = ColumnDataSource(subset_df)
 
-size = st_dimensions(key="main")
-if size is None:
-    size={'width':300}    
+    size = st_dimensions(key="main")
+    if size is None:
+        size={'width':300}    
 
-point_cloud = make_pointcloud(col_data_pc, int(size['width']))
+    point_cloud = make_pointcloud(col_data_pc, int(size['width']))
 
-pc_event_result = streamlit_bokeh3_events(
-    events="PointCloudSelectEvent",
-    bokeh_plot=point_cloud,
-    key="point_cloud",
-    debounce_time=100,
-    refresh_on_update=True
-)
+    pc_event_result = streamlit_bokeh3_events(
+        events="PointCloudSelectEvent",
+        bokeh_plot=point_cloud,
+        key="point_cloud",
+        debounce_time=100,
+        refresh_on_update=True
+    )
 
-# some event was thrown
-if pc_event_result is not None:
-    # PointCloudSelectEvent was thrown
-    if "PointCloudSelectEvent" in pc_event_result:
-        indices = pc_event_result["PointCloudSelectEvent"].get("indices", [])
-        selected_df = subset_df.iloc[indices]
-        st.session_state['selected_data_indices'] = indices
-        st.session_state['frame_num'] = min(selected_df['frame'])
+    # some event was thrown
+    if pc_event_result is not None:
+        # PointCloudSelectEvent was thrown
+        if "PointCloudSelectEvent" in pc_event_result:
+            indices = pc_event_result["PointCloudSelectEvent"].get("indices", [])
+            selected_df = subset_df.iloc[indices]
+            st.session_state['selected_data_indices'] = indices
+            st.session_state['frame_num'] = min(selected_df['frame'])
 
 st.markdown('#### Position Over Time')
 over_time = make_overtime(col_data_ot, int(size['width']))
@@ -448,10 +488,15 @@ if ot_event_result is not None:
 #         st.session_state['selected_data_indices'] = indices
 #         st.session_state['frame_num'] = min(selected_df['frame'])
 
-st.markdown('''
-<style>
-[data-testid="stMarkdownContainer"] ul{
-    padding-left:40px;
-}
-</style>
-''', unsafe_allow_html=True)
+    # st.markdown('''
+    # <style>
+    # [data-testid="stMarkdownContainer"] ul{
+    #     padding-left:40px;
+    # }
+    # </style>
+    # ''', unsafe_allow_html=True)
+
+
+
+if __name__ == "__main__":
+    run()
