@@ -15,7 +15,7 @@ from csv import writer
 #from streamlit_scatterplot_selection import st_scatterplot
 from streamlit_dimensions import st_dimensions
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, CustomJS
+from bokeh.models import ColumnDataSource, CustomJS, CDSView, IndexFilter
 from bokeh.transform import factor_cmap
 from bokeh.palettes import Category10
 from bokeh.io import curdoc
@@ -170,9 +170,13 @@ def make_pointcloud(col_data, col_width):
     
     fig.line(x=[0, 0], y=[fig.y_range.start, fig.y_range.end], line_width=3, color='black')
     fig.line(x=[fig.x_range.start, fig.x_range.end], y=[0, 0], line_width=3, color='black')
-    #TODO: subset col_data with selected_data_indices
-    fig.scatter(x='x', y='y', size=2, source=col_data,fill_alpha=0.6, color=index_cmap, legend_group='keypoint_name')
     
+    if 'selected_data_indices' in st.session_state:
+        fig.scatter(x='x', y='y', size=2, source=col_data,fill_alpha=0.2, line_alpha=0.2, color=index_cmap, legend_group='keypoint_name')
+        view = CDSView(source=col_data, filters = [IndexFilter(st.session_state['selected_data_indices'])])
+        fig.scatter(x='x', y='y', size=4, source=col_data, view=view, fill_alpha=1.0, color=index_cmap, legend_group='keypoint_name')
+    else: 
+        fig.scatter(x='x', y='y', size=2, source=col_data,fill_alpha=0.6, color=index_cmap, legend_group='keypoint_name')
 
     col_data.selected.js_on_change(
         "indices",
@@ -191,9 +195,13 @@ def make_pointcloud(col_data, col_width):
 def make_overtime(col_data, col_width):
         
     keys = np.unique(col_data.data["keypoint_name"])
+    
     num = len(keys)
     pal = Category10[max(3, num)]
     pal = pal[:num]
+
+    index_cmap = factor_cmap('keypoint_name', palette=pal, 
+                         factors=np.unique(col_data.data["keypoint_name"]))
     
     new_t_min = new_t_max = new_x_min = new_x_max = new_y_min = new_y_max = 0
     if len(col_data.data['time']) > 0: 
@@ -215,10 +223,25 @@ def make_overtime(col_data, col_width):
         new_y_min = y_mid - new_y_width / 2.0 
         new_y_max = y_mid + new_y_width / 2.0 
     
+    
+    
+    x_subset = None
+    y_subset = None
+    t_subset = None
+    key_subset = None
+    if 'selected_data_indices' in st.session_state:
+        x_subset = col_data.data['x'][st.session_state['selected_data_indices']]
+        y_subset = col_data.data['y'][st.session_state['selected_data_indices']]
+        t_subset = col_data.data['time'][st.session_state['selected_data_indices']]
+        key_subset = col_data.data['keypoint_name'][st.session_state['selected_data_indices']]
+    
     all_t_data=[]
     all_x_data=[]
-    all_y_data=[]
-    for key in keys:
+    all_y_data=[]  
+    selected_t_data=[]
+    selected_x_data=[]
+    selected_y_data=[]
+    for i,key in enumerate(keys):
         key_data = col_data.data['keypoint_name']
         inds = np.where(key_data == key)[0]
         x_data = col_data.data['x'][inds]
@@ -228,15 +251,40 @@ def make_overtime(col_data, col_width):
         t_data = col_data.data['time'][inds]
         all_t_data.append(t_data)
 
+        if x_subset is not None:
+            s_inds = np.where(key_subset == key)[0]
+            s_x_data = x_subset[s_inds]
+            selected_x_data.append(s_x_data)
+            s_y_data = y_subset[s_inds]
+            selected_y_data.append(s_y_data)
+            s_t_data = t_subset[s_inds]
+            selected_t_data.append(s_t_data)
+
+    
     data_dict = {'ts':all_t_data, 'xs':all_x_data, 'ys':all_y_data, 'colors':pal, 'labels':keys}
+    selected_data_dict = {'ts':selected_t_data, 'xs':selected_x_data, 'ys':selected_y_data, 'colors':pal, 'labels':keys}
     horiz_cds = ColumnDataSource(data_dict)
+    selected_horiz_cds = ColumnDataSource(selected_data_dict)
+
+
     vert_cds = ColumnDataSource(data_dict)
+    selected_vert_cds = ColumnDataSource(selected_data_dict)
 
     figh = figure(tools="lasso_select,reset", width=col_width, height=int(col_width/4.0),title="Horizontal Position Over Time", x_axis_label="Time (s)", y_axis_label="Pos (px)", x_range=(new_t_min, new_t_max), y_range=(new_x_min, new_x_max))
 
     figh.line(x=[0, 0], y=[figh.x_range.start, figh.x_range.end], line_width=3, color='black')
     figh.line(x=[figh.y_range.start, figh.y_range.end], y=[0, 0], line_width=3, color='black')
-    figh.multi_line(xs='ts', ys='xs', line_width=2, line_alpha=0.6, color='colors', legend_field='labels', source=horiz_cds)
+    
+    if len(selected_t_data) > 0:
+        figh.multi_line(xs='ts', ys='xs', line_width=2, line_alpha=0.2, color='colors', legend_field='labels', source=horiz_cds)
+        #figh.scatter(x='time', y='x', size=2, source=col_data,fill_alpha=0.2, line_alpha=0.2, color=index_cmap, legend_group='keypoint_name')
+        
+        figh.multi_line(xs='ts', ys='xs', line_width=8, line_alpha=0.6, color='colors')
+        #figh.scatter(x='ts', y='xs', size=8, source=selected_horiz_cds, fill_alpha=0.2, color='colors')
+    else: 
+        figh.multi_line(xs='ts', ys='xs', line_width=2, line_alpha=0.6, color='colors', legend_field='labels', source=horiz_cds)
+        figh.scatter(x='ts', y='xs', size=8, source=horiz_cds, fill_alpha=0.6, color='colors')
+
     
 
     horiz_cds.selected.js_on_change(
@@ -251,11 +299,15 @@ def make_overtime(col_data, col_width):
         ),
     )
 
-    figv = figure(tools="lasso_select,reset", width=col_width, height=int(col_width/4.0),title="Vertical Position Over Time", x_axis_label="Time (s)", y_axis_label="Pos (px)", x_range=(new_t_min, new_t_max), y_range=(new_y_min, new_y_max))
+    figv = figure(tools="lasso_select,reset", width=col_width, height=int(col_width/4.0),title="Vertical Position Over Time", x_axis_label="Time (s)", y_axis_label="Pos (py)", x_range=(new_t_min, new_t_max), y_range=(new_y_min, new_y_max))
 
     figv.line(x=[0, 0], y=[figv.x_range.start, figv.x_range.end], line_width=3, color='black')
     figv.line(x=[figv.y_range.start, figv.y_range.end], y=[0, 0], line_width=3, color='black')
-    figv.multi_line(xs='ts', ys='ys', line_width=2, line_alpha=0.6, color='colors', legend_field='labels', source=vert_cds)
+    if len(selected_t_data) > 0:
+        figv.multi_line(xs='ts', ys='ys', line_width=2, line_alpha=0.2, color='colors', legend_field='labels', source=vert_cds)
+        figv.multi_line(xs='ts', ys='ys', line_width=8, line_alpha=0.6, color='colors', legend_field='labels', source=selected_vert_cds)
+    else: 
+        figv.multi_line(xs='ts', ys='ys', line_width=2, line_alpha=0.6, color='colors', legend_field='labels', source=vert_cds)
     
     vert_cds.selected.js_on_change(
         "indices",
@@ -371,6 +423,7 @@ def run():
     subset_df = pd.DataFrame(columns=['time', 'frame', 'keypoint_name', 'x', 'y', 'z'])
     if my_df is not None:
         subset_df = my_df.loc[my_df['keypoint_name'].isin(selected_trackpoints)]
+            
 
     with col[0]:
         st.markdown('#### Video')
@@ -438,6 +491,7 @@ def run():
             selected_df = subset_df.iloc[indices]
             st.session_state['selected_data_indices'] = indices
             st.session_state['frame_num'] = min(selected_df['frame'])
+            
 
     st.markdown('#### Position Over Time')
     over_time = make_overtime(col_data_ot, int(size['width']))
