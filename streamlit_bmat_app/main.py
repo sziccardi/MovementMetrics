@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-#import altair as alt
+import altair as alt
 #import plotly.express as px
 import cv2
 import mediapipe as mp
@@ -170,6 +170,7 @@ def make_pointcloud(col_data, col_width):
     
     fig.line(x=[0, 0], y=[fig.y_range.start, fig.y_range.end], line_width=3, color='black')
     fig.line(x=[fig.x_range.start, fig.x_range.end], y=[0, 0], line_width=3, color='black')
+    #TODO: subset col_data with selected_data_indices
     fig.scatter(x='x', y='y', size=2, source=col_data,fill_alpha=0.6, color=index_cmap, legend_group='keypoint_name')
     
 
@@ -187,29 +188,29 @@ def make_pointcloud(col_data, col_width):
     
     return fig
 
-def make_overtime(col_data_h, col_width):
+def make_overtime(col_data, col_width):
         
-    keys = np.unique(col_data_h.data["keypoint_name"])
+    keys = np.unique(col_data.data["keypoint_name"])
     num = len(keys)
     pal = Category10[max(3, num)]
     pal = pal[:num]
     
     new_t_min = new_t_max = new_x_min = new_x_max = new_y_min = new_y_max = 0
-    if len(col_data_h.data['x']) > 0: 
-        t_width = np.max(col_data_h.data['time']) - np.min(col_data_h.data['time'])
-        t_mid = np.min(col_data_h.data['time']) + t_width/2.0
+    if len(col_data.data['time']) > 0: 
+        t_width = np.max(col_data.data['time']) - np.min(col_data.data['time'])
+        t_mid = np.min(col_data.data['time']) + t_width/2.0
         new_t_width = t_width*1.1
         new_t_min = t_mid - new_t_width / 2.0 
         new_t_max = t_mid + new_t_width / 2.0 
 
-        x_width = np.max(col_data_h.data['x']) - np.min(col_data_h.data['x'])
-        x_mid = np.min(col_data_h.data['x']) + y_width/2.0
+        x_width = np.max(col_data.data['x']) - np.min(col_data.data['x'])
+        x_mid = np.min(col_data.data['x']) + x_width/2.0
         new_x_width = x_width*1.1
         new_x_min = x_mid - new_x_width / 2.0 
         new_x_max = x_mid + new_x_width / 2.0 
 
-        y_width = np.max(col_data_h.data['y']) - np.min(col_data_h.data['y'])
-        y_mid = np.min(col_data_h.data['y']) + y_width/2.0
+        y_width = np.max(col_data.data['y']) - np.min(col_data.data['y'])
+        y_mid = np.min(col_data.data['y']) + y_width/2.0
         new_y_width = y_width*1.1
         new_y_min = y_mid - new_y_width / 2.0 
         new_y_max = y_mid + new_y_width / 2.0 
@@ -218,13 +219,13 @@ def make_overtime(col_data_h, col_width):
     all_x_data=[]
     all_y_data=[]
     for key in keys:
-        key_data = col_data_h.data['keypoint_name']
+        key_data = col_data.data['keypoint_name']
         inds = np.where(key_data == key)[0]
-        x_data = col_data_h.data['x'][inds]
+        x_data = col_data.data['x'][inds]
         all_x_data.append(x_data)
-        y_data = col_data_h.data['y'][inds]
+        y_data = col_data.data['y'][inds]
         all_y_data.append(y_data)
-        t_data = col_data_h.data['time'][inds]
+        t_data = col_data.data['time'][inds]
         all_t_data.append(t_data)
 
     data_dict = {'ts':all_t_data, 'xs':all_x_data, 'ys':all_y_data, 'colors':pal, 'labels':keys}
