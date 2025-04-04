@@ -45,7 +45,7 @@ def mediapipe_process(bytes_to_load):
         os.remove("./temp.mp4")   
 
     #tracked_temp_file_to_save = open("./temp.mp4", "wb") #NamedTemporaryFile(suffix=".mp4", delete=False)
-
+    readcap = None
     with NamedTemporaryFile(suffix="mp4") as temp:
         temp.write(bytes_to_load.getbuffer())
         with mp_pose.Pose(
@@ -57,7 +57,7 @@ def mediapipe_process(bytes_to_load):
             h = int(readcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             #num_frames = int(readcap.get(cv2.CAP_PROP_FRAME_COUNT))
             
-            writecap = cv2.VideoWriter("./temp.mp4", 0x00000021, fps, (w, h)) 
+            #writecap = cv2.VideoWriter("./temp.mp4", 0x00000021, fps, (w, h)) 
             
             frame_num = 0
             while readcap.isOpened():
@@ -82,19 +82,20 @@ def mediapipe_process(bytes_to_load):
                     landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style())
                 
                 # Save the annotated image in the temp tracked video
-                writecap.write(image)
+                #writecap.write(image)
 
                 # Write the landmark positions to df
-                for idx, landmark in enumerate(results.pose_landmarks.landmark):
-                    new_row = [float(frame_num)/float(fps), frame_num, mp_pose.PoseLandmark(idx).name, landmark.x, landmark.y, landmark.z]
-                    #df = pd.concat([df, new_row], axis = 0, ignore_index = True)
-                    csv_writer.writerow(new_row)
+                if results.pose_landmarks is not None:
+                    for idx, landmark in enumerate(results.pose_landmarks.landmark):
+                        new_row = [float(frame_num)/float(fps), frame_num, mp_pose.PoseLandmark(idx).name, landmark.x, landmark.y, landmark.z]
+                        #df = pd.concat([df, new_row], axis = 0, ignore_index = True)
+                        csv_writer.writerow(new_row)
 
                 frame_num += 1
 
             readcap.release()
-            writecap.release()
-
+            #writecap.release()
+    
     output.seek(0)
     df = pd.read_csv(output)
     thing1 = df.loc[df['keypoint_name'] == "LEFT_SHOULDER"]
@@ -118,8 +119,8 @@ def mediapipe_process(bytes_to_load):
     #file = open("./temp.mp4", "rb")
     
     st.session_state['frame_num'] = 0
-    wrotecap = cv2.VideoCapture("./temp.mp4")
-    return df, wrotecap
+    #wrotecap = cv2.VideoCapture("./temp.mp4")
+    return df
 
 
 # def file_selector(folder_path='.'):
@@ -172,6 +173,7 @@ def make_pointcloud(col_data, col_width):
     fig.line(x=[fig.x_range.start, fig.x_range.end], y=[0, 0], line_width=3, color='black')
     
     if 'selected_data_indices' in st.session_state:
+        print("FOUND A SELECTION, DRAWING SELECTION POINTCLOUD")
         fig.scatter(x='x', y='y', size=2, source=col_data,fill_alpha=0.2, line_alpha=0.2, color=index_cmap, legend_group='keypoint_name')
         view = CDSView(source=col_data, filters = [IndexFilter(st.session_state['selected_data_indices'])])
         fig.scatter(x='x', y='y', size=4, source=col_data, view=view, fill_alpha=1.0, color=index_cmap, legend_group='keypoint_name')
@@ -184,11 +186,12 @@ def make_pointcloud(col_data, col_width):
             args=dict(source=col_data),
             code="""
             document.dispatchEvent(
-                new CustomEvent("PointCloudSelectEvent", {detail: {indices: cb_obj.indices}})
+                new CustomEvent("PointCloudSelectEvent", {detail: {indices: source.selected.indices}})
             )
         """,
         ),
     )
+    
     
     return fig
 
@@ -199,9 +202,6 @@ def make_overtime(col_data, col_width):
     num = len(keys)
     pal = Category10[max(3, num)]
     pal = pal[:num]
-
-    index_cmap = factor_cmap('keypoint_name', palette=pal, 
-                         factors=np.unique(col_data.data["keypoint_name"]))
     
     new_t_min = new_t_max = new_x_min = new_x_max = new_y_min = new_y_max = 0
     if len(col_data.data['time']) > 0: 
@@ -230,6 +230,7 @@ def make_overtime(col_data, col_width):
     t_subset = None
     key_subset = None
     if 'selected_data_indices' in st.session_state:
+        print("FOUND A SELECTION, DRAWING SELECTION OVER TIME")
         x_subset = col_data.data['x'][st.session_state['selected_data_indices']]
         y_subset = col_data.data['y'][st.session_state['selected_data_indices']]
         t_subset = col_data.data['time'][st.session_state['selected_data_indices']]
@@ -272,20 +273,17 @@ def make_overtime(col_data, col_width):
 
     figh = figure(tools="lasso_select,reset", width=col_width, height=int(col_width/4.0),title="Horizontal Position Over Time", x_axis_label="Time (s)", y_axis_label="Pos (px)", x_range=(new_t_min, new_t_max), y_range=(new_x_min, new_x_max))
 
-    figh.line(x=[0, 0], y=[figh.x_range.start, figh.x_range.end], line_width=3, color='black')
-    figh.line(x=[figh.y_range.start, figh.y_range.end], y=[0, 0], line_width=3, color='black')
     
     if len(selected_t_data) > 0:
         figh.multi_line(xs='ts', ys='xs', line_width=2, line_alpha=0.2, color='colors', legend_field='labels', source=horiz_cds)
-        #figh.scatter(x='time', y='x', size=2, source=col_data,fill_alpha=0.2, line_alpha=0.2, color=index_cmap, legend_group='keypoint_name')
-        
-        figh.multi_line(xs='ts', ys='xs', line_width=8, line_alpha=0.6, color='colors')
-        #figh.scatter(x='ts', y='xs', size=8, source=selected_horiz_cds, fill_alpha=0.2, color='colors')
+        figh.multi_line(xs='ts', ys='xs', line_width=8, line_alpha=0.6, color='colors', legend_field='labels', source=selected_horiz_cds)
     else: 
         figh.multi_line(xs='ts', ys='xs', line_width=2, line_alpha=0.6, color='colors', legend_field='labels', source=horiz_cds)
         figh.scatter(x='ts', y='xs', size=8, source=horiz_cds, fill_alpha=0.6, color='colors')
 
     
+    figh.line(x=[0, 0], y=[figh.x_range.start, figh.x_range.end], line_width=3, color='black')
+    figh.line(x=[figh.y_range.start, figh.y_range.end], y=[0, 0], line_width=3, color='black')
 
     horiz_cds.selected.js_on_change(
         "indices",
@@ -301,14 +299,15 @@ def make_overtime(col_data, col_width):
 
     figv = figure(tools="lasso_select,reset", width=col_width, height=int(col_width/4.0),title="Vertical Position Over Time", x_axis_label="Time (s)", y_axis_label="Pos (py)", x_range=(new_t_min, new_t_max), y_range=(new_y_min, new_y_max))
 
-    figv.line(x=[0, 0], y=[figv.x_range.start, figv.x_range.end], line_width=3, color='black')
-    figv.line(x=[figv.y_range.start, figv.y_range.end], y=[0, 0], line_width=3, color='black')
     if len(selected_t_data) > 0:
         figv.multi_line(xs='ts', ys='ys', line_width=2, line_alpha=0.2, color='colors', legend_field='labels', source=vert_cds)
         figv.multi_line(xs='ts', ys='ys', line_width=8, line_alpha=0.6, color='colors', legend_field='labels', source=selected_vert_cds)
     else: 
         figv.multi_line(xs='ts', ys='ys', line_width=2, line_alpha=0.6, color='colors', legend_field='labels', source=vert_cds)
     
+    figv.line(x=[0, 0], y=[figv.x_range.start, figv.x_range.end], line_width=3, color='black')
+    figv.line(x=[figv.y_range.start, figv.y_range.end], y=[0, 0], line_width=3, color='black')
+
     vert_cds.selected.js_on_change(
         "indices",
         CustomJS(
@@ -321,7 +320,7 @@ def make_overtime(col_data, col_width):
         ),
     )
     
-    p = column(figh, figv)
+    p = column(children=[figh, figv], sizing_mode="scale_both")
 
     return p
 
@@ -355,6 +354,7 @@ def get_metrics(df, plot_type):
 
 
 def run():
+    print("RERUN")
     global my_df
     global vidcap
     # full page configs
@@ -378,6 +378,22 @@ def run():
         # process trackpoints
         trackpoint_choices=["NOSE", "LEFT_WRIST", "LEFT_ELBOW", "LEFT_SHOULDER", "RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"]
         selected_trackpoints = st.multiselect('Select Trackpoints', trackpoint_choices)
+        #st.session_state['clear_selection'] = True
+        if 'selected_trackpoints' in st.session_state:
+            same = True
+            for point in st.session_state['selected_trackpoints']:
+                if point not in selected_trackpoints:
+                    same = False
+                    break
+            
+            #st.session_state['clear_selection'] = not same
+            if not same and 'selected_data_indices' in st.session_state:
+                st.session_state.pop('selected_data_indices')
+                #del st.session_state['selected_data_indices']
+                print('selected_data_indices' in st.session_state)
+                print("DELETING SELECTION")
+
+        st.session_state['selected_trackpoints'] = selected_trackpoints
 
         # process graph types
         plot_choices = ['relative position', 'relative angle']
@@ -386,23 +402,23 @@ def run():
         if st.button('Process!'):
             if uploaded_csv is None and uploaded_vid is not None:
                 # process uploaded video
-                my_df, vidcap = mediapipe_process(uploaded_vid)
+                my_df = mediapipe_process(uploaded_vid)
+                st.session_state['df'] = my_df
+
             elif uploaded_csv is not None and uploaded_vid is not None:
                 my_df = pd.read_csv(uploaded_csv)
                 
                 #csv_writer.writerow(['time', 'frame', 'keypoint_name', 'x', 'y', 'z'])
-                with NamedTemporaryFile(suffix="mp4") as temp:
-                    temp.write(uploaded_vid.getbuffer())
-                    vidcap = cv2.VideoCapture(temp.name)
-                    st.session_state['frame_num'] = 0
+            with NamedTemporaryFile(suffix="mp4") as temp:
+                temp.write(uploaded_vid.getbuffer())
+                vidcap = cv2.VideoCapture(temp.name)
+                st.session_state['frame_num'] = 0
         
         if 'frame_num' in st.session_state: 
-            if uploaded_csv is not None and uploaded_vid is not None:
+            if uploaded_vid is not None:
                 with NamedTemporaryFile(suffix="mp4") as temp:
                     temp.write(uploaded_vid.getbuffer())
                     vidcap = cv2.VideoCapture(temp.name)
-            elif uploaded_vid is not None:
-                vidcap = cv2.VideoCapture("./temp.mp4")
 
         if my_df is None and uploaded_csv is not None and uploaded_vid is not None:
             my_df = pd.read_csv(uploaded_csv)
@@ -415,6 +431,8 @@ def run():
             elif uploaded_csv is not None:
                 filename = uploaded_csv.name
             st.download_button('Download pose data', my_df.to_csv().encode("utf-8"), mime="text/csv", file_name=filename)
+        elif 'df' in st.session_state:
+            my_df = st.session_state['df']
         #st.download_button('Download video data', vidcap., mime="video/mp4", file_name='BMAT_'+filename+".csv")
 
     # layout
@@ -422,6 +440,7 @@ def run():
 
     subset_df = pd.DataFrame(columns=['time', 'frame', 'keypoint_name', 'x', 'y', 'z'])
     if my_df is not None:
+        print("selected track points????")
         subset_df = my_df.loc[my_df['keypoint_name'].isin(selected_trackpoints)]
             
 
@@ -473,13 +492,14 @@ def run():
     if size is None:
         size={'width':300}    
 
+    print("CALLING MAKE POINT CLOUD")
     point_cloud = make_pointcloud(col_data_pc, int(size['width']))
 
     pc_event_result = streamlit_bokeh3_events(
         events="PointCloudSelectEvent",
         bokeh_plot=point_cloud,
         key="point_cloud",
-        debounce_time=100,
+        debounce_time=0,
         refresh_on_update=True
     )
 
@@ -488,12 +508,15 @@ def run():
         # PointCloudSelectEvent was thrown
         if "PointCloudSelectEvent" in pc_event_result:
             indices = pc_event_result["PointCloudSelectEvent"].get("indices", [])
+            print("POINT CLOUD SELECT EVENT")
+            print(indices)
             selected_df = subset_df.iloc[indices]
             st.session_state['selected_data_indices'] = indices
             st.session_state['frame_num'] = min(selected_df['frame'])
             
 
     st.markdown('#### Position Over Time')
+    print("CALLING MAKE OVER TIME")
     over_time = make_overtime(col_data_ot, int(size['width']))
     #st.line_chart(subset_df, x='time', y='x', color='keypoint_name')
     #st.plotly_chart(over_time_horiz, use_container_width=True)
