@@ -19,8 +19,8 @@ current_video_fps = 0
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
-        #ui.input_file("csvfile", "Choose Pose CSV File", accept=[".csv"], multiple=False),
-        ui.input_file("videofile", "Video to Analyze", accept=[".mp4"], multiple=False),
+        ui.input_file("csvfile", "Choose Pose CSV File", accept=[".csv"], multiple=False),
+        #ui.input_file("videofile", "Video to Analyze", accept=[".mp4"], multiple=False),
         ui.input_selectize(
         "track_points",
         "Choose track points to plot:",
@@ -91,7 +91,7 @@ def server(input, output, session):
         if current_videocap is not None:
             f = input.frame_selector()
             if current_frame_num != f:
-                current_videocap.seek(f / current_video_fps)
+                current_videocap.seek(int(f / current_video_fps))
                 frame = next(current_videocap.decode(video=0))
                 plt.axis('off')
                 plt.imshow(frame)

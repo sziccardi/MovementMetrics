@@ -18,12 +18,14 @@ from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, CustomJS, CDSView, IndexFilter
 from bokeh.transform import factor_cmap
 from bokeh.palettes import Category10
-from bokeh.io import curdoc
+from bokeh.io import curdoc, export_png
 from bokeh.layouts import column
 from streamlit_bokeh3_events import streamlit_bokeh3_events
 
+
 vidcap = None
 my_df = None
+time_chosen = False
 
 # MediaPipe helper functions
 @st.cache_resource
@@ -61,6 +63,9 @@ def mediapipe_process(bytes_to_load):
             
             frame_num = 0
             while readcap.isOpened():
+                if frame_num%fps == 0:
+                    print("PROCESSING FRAME #", frame_num)
+                    
                 # Read frame from video
                 success, image = readcap.read()
                 if not success:
@@ -167,7 +172,7 @@ def make_pointcloud(col_data, col_width):
         new_y_width = y_width*1.1
         new_y_min = y_mid - new_y_width / 2.0 
         new_y_max = y_mid + new_y_width / 2.0 
-    fig = figure(tools="lasso_select,reset", width=col_width, x_axis_label="x pos (px)", y_axis_label="y pos (px)", x_range=(new_x_min, new_x_max), y_range=(new_y_min, new_y_max))
+    fig = figure(tools="lasso_select,reset", width=col_width, x_axis_label="x pos (px)", y_axis_label="y pos (px)", x_range=(-0.4, 0.4), y_range=(-0.6, 0.3)) #TODO: change these back to computed limits eventually
     
     fig.line(x=[0, 0], y=[fig.y_range.start, fig.y_range.end], line_width=3, color='black')
     fig.line(x=[fig.x_range.start, fig.x_range.end], y=[0, 0], line_width=3, color='black')
@@ -179,6 +184,7 @@ def make_pointcloud(col_data, col_width):
         fig.scatter(x='x', y='y', size=4, source=col_data, view=view, fill_alpha=1.0, color=index_cmap, legend_group='keypoint_name')
     else: 
         fig.scatter(x='x', y='y', size=2, source=col_data,fill_alpha=0.6, color=index_cmap, legend_group='keypoint_name')
+
 
     col_data.selected.js_on_change(
         "indices",
@@ -281,9 +287,10 @@ def make_overtime(col_data, col_width):
         figh.multi_line(xs='ts', ys='xs', line_width=2, line_alpha=0.6, color='colors', legend_field='labels', source=horiz_cds)
         figh.scatter(x='ts', y='xs', size=8, source=horiz_cds, fill_alpha=0.6, color='colors')
 
-    
-    figh.line(x=[0, 0], y=[figh.x_range.start, figh.x_range.end], line_width=3, color='black')
-    figh.line(x=[figh.y_range.start, figh.y_range.end], y=[0, 0], line_width=3, color='black')
+    # vert axis
+    figh.line(x=[0, 0], y=[figh.y_range.start, figh.y_range.end], line_width=2, color='black')
+    # horiz axis
+    figh.line(x=[figh.x_range.start, figh.x_range.end], y=[0, 0], line_width=2, color='black')
 
     horiz_cds.selected.js_on_change(
         "indices",
@@ -305,8 +312,8 @@ def make_overtime(col_data, col_width):
     else: 
         figv.multi_line(xs='ts', ys='ys', line_width=2, line_alpha=0.6, color='colors', legend_field='labels', source=vert_cds)
     
-    figv.line(x=[0, 0], y=[figv.x_range.start, figv.x_range.end], line_width=3, color='black')
-    figv.line(x=[figv.y_range.start, figv.y_range.end], y=[0, 0], line_width=3, color='black')
+    figv.line(x=[0, 0], y=[figv.y_range.start, figv.y_range.end], line_width=2, color='black')
+    figv.line(x=[figv.x_range.start, figv.x_range.end], y=[0, 0], line_width=2, color='black')
 
     vert_cds.selected.js_on_change(
         "indices",
@@ -453,9 +460,17 @@ def run():
                 t = st.slider("Frame:", value=int(st.session_state['frame_num']), min_value=0, max_value=int(num_frames), step=1)
 
                 st.session_state['frame_num'] = t
-                img = get_frame(int(st.session_state['frame_num']), vidcap)
-                if img is not None:
-                    col[0].image(img)
+                #img = get_frame(int(st.session_state['frame_num']), vidcap)
+                placeholder = col[0].empty()
+                placeholder.video(vidcap, start_time=t)
+
+                if time_chosen:
+                    # placeholder.empty()
+                    # placeholder.video(vidcap, start_time=?)
+                    time_chosen = False
+
+                # if img is not None:
+                #     col[0].image(img)
                 
             else:
                 col[0].image('TEMP.jpg')
@@ -502,6 +517,9 @@ def run():
         debounce_time=0,
         refresh_on_update=True
     )
+
+    # if st.button("Download plot"):
+    #     export_png(point_cloud, filename='BMAT_'+uploaded_vid.name[:i]+'_pointcloud.png')
 
     # some event was thrown
     if pc_event_result is not None:
