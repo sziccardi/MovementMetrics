@@ -25,7 +25,6 @@ from streamlit_bokeh3_events import streamlit_bokeh3_events
 
 vidcap = None
 my_df = None
-time_chosen = False
 
 # MediaPipe helper functions
 @st.cache_resource
@@ -126,12 +125,6 @@ def mediapipe_process(bytes_to_load):
     st.session_state['frame_num'] = 0
     #wrotecap = cv2.VideoCapture("./temp.mp4")
     return df
-
-
-# def file_selector(folder_path='.'):
-#     filenames = os.listdir(folder_path)
-#     selected_filename = st.selectbox('Select a file or folder', filenames)
-#     return os.path.join(folder_path, selected_filename)
 
 
 def get_frame(frame_num, cap):
@@ -460,17 +453,9 @@ def run():
                 t = st.slider("Frame:", value=int(st.session_state['frame_num']), min_value=0, max_value=int(num_frames), step=1)
 
                 st.session_state['frame_num'] = t
-                #img = get_frame(int(st.session_state['frame_num']), vidcap)
-                placeholder = col[0].empty()
-                placeholder.video(vidcap, start_time=t)
-
-                if time_chosen:
-                    # placeholder.empty()
-                    # placeholder.video(vidcap, start_time=?)
-                    time_chosen = False
-
-                # if img is not None:
-                #     col[0].image(img)
+                img = get_frame(int(st.session_state['frame_num']), vidcap)
+                if img is not None:
+                    col[0].image(img)
                 
             else:
                 col[0].image('TEMP.jpg')
@@ -480,11 +465,7 @@ def run():
         else:
             st.session_state['frame_num'] = -1
             col[0].image('TEMP.jpg')
-            # if os.path.isfile("./temp.mp4"): 
-            #     print("REMOVING ", "./temp.mp4")
-            #     if vidcap is not None:
-            #         vidcap.release()
-            #     os.remove("./temp.mp4")
+            
     if vidcap is not None:
         vidcap.release()
         vidcap = None
@@ -560,37 +541,6 @@ def run():
             st.session_state['frame_num'] = min(selected_df['frame'])
             print("GRABBED DATA FROM VERT")
 
-
-    # st.markdown('#### Vertical Position Over Time')
-    # over_time_vert = make_overtime(col_data_otv, int(size['width']), True)
-    # #st.plotly_chart(over_time_vert, use_container_width=True)
-    # #st.markdown('#### Vertical Position Over Time')
-    # #st.line_chart(subset_df, x='time', y='y', color='keypoint_name')
-
-    # otv_event_result = streamlit_bokeh3_events(
-    #     events="OverTimeVertSelectEvent",
-    #     bokeh_plot=over_time_vert,
-    #     key="over_time_vert",
-    #     debounce_time=100,
-    #     refresh_on_update=True
-    # )
-
-    # # some event was thrown
-    # if otv_event_result is not None:
-    #     # PointCloudSelectEvent was thrown
-    #     if "OverTimeHorizSelectEvent" in pc_event_result:
-    #         indices = pc_event_result["OverTimeHorizSelectEvent"].get("indices", [])
-    #         selected_df = subset_df.iloc[indices]
-    #         st.session_state['selected_data_indices'] = indices
-    #         st.session_state['frame_num'] = min(selected_df['frame'])
-
-        # st.markdown('''
-        # <style>
-        # [data-testid="stMarkdownContainer"] ul{
-        #     padding-left:40px;
-        # }
-        # </style>
-        # ''', unsafe_allow_html=True)
 
 
 

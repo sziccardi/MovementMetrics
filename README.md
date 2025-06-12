@@ -40,12 +40,14 @@ pip install -r requirements.txt
 > ```
 > streamlit
 > pandas
-> matplotlib
 > numpy
-> plotly
+> mediapipe
+> bokeh
+> streamlit_bokeh3_events
+> altair
 > ```
 
-### ▶️ Run the App
+### Run the App
 
 ```bash
 streamlit run main.py
@@ -53,7 +55,7 @@ streamlit run main.py
 
 ### Uploading a New Video
 1. Use the **file uploader** in the app to load your video in **Mp4 or MOV format** . Video file must be <200mb in size.
-2. Select 'run'
+2. Select 'process'
 3. Wait for the algorithm to extract the pose data (this could take a significant amount of time depending on the length of the video).
 
 ### Uploading a Previously Processed Video
@@ -67,6 +69,12 @@ streamlit run main.py
    * `x`,	`y`,	`z`
    
 4. Select 'run'
+
+### Downloading Processed Data
+1. If you process a video and want to be able to load it faster next time, select 'Download'. 
+2. You will select a location to save the pose information.
+3. Next time you want to visualize the pose data, you can upload this file.
+   
 
 ### Using the App
 
