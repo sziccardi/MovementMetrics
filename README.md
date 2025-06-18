@@ -97,7 +97,9 @@ You can try the app by loading the provided example data in the `data/` folder.
 For questions, feature requests, or collaboration inquiries, reach out to:
 
 **Name**: Shelby Ziccardi
+
 **Email**: [zicca010@umn.edu](mailto:zicca010@umn.edu)
+
 **GitHub**: [@sziccardi](https://github.com/sziccardi)
 
 ---
