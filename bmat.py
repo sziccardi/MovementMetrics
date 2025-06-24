@@ -20,11 +20,18 @@ from bokeh.io import curdoc
 from streamlit_bokeh import streamlit_bokeh
 from bokeh.plotting import figure
 from bokeh.palettes import Category10
+from bokeh.transform import factor_cmap
 from bokeh.models import ColumnDataSource, HoverTool, LassoSelectTool, CustomJS
 
 # Globals
 video_time = 0
 trackpoint_choices = ["NOSE", "LEFT_WRIST", "LEFT_ELBOW", "LEFT_SHOULDER", "RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"]
+
+color_palette = Category10[len(trackpoint_choices)]
+color_palette = color_palette[:len(trackpoint_choices)]
+
+color_palette = dict(zip(trackpoint_choices, color_palette))
+
 
 def on_video_change():
     if "video_capture" in st.session_state:
@@ -34,20 +41,19 @@ def on_video_change():
     if "video_time" in st.session_state:
         st.session_state["video_time"] = 0
     # TODO: reset skeleton data
-
+    st.session_state["pose_trajectory"] = pd.DataFrame(columns=['frame', 'keypoint_name', 'x', 'y', 'z', 'color', 'prev_x', 'prev_y', 'speed_xy'])
+    st.session_state["uploader_key"] += 1
+    #st.rerun()
     # uploaded_file = st.session_state["my_uploader"]
     # if uploaded_file is not None:
         # st.write(f"File uploaded: {uploaded_file.name}")
 
-def on_data_change():
-    st.session_state["pose_trajectory"] = df
 
-# TODO: Put MEDIAPIPE here
 def process_video(video, progress_bar):
     if "video_capture" in st.session_state: #and "pose_trajectory" not in st.session_state
         output = StringIO()
         csv_writer = writer(output)
-        csv_writer.writerow(['time', 'frame', 'keypoint_name', 'x', 'y', 'z'])
+        csv_writer.writerow(['frame_sec', 'frame', 'keypoint_name', 'x', 'y', 'z', 'color', 'prev_x', 'prev_y', 'speed_xy'])
 
         if video is None:
             output.seek(0)
@@ -116,14 +122,32 @@ def process_video(video, progress_bar):
         sternum = thing1.add(thing2) / 2.0
         
         keypoints = df['keypoint_name'].unique()
-        
+        print("DEBUG")
+        print(df['keypoint_name'])
+        print(keypoints)
+        print(sternum)
         for key in keypoints:
+            print(key)
             keything = df.loc[df['keypoint_name'] == key, ['x', 'y', 'z']]
             keysternum = sternum.set_axis([f for f in keything.index])
 
             df.loc[df['keypoint_name'] == key,['x', 'y', 'z']] = (keything - keysternum)
             df.loc[df['keypoint_name'] == key,'y'] = df.loc[df['keypoint_name'] == key,'y'] * -1.0
         
+        keys = df['keypoint_name'].unique()
+        for k in keys:
+            if k not in color_palette:
+                color_palette[k] = '#000000'
+        df['color'] = df['keypoint_name'].replace(color_palette)
+
+        #'frame', 'keypoint_name', 'x', 'y', 'z', 'color', 'prev_x', 'prev_y', 'speed_xy'
+        df['prev_x'].iloc[1:] = df['x'].iloc[:-1]
+        df['prev_y'].iloc[1:] = df['y'].iloc[:-1]
+
+        dx = df['x'].iloc[1:] - df['prev_x'].iloc[1:]
+        dy = df['y'].iloc[1:] - df['prev_y'].iloc[1:]
+        df['speed_xy'].iloc[1:] = np.sqrt(dx*dx + dy*dy) * fps
+
         progress_bar.progress(1.0)
 
         return df
@@ -132,7 +156,7 @@ def process_video(video, progress_bar):
         #     time.sleep(1 / 200)  # Wait 1/200th of a second
         #     progress_bar.progress(i + 1)  # Update progress bar
     else:
-        return None
+        return pd.DataFrame(columns=['frame', 'keypoint_name', 'x', 'y', 'z', 'color', 'prev_x', 'prev_y', 'speed_xy'])
 
 
 def get_metrics(df, plot_type):
@@ -182,33 +206,25 @@ def run_app():
     video_reference = None
 
     if "pose_trajectory" not in st.session_state:
-        # MEDIAPIPE or CSV should populate this list
-        synthetic_data = []
-
-        # TODO: put this code in process_video
-        df =pd.DataFrame(synthetic_data, columns=['frame', 'joint', 'x', 'y', 'z'])
-        df['prev_x'] = df.groupby('joint')['x'].shift(1)
-        df['prev_y'] = df.groupby('joint')['y'].shift(1)
-
-        df['speed_xy'] = np.sqrt((df['x'] - df['prev_x'])**2 + (df['y'] - df['prev_y'])**2)
-
-        st.session_state["pose_trajectory"] = df
-        #print(st.session_state["pose_trajectory"])
+        # initialize empty 
+        st.session_state["pose_trajectory"] = pd.DataFrame(columns=['frame', 'keypoint_name', 'x', 'y', 'z', 'color', 'prev_x', 'prev_y', 'speed_xy'])
+        
         
 
     with st.sidebar:
         st.title('BMAT')
-
+        if "uploader_key" not in st.session_state:
+            st.session_state["uploader_key"] = 1
         video_reference = st.file_uploader("Choose a video... [required]", on_change=on_video_change, type=['.mp4', '.MP4', '.mov', '.MOV'])
-        csv_reference = st.file_uploader("Choose a pre-processed file... [optional]", on_change=on_data_change, type=['.csv'])
+        csv_reference = st.file_uploader("Choose a pre-processed file... [optional]", type=['.csv'], key=st.session_state["uploader_key"])
 
         # process trackpoints
         selected_trackpoints = st.multiselect('Select Trackpoints', trackpoint_choices)
         st.session_state['selected_trackpoints'] = selected_trackpoints
 
     
-        if "selected_trackpoints" in st.session_state:
-            print(st.session_state['selected_trackpoints'])
+        # if "selected_trackpoints" in st.session_state:
+        #     print(st.session_state['selected_trackpoints'])
         # breakpoint()
         # print("video reference:\n", list(video_reference.keys()))
 
@@ -216,15 +232,27 @@ def run_app():
         plot_choices = ['relative position', 'relative angle']
         selected_plot_type = st.selectbox('Select a plot type', plot_choices)
 
-        if st.button('Process Trackpoints!'):
-            print("processing...")
-            progress_bar = st.progress(0)
-            df = process_video(video_reference, progress_bar)
-            if (df is not None):
-                st.session_state["pose_trajectory"] = df
-                st.success("Processing complete!")
+        if len(st.session_state["pose_trajectory"]) > 0:
+            i = video_reference.name.rfind('.')
+            filename = 'BMAT_'+video_reference.name[:i]+'.csv'
+            st.download_button('Download pose data', st.session_state["pose_trajectory"].to_csv().encode("utf-8"), mime="text/csv", file_name=filename)
+        else:
+            if csv_reference is None:
+                if st.button('Process Trackpoints!'):
+                    print("processing...")
+                    progress_bar = st.progress(0)
+                    df = process_video(video_reference, progress_bar)
+                    st.session_state["pose_trajectory"] = df
+                    if len(df) > 0:
+                        st.success("Processing complete!")
+                    else:
+                        print("Couldn't process video")
             else:
-                print("Couldn't process video")
+                my_df = pd.read_csv(csv_reference)
+                my_df['color'] = my_df['keypoint_name'].replace(color_palette)
+                st.session_state["pose_trajectory"] = my_df
+
+        
 
 
     # Layout page
@@ -259,86 +287,106 @@ def run_app():
             with tab2:
                 st.video(video_reference)
             
+        selected_data = st.session_state["pose_trajectory"].loc[st.session_state["pose_trajectory"]["keypoint_name"].isin(selected_trackpoints)]
 
         with layout_columns[1]:
-            
-            # Initialize figure in session_state only once
-            if 'scatter_plot' not in st.session_state:
-                print("making plot")
+            st.markdown('#### Metrics')
+            with st.container(height=500):
+                text = get_metrics(selected_data, selected_plot_type)
+                st.markdown(text)
 
-                # Create Bokeh figure with square aspect ratio and limits
-                p = figure(
-                    title="Joint Positions",
-                    # tools="pan,wheel_zoom,box_zoom,box_select,reset",
-                    tools="",
-                    # x_range=(0, 1.3),
-                    # y_range=(0, 1.3),
-                    # match_aspect=True,
-                    aspect_scale=1,
-                    match_aspect=True,
-                    x_axis_label='x_position', 
-                    y_axis_label='y_position',
-                    # sizing_mode="stretch_width",
-                    # sizing_mode='stretch_both',
-                    sizing_mode='stretch_width',
-                    # width=500,
-                    height=500
-                )
+        # Initialize figure in session_state only once
+        # if 'scatter_plot' not in st.session_state:
+        #     print("making plot")
 
-                # p.scatter(x, y, size=8, color="magenta", alpha=0.5)
-                st.session_state["pose_trajectory"]['color'] = st.session_state["pose_trajectory"]['joint'].map({"NOSE": Category10[3][0], "RIGHT_SHOULDER": Category10[3][1], "RIGHT_WRIST": Category10[3][2]})
+        # Create Bokeh figure with square aspect ratio and limits
+        p = figure(
+            title="Joint Positions",
+            # tools="pan,wheel_zoom,box_zoom,box_select,reset",
+            tools="",
+            # x_range=(0, 1.3),
+            # y_range=(0, 1.3),
+            # match_aspect=True,
+            aspect_scale=1,
+            match_aspect=True,
+            x_axis_label='x_position', 
+            y_axis_label='y_position',
+            # sizing_mode="stretch_width",
+            # sizing_mode='stretch_both',
+            sizing_mode='stretch_width',
+            # width=500,
+            height=500
+        )
 
-                source = ColumnDataSource(st.session_state["pose_trajectory"])
-            
-                # Setup javascript callback
-                source.selected.js_on_change(
-                    "indices",
-                    CustomJS(code="""
-                        const indices = cb_obj.indices;
-                        const event = new CustomEvent("INDEX_SELECT", {detail: {indices: indices}});
-                        document.dispatchEvent(event);
-                    """)
-                )
+        # p.scatter(x, y, size=8, color="magenta", alpha=0.5)
+        # st.session_state["pose_trajectory"]['color'] = st.session_state["pose_trajectory"]['keypoint_name'].map({"NOSE": Category10[3][0], "RIGHT_SHOULDER": Category10[3][1], "RIGHT_WRIST": Category10[3][2]})
+        
+        col_source = ColumnDataSource(selected_data)
 
-                p.scatter(x="x", y="y",  color='color', size=10, source=source, alpha=0.6, legend_group='joint')
+        
+        # Setup javascript callback
+        col_source.selected.js_on_change(
+            "indices",
+            CustomJS(code="""
+                const indices = cb_obj.indices;
+                const event = new CustomEvent("INDEX_SELECT", {detail: {indices: indices}});
+                document.dispatchEvent(event);
+            """)
+        )
+        
+        p.scatter(x="x", y="y", color='color', size=10, source=col_source, alpha=0.6, legend_group='keypoint_name')
+        
+        xmin = ymin = -1
+        xmax = ymax = 1
+        if len(selected_data) > 0:
+            xmin = np.min(selected_data['x'])
+            xmax = np.max(selected_data['x'])
+            ymin = np.min(selected_data['y'])
+            ymax = np.max(selected_data['y'])
 
-                # LassoSelectTool to select points
-                lasso = LassoSelectTool()
-                p.add_tools(lasso)
+        
+        #p.line(x=[0, 0], y=[ymin, ymax], line_width=3, color='black')
+        #p.line(x=[xmin, xmax], y=[0, 0], line_width=3, color='black')
 
-                # Hover to tell sample info (e.g. frame #)
-                hover = HoverTool(tooltips=[
-                    ("Joint", "@joint"),
-                    ("Frame", "@frame"),
-                    ("x", "@x"),
-                    ("y", "@y")
-                ])
-                p.add_tools(hover)
+        # LassoSelectTool to select points
+        lasso = LassoSelectTool()
+        p.add_tools(lasso)
 
-                p.legend.title = "Joint"
-                        
-                st.session_state["scatter_plot"] = p
+        # Hover to tell sample info (e.g. frame #)
+        hover = HoverTool(tooltips=[
+            ("Joint", "@keypoint_name"),
+            ("Frame", "@frame"),
+            ("x", "@x"),
+            ("y", "@y")
+        ])
+        p.add_tools(hover)
 
-                if 'selected_indices' not in st.session_state:
-                    st.session_state["selected_indices"] = []
+        p.legend.title = "Joint"
+                
+        st.session_state["scatter_plot"] = p
 
-            # Show in Streamlit w/ events
-            result = streamlit_bokeh3_events(
-                bokeh_plot=st.session_state["scatter_plot"],
-                events="INDEX_SELECT",
-                key="foo",
-                refresh_on_update=False,
-                debounce_time=0
-            )
+        if 'selected_indices' not in st.session_state:
+            st.session_state["selected_indices"] = []
+        
 
-            if result and "INDEX_SELECT" in result:
-                st.session_state["selected_indices"] = result["INDEX_SELECT"]["indices"]
-                print("Selected indices:", st.session_state["selected_indices"])
+        # Show in Streamlit w/ events
+        result = streamlit_bokeh3_events(
+            bokeh_plot=p,
+            events="INDEX_SELECT",
+            key="foo",
+            refresh_on_update=True,
+            debounce_time=0
+        )
 
-
+        if result and "INDEX_SELECT" in result:
+            st.session_state["selected_indices"] = result["INDEX_SELECT"]["indices"]
+            print("Selected indices:", st.session_state["selected_indices"])
+        # Render
+        #streamlit_bokeh(p)
+        
 
         # setup timeline plot
-        p = figure(
+        ps = figure(
             title="Coronal Speed for Each Joint", 
             x_axis_label='Frame', 
             y_axis_label='Speed', 
@@ -349,14 +397,14 @@ def run_app():
         
         # Get subset of trajectory from positional selection
         if len(st.session_state["selected_indices"]) == 0:
-            trajectories_subset = st.session_state["pose_trajectory"]
+            trajectories_subset = selected_data
         else:
-            trajectories_subset = st.session_state["pose_trajectory"].loc[st.session_state["selected_indices"]]
+            trajectories_subset = selected_data.loc[st.session_state["selected_indices"]]
 
+        
         # Draw all joint lines
-        for joint in trajectories_subset['joint'].unique():
-
-            joint_data = trajectories_subset[trajectories_subset['joint'] == joint]
+        for joint in trajectories_subset['keypoint_name'].unique():
+            joint_data = trajectories_subset[trajectories_subset['keypoint_name'] == joint]
 
             # Find splits where frame is not consecutive
             joint_data = joint_data.reset_index(drop=True)
@@ -365,14 +413,15 @@ def run_app():
             # Draw a line for each consecutive segment
             for _, segment in joint_data.groupby('group'):
                 color = segment['color'].iloc[0]  # Use the first color for the joint
-                p.line(x=segment['frame'], y=segment['speed_xy'], legend_label=joint, line_width=2, color=color)
+                ps.line(x=segment['frame'], y=segment['speed_xy'], legend_label=joint, line_width=2, color=color)
 
+        if len(selected_data) > 0:
+            # Legend information
+            ps.legend.title = 'Joint'
+            ps.legend.location = 'top_left'
 
-        # Legend information
-        p.legend.title = 'Joint'
-        p.legend.location = 'top_left'
         # Render
-        streamlit_bokeh(p)
+        streamlit_bokeh(ps)
 
         
 
