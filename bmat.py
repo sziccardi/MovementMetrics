@@ -303,7 +303,7 @@ def run_app():
         p = figure(
             title="Joint Positions",
             # tools="pan,wheel_zoom,box_zoom,box_select,reset",
-            tools="",
+            tools="reset",
             # x_range=(0, 1.3),
             # y_range=(0, 1.3),
             # match_aspect=True,
@@ -399,10 +399,22 @@ def run_app():
         if len(st.session_state["selected_indices"]) == 0:
             trajectories_subset = selected_data
         else:
-            trajectories_subset = selected_data.loc[st.session_state["selected_indices"]]
+            trajectories_subset = selected_data.iloc[st.session_state["selected_indices"]]
 
         
         # Draw all joint lines
+        for joint in selected_data['keypoint_name'].unique():
+            joint_data = selected_data[selected_data['keypoint_name'] == joint]
+
+            # Find splits where frame is not consecutive
+            joint_data = joint_data.reset_index(drop=True)
+            joint_data['group'] = (joint_data['frame'].diff() != 1).cumsum()
+
+            # Draw a line for each consecutive segment
+            for _, segment in joint_data.groupby('group'):
+                color = segment['color'].iloc[0]  # Use the first color for the joint
+                ps.line(x=segment['frame'], y=segment['speed_xy'], legend_label=joint, line_width=2, color=color)
+
         for joint in trajectories_subset['keypoint_name'].unique():
             joint_data = trajectories_subset[trajectories_subset['keypoint_name'] == joint]
 
@@ -413,7 +425,7 @@ def run_app():
             # Draw a line for each consecutive segment
             for _, segment in joint_data.groupby('group'):
                 color = segment['color'].iloc[0]  # Use the first color for the joint
-                ps.line(x=segment['frame'], y=segment['speed_xy'], legend_label=joint, line_width=2, color=color)
+                ps.line(x=segment['frame'], y=segment['speed_xy'], legend_label=joint, line_width=6, color=color, line_alpha=0.5)
 
         if len(selected_data) > 0:
             # Legend information
