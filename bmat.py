@@ -122,10 +122,7 @@ def process_video(video, progress_bar):
         sternum = thing1.add(thing2) / 2.0
         
         keypoints = df['keypoint_name'].unique()
-        print("DEBUG")
-        print(df['keypoint_name'])
-        print(keypoints)
-        print(sternum)
+        
         for key in keypoints:
             print(key)
             keything = df.loc[df['keypoint_name'] == key, ['x', 'y', 'z']]
