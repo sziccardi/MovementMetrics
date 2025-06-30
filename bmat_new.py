@@ -24,10 +24,13 @@ def on_video_change():
         st.session_state["video_capture"].release()
         del st.session_state["video_capture"]
         del st.session_state["video_time"]
-        del st.session_state['video_frames']
+        del st.session_state['bokeh_video_frames']
+        del st.session_state['opencv_video_frames']
 
-def test():
-    print("I RAN TEST!!!!!")
+def on_csv_change():
+    if 'pose_trajectory' in st.session_state:
+        print("deleting old poses")
+        del st.session_state["pose_trajectory"]
 
 def run():
     global col_source
@@ -40,7 +43,6 @@ def run():
         initial_sidebar_state="expanded")
     
     alt.themes.enable("dark")
-    #curdoc().theme = "dark_minimal"
 
     st.title('Bilateral Motion Analysis Toolkit')
 
@@ -57,13 +59,13 @@ def run():
                 st.session_state["video_capture"] = vid
                 st.session_state["video_time"] = 1
 
-                st.session_state["video_frames"] = extract_frames(vid)
-                img_source = ColumnDataSource(data=dict(image=[st.session_state["video_frames"][st.session_state["video_time"]]]))
+                st.session_state["bokeh_video_frames"], st.session_state["opencv_video_frames"] = extract_frames(vid)
+                img_source = ColumnDataSource(data=dict(image=[st.session_state["bokeh_video_frames"][st.session_state["video_time"]]]))
             else:
                 print("Didn't load video properly")
 
             
-        uploaded_csv = st.file_uploader("Choose a pre-processed file... [optional]", type=['.csv'])
+        uploaded_csv = st.file_uploader("Choose a pre-processed file... [optional]", on_change=on_csv_change, type=['.csv'])
 
         selected_trackpoints = st.multiselect('Select joints', trackpoint_choices)
         st.session_state['selected_trackpoints'] = selected_trackpoints
@@ -101,8 +103,18 @@ def run():
 
     st.session_state['pose_trajectory']['color'] = st.session_state['pose_trajectory']['keypoint_name'].replace(color_palette)
     sub_df = st.session_state["pose_trajectory"].loc[st.session_state["pose_trajectory"]['keypoint_name'].isin(selected_trackpoints)]
+    
     # Create shared data source for the graphs
     col_source = ColumnDataSource(sub_df)
+    #TODO: see if I can get this hooked up
+    # if 'bokeh_video_frames' in st.session_state:
+    #     col_source.selected.js_on_change('indices', CustomJS(args=dict(imgs=img_source, viddata=st.session_state['bokeh_video_frames'], data=col_source), code="""
+    #     const inds = data.selected.indices
+    #     if (inds.length > 0) {
+    #         const first = min(data.data[inds].frame)
+    #         imgs.data = viddata[first]
+    #     }
+    #     """))
 
     # Layout page
     layout_columns = st.columns((1,1), gap='medium')
@@ -116,17 +128,8 @@ def run():
             if 'video_capture' in st.session_state and st.session_state['video_capture'] is not None:
                 readcap = st.session_state["video_capture"]
                 
-                # Select Frame TODO: BROKEENN
-                #readcap.set(cv2.CAP_PROP_POS_FRAMES, int(st.session_state["video_time"] + 1))
-                
-                #curr_frame = int(readcap.get(cv2.CAP_PROP_POS_FRAMES))
-                #print("trying to set video to frame #", st.session_state["video_time"], " but frame is actually ", curr_frame)
-
-                #ret, frame = readcap.read()
-                #if ret:
-                # img, M, N = cv2_to_bokeh(frame)
-                if 'video_time' in st.session_state and 'video_frames' in st.session_state and st.session_state["video_time"] < st.session_state["video_frames"].shape[0]:
-                    img = st.session_state["video_frames"][st.session_state["video_time"]]
+                if 'video_time' in st.session_state and 'bokeh_video_frames' in st.session_state and st.session_state["video_time"] < st.session_state["bokeh_video_frames"].shape[0]:
+                    img = st.session_state["bokeh_video_frames"][st.session_state["video_time"]]
                     img_p = figure(tools='', aspect_ratio=img.shape[1]/img.shape[0], background_fill_alpha = 0.0, background_hatch_alpha = 0.0)
                     img_p.yaxis.major_label_text_alpha = 0.0
                     img_p.xaxis.major_label_text_alpha = 0.0
@@ -153,13 +156,8 @@ def run():
     plot_tools = "lasso_select,reset,pan,zoom_in,zoom_out"
 
     scatter_p = create_scatter(col_source, plot_tools)
+    speed_p = create_speed_time(col_source, plot_tools)
     
-    st.session_state['selected_indices'] = []
-
-    speed_p = create_speed_time(col_source, plot_tools, st.session_state['selected_indices'])
-    #streamlit_bokeh(speed_p)
-    
-    #total_p = gridplot([[scatter_p], [speed_p]])
     total_p = column([scatter_p, speed_p])
     
     # Setup javascript callback

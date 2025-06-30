@@ -38,7 +38,8 @@ def cv2_to_bokeh(frame):
 
 
 def extract_frames(video):
-    frames = []
+    bokeh_frames = []
+    opencv_frames = []
     num_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     for frame_num in tqdm(range(num_frames)):
         if video.isOpened():
@@ -49,49 +50,47 @@ def extract_frames(video):
                 continue
 
             img, M, N = cv2_to_bokeh(image)
-            frames.append(img)
-    frames = np.array(frames)
-    print(frames.shape)
-    return frames
+            bokeh_frames.append(img)
+            opencv_frames.append(image)
+    bokeh_frames = np.array(bokeh_frames)
+    print(bokeh_frames.shape)
+    opencv_frames = np.array(opencv_frames)
+    print(opencv_frames.shape)
+    return bokeh_frames, opencv_frames
      
 
 def process_video(progress_bar, session_state):
     output = StringIO()
     csv_writer = writer(output)
-    csv_writer.writerow(['frame_sec', 'frame', 'keypoint_name', 'x', 'y', 'z', 'color', 'prev_x', 'prev_y', 'speed_xy'])
+    csv_writer.writerow(['frame', 'keypoint_name', 'x', 'y', 'z', 'color', 'prev_x', 'prev_y', 'speed_xy'])
 
-    if "video_capture" in session_state:
-        readcap = session_state["video_capture"]
+    if "opencv_video_frames" in session_state:
+        #readcap = session_state["video_capture"]
         with mp_pose.Pose( min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
-                fps = int(readcap.get(cv2.CAP_PROP_FPS))
-                w = int(readcap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                h = int(readcap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                num_frames = int(readcap.get(cv2.CAP_PROP_FRAME_COUNT))
+                
+                num_frames = len(session_state['opencv_video_frames'])
 
                 for frame_num in tqdm(range(num_frames)):
-                    if readcap.isOpened():
-                        # Read frame from video
-                        success, image = readcap.read()
-                        if not success:
-                            print("Ignoring empty camera frame at frame #", frame_num)
-                            continue
-                        
-                        # Process frame with mediapipe
-                        image.flags.writeable = False
-                        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                        results = pose.process(image)
+                    # Process frame with mediapipe
+                    image = session_state['opencv_video_frames'][frame_num]
+                    image.flags.writeable = False
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                    results = pose.process(image)
 
-                        # Write the landmark positions to df
-                        if results.pose_landmarks is not None:
-                            for idx, landmark in enumerate(results.pose_landmarks.landmark):
-                                new_row = [float(frame_num)/float(fps), frame_num, mp_pose.PoseLandmark(idx).name, landmark.x, landmark.y, landmark.z]
-                                
-                                csv_writer.writerow(new_row)
+                    # Write the landmark positions to df
+                    if results.pose_landmarks is not None:
+                        for idx, landmark in enumerate(results.pose_landmarks.landmark):
+                            new_row = [frame_num, mp_pose.PoseLandmark(idx).name, landmark.x, landmark.y, landmark.z]
+                            
+                            csv_writer.writerow(new_row)
 
-                        progress_bar.progress(frame_num / num_frames)
+                    progress_bar.progress(frame_num / num_frames)
 
         output.seek(0)
         df = pd.read_csv(output)
+        if len(df) == 0:
+            print("DIDNT PROCESS PROPERLY")
+            return df
 
         # Center positions around sternum and flip vertically
         LShoulder = df.loc[df['keypoint_name'] == "LEFT_SHOULDER"]
@@ -119,6 +118,9 @@ def process_video(progress_bar, session_state):
 
         dx = df['x'].iloc[1:] - df['prev_x'].iloc[1:]
         dy = df['y'].iloc[1:] - df['prev_y'].iloc[1:]
+        fps = 30
+        if 'video_capture' in session_state:
+            fps = int(session_state['video_capture'].get(cv2.CAP_PROP_FPS))
         df['speed_xy'].iloc[1:] = np.sqrt(dx*dx + dy*dy) * fps
         
         # Return clean dataframe

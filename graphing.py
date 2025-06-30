@@ -28,14 +28,15 @@ def create_scatter(col_source, tools):
     
     return p
 
-def create_speed_time(col_source, tools, selected_indices):
+def create_speed_time(col_source, tools):
     # setup timeline plot
     p = figure(
         title="Coronal Speed for Each Joint", 
         x_axis_label='Frame', 
         y_axis_label='Speed', 
         tools=tools,
-        height=150,
+        height=250,
+        sizing_mode='stretch_width',
     )
     hover = HoverTool(tooltips=[
             ("Joint", "@keypoint_name"),
@@ -43,6 +44,6 @@ def create_speed_time(col_source, tools, selected_indices):
             ("speed", "@speed_xy")
         ])
     p.add_tools(hover)
-    p.scatter('frame', 'speed_xy', source=col_source, legend_label='keypoint_name', size=6, color = 'color', alpha=0.6)
+    p.scatter('frame', 'speed_xy', source=col_source, legend_group='keypoint_name', size=6, color = 'color', alpha=0.6)
     
     return p
