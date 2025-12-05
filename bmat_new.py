@@ -4,10 +4,12 @@ import altair as alt
 import pandas as pd
 
 from bokeh.io import curdoc
+curdoc().clear()
 from streamlit_bokeh import streamlit_bokeh
 from streamlit_bokeh3_events import streamlit_bokeh3_events
 from bokeh.palettes import Category10
 from bokeh.layouts import gridplot, column
+from bokeh.models import ColumnDataSource, CustomJS
 
 from video_processing import *
 from data_analysis import *
@@ -16,7 +18,7 @@ from graphing import *
 trackpoint_choices=["NOSE", "LEFT_WRIST", "LEFT_ELBOW", "LEFT_SHOULDER", "RIGHT_SHOULDER", "RIGHT_ELBOW", "RIGHT_WRIST"]
 color_palette = dict(zip(trackpoint_choices, Category10[len(trackpoint_choices)]))
 
-col_source = img_source = None
+col_source = None
 
 def on_video_change():
     if "video_capture" in st.session_state:
@@ -116,6 +118,32 @@ def run():
     #     }
     #     """))
 
+
+    selected = ColumnDataSource(data=dict(x=[], y=[]))
+    col_source.selected.js_on_change(
+        "indices",
+        CustomJS(
+            args=dict(source=col_source, newsource=selected),
+            code="""
+                const selected_indices = cb_obj.indices;
+                if (selected_indices.length > 0) {
+                    const selected_index = selected_indices[0];
+                    const x_value = source.data['x'][selected_index];
+                    const y_value = source.data['y'][selected_index];
+                    
+                    newsource.data['x'] = x_value;
+                    newsource.data['y'] = y_value;
+                    
+                }
+                else{
+                    newsource.x = [];
+                    newsource.y = [];
+                }
+            """,
+        ),
+    )
+
+
     # Layout page
     layout_columns = st.columns((1,1), gap='medium')
     with layout_columns[0]:
@@ -130,6 +158,7 @@ def run():
                 
                 if 'video_time' in st.session_state and 'bokeh_video_frames' in st.session_state and st.session_state["video_time"] < st.session_state["bokeh_video_frames"].shape[0]:
                     img = st.session_state["bokeh_video_frames"][st.session_state["video_time"]]
+                    
                     img_p = figure(tools='', aspect_ratio=img.shape[1]/img.shape[0], background_fill_alpha = 0.0, background_hatch_alpha = 0.0)
                     img_p.yaxis.major_label_text_alpha = 0.0
                     img_p.xaxis.major_label_text_alpha = 0.0
@@ -137,7 +166,11 @@ def run():
 
                     img_p.image_rgba(image=[img], x=0, y=0, dw=10, dh=10) #TODO: link img_source here so it can be hooked to the slider
 
-                    streamlit_bokeh(img_p)
+                    selected_p = figure(tools='', height=5, sizing_mode='stretch_width', background_fill_alpha = 0.0, background_hatch_alpha = 0.0)
+                    selected_p.scatter(x="x", y="y", source=selected)
+
+                    frame_total_p = column([img_p, selected_p])
+                    streamlit_bokeh(frame_total_p)
                 else:
                     print("Couldn't find frame at ", st.session_state["video_time"])
                 
@@ -153,20 +186,31 @@ def run():
             st.markdown(text)
 
 
+    
     plot_tools = "lasso_select,reset,pan,zoom_in,zoom_out"
 
     scatter_p = create_scatter(col_source, plot_tools)
     speed_p = create_speed_time(col_source, plot_tools)
     
     total_p = column([scatter_p, speed_p])
+
+
+    # col_source.selected.js_on_change('indices', CustomJS(args=dict(plotted=col_source, s=selected), code="""
+    #     const inds = cb_obj.indices
+    #     const d1 = plotted.data
+    #     const x = Array.from(inds, (i) => d1.x[i])
+    #     const y = Array.from(inds, (i) => 0)
+    #     s.data = {x, y}
+    # """),
+    # )
+    
     
     # Setup javascript callback
     # col_source.selected.js_on_change(
     #     "indices",
     #     CustomJS(
-    #         args=dict(source=col_source),
+    #         args=dict(source=col_source, newsource=selected),
     #         code="""
-            
     #         """,
     #     ),
     # )

@@ -1,0 +1,3 @@
+[submodule "poseprocessing/PoseFormerV2"]
+	path = poseprocessing/PoseFormerV2
+	url = https://github.com/QitaoZhao/PoseFormerV2.git

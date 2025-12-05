@@ -1,7 +1,7 @@
 
 from bokeh.plotting import figure
 
-from bokeh.models import ColumnDataSource, HoverTool, LassoSelectTool, CustomJS
+from bokeh.models import HoverTool
 
 def create_scatter(col_source, tools):
 
